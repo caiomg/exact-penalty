@@ -13,14 +13,16 @@ p = @(x) l1_function(f, phi, mu, x);
 % QR decomposition of constraints gradients matrix A
 Q = zeros(n_variables, 0);
 R = zeros(0, 0);
+ind_eactive = zeros(0, 1);
 
 
 
 current_constraints = evaluate_constraints(phi, x);
 
 while true
-    [A, N, ind_eactive, ind_eviolated] = ...
-                      identify_constraints(current_constraints, epsilon, Q, R);
+    [N, Q, R, ind_eactive, ind_eviolated] = ...
+                      identify_constraints(current_constraints, epsilon, ...
+                                           Q, R, ind_eactive);
 
     [fx, gfx, Hfx] = f(x);
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
@@ -41,7 +43,6 @@ while true
     elseif (~isempty(ind_eviolated) || (epsilon > tol_con) || ...
             (norm(N'*pseudo_gradient) > tol_g))
         % calculate multipliers
-        [Q, R] = qr(A);
         multipliers = R\(Q'*pseudo_gradient);
 
         % Are there conditions for dropping one constraint?
@@ -52,10 +53,11 @@ while true
                                      current_constraints, p, epsilon, delta);
                 current_constraints = evaluate_constraints(phi, x);
             else
-                [epsilon, Lambda, A, N, ind_eactive, ind_eviolated, ...
-                 pseudo_gradient] = l1_criticality_step(epsilon, Lambda, ...
+                [epsilon, Lambda] = l1_criticality_step(epsilon, Lambda, ...
                                                         current_constraints,...
-                                                        gfx, mu, Q, R, tol_g, tol_con);
+                                                        gfx, mu, Q, R, ...
+                                                        ind_eactive, ...
+                                                        tol_g, tol_con);
             end
         else
             B = zeros(size(Hfx));
@@ -71,8 +73,8 @@ while true
             h = -N*u;
             % Recalculate constraints
             phih = zeros(size(ind_eactive));
-            for n = 1:length(ind_eactive)
-               phih(n) = phi{ind_eactive(n)}(x + h);
+            for n = 1:ind_eactive'
+               phih(n) = phi{n}(x + h);
             end
             v = Q*(R'\phih);
             normphi = norm([current_constraints(ind_eactive).c]);
@@ -81,10 +83,11 @@ while true
                 x = x + h + v;
                 current_constraints = evaluate_constraints(phi, x);
             else
-                [epsilon, Lambda, A, N, ind_eactive, ind_eviolated, ...
-                 pseudo_gradient] = l1_criticality_step(epsilon, Lambda, ...
+                [epsilon, Lambda] = l1_criticality_step(epsilon, Lambda, ...
                                                         current_constraints, ...
-                                                        gfx, mu, Q, R, tol_g, tol_con);
+                                                        gfx, mu, Q, R, ...
+                                                        ind_eactive, ...
+                                                        tol_g, tol_con);
             end
         end
     else
