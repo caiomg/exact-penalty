@@ -35,8 +35,8 @@ while true
         end
         B = B + Hfx;
         % Calculate Newton direction
-        u = (N'*B*N)\(N'*pseudo_gradient);
-        h = -N*u;
+        u = -(N'*B*N)\(N'*pseudo_gradient);
+        h = N*u;
         x = l1_linear_search(pseudo_gradient, h, x, current_constraints, ...
                              p, epsilon, delta);
         current_constraints = evaluate_constraints(phi, x);
@@ -69,8 +69,8 @@ while true
             end
             B = B + Hfx;
             % Calculate Newton direction
-            u = (N'*B*N)\(N'*pseudo_gradient);
-            h = -N*u;
+            u = -(N'*B*N)\(N'*pseudo_gradient);
+            h = N*u;
             % Recalculate constraints
             phih = zeros(size(ind_eactive));
             for n = 1:ind_eactive'
