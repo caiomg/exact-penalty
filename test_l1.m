@@ -32,8 +32,9 @@ x = l1_penalty(f, {g2, g}, x0, mu, epsilon, delta, Lambda)
 tl1 = @() l1_penalty(f, {g2, g}, x0, mu, epsilon, delta, Lambda);
 
 nlcon = @(x) constraints({@(y) -g(y), @(y) -g2(y)}, {}, x);
-x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon)
-tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon);
+fmincon_options = optimoptions(@fmincon, 'Display', 'off');
+x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options)
+tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
 
 timeit(tl1)
 timeit(tmlab)
