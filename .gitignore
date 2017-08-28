@@ -1,0 +1,12 @@
+*~
+*.tmp
+*.sqlite
+*.mat
+log_*
+*.old
+*.pyc
+*.asv
+\#*#
+*.lck
+*.m~
+section_measures.txt
