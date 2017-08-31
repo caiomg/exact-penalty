@@ -6,8 +6,8 @@ function x = l1_penalty(f, phi, x0, mu, epsilon, delta, Lambda )
 x = x0;
 n_variables = size(x, 1);
 n_constraints = size(phi, 1);
-tol_g = n_variables*sqrt(eps);
-tol_con = n_constraints*sqrt(eps);
+tol_g = 1e-6;
+tol_con = 1e-6;
 
 p = @(x) l1_function(f, phi, mu, x);
 % QR decomposition of constraints gradients matrix A
