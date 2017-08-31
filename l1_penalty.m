@@ -76,8 +76,9 @@ while true
             for n = 1:ind_eactive'
                phih(n) = phi{n}(x + h);
             end
+            % Vertical step
             v = Q*(R'\phih);
-            normphi = norm([current_constraints(ind_eactive).c]);
+            normphi = norm([current_constraints(ind_eactive).c], 1);
             ppgrad = N'*pseudo_gradient;
             if (p(x + h + v) <= p(x) - delta*(norm(ppgrad)^2 + normphi))
                 x = x + h + v;
