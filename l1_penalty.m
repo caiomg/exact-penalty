@@ -64,8 +64,8 @@ while true
             for n = ind_eviolated'
                 B = B - (current_constraints(n).H)/mu;
             end
-            for n = ind_eactive'
-                B = B - multipliers(n)*(current_constraints(n).H);
+            for n = 1:length(ind_eactive)
+                B = B - multipliers(n)*(current_constraints(ind_eactive(n)).H);
             end
             B = B + Hfx;
             % Calculate Newton direction
