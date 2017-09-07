@@ -19,7 +19,9 @@ ind_eactive = zeros(0, 1);
 
 current_constraints = evaluate_constraints(phi, x);
 
+iter = 0;
 while true
+    iter = iter + 1;
     [N, Q, R, ind_eactive, ind_eviolated, ind_qr] = ...
         identify_new_constraints(current_constraints, epsilon, ...
                                  Q, R, ind_eactive);
@@ -29,6 +31,7 @@ while true
                                          ind_eviolated);
 
     p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
+
     if (norm(N'*pseudo_gradient) > Lambda)
         B = zeros(size(Hfx));
         for n = ind_eviolated'
@@ -38,14 +41,10 @@ while true
         % Calculate Newton direction
         u = -(N'*B*N)\(N'*pseudo_gradient);
         h = N*u;
-        x_old = x;
-        x = l1_linear_search(B, pseudo_gradient, h, x, current_constraints, ...
-                             p1, mu, epsilon, delta, ind_eactive);
-        if norm(x - x_old, 'inf') == 0
-            [epsilon, Lambda, N, Q, R] = ...
-                l1_criticality_step(epsilon, Lambda, current_constraints, ...
-                                    gfx, mu, Q, R, ind_eactive, tol_g, tol_con);
-        end
+        h = correct_direction(h, Q*R);
+        x = l1_linear_search(B, pseudo_gradient, h, x, ...
+                              current_constraints, p, mu, epsilon, ...
+                              delta, ind_eactive);
         current_constraints = evaluate_constraints(phi, x);
     else
         % calculate multipliers
@@ -64,12 +63,17 @@ while true
         if sum(multipliers < 0 | 1/mu < multipliers)
             [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
                                 l1_drop_constraint(Q, R, multipliers, mu);
+            h = correct_direction(h, Q1*R1);
             if ((pseudo_gradient + min(0, sigma)*grad_phi_j)'*h < -delta)
                 n_drop = ind_qr(ind_j);
-                B = B + multipliers(ind_j)*(current_constraints(n_drop).H) + min(0, sigma)*(current_constraints(n_drop).H)/mu;
-                x = l1_linear_search(B, pseudo_gradient + min(0, sigma)*grad_phi_j, h, x, ...
-                                 current_constraints, p, mu, epsilon, ...
-                                 delta, ind_eactive);
+                p2 = @(x) l1_function(f, phi, mu, x, ind_eactive(ind_eactive ~= n_drop));
+                B = B + multipliers(n_drop)*(current_constraints(n_drop).H);
+                if current_constraints(n_drop).c < 0
+                    B = B - (current_constraints(n_drop).H)/mu;
+                end
+                x = l1_linear_search(B, pseudo_gradient, h, x, ...
+                              current_constraints, p2, mu, epsilon, ...
+                              delta, ind_eactive);
                 current_constraints = evaluate_constraints(phi, x);
                 Q = Q1;
                 R = R1;
@@ -86,15 +90,28 @@ while true
         elseif (norm(N'*pseudo_gradient) < tol_g && ...
                 norm(min(0, vertcat(current_constraints.c)), 1) < tol_con ...
                 && isempty(find(multipliers < 0 | multipliers > 1/mu, 1)))
-            break
+            % Test complementarity condition
+            if norm(multipliers.*vertcat(current_constraints(ind_qr).c), 1) > tol_con
+                % Case to lower epsilon and drop constraints
+                [epsilon, Lambda, N, Q, R, ind_eactive, ind_eviolated, ...
+                 ind_qr] = l1_criticality_step(epsilon, Lambda, ....
+                                               current_constraints, ...
+                                               gfx, mu, Q, R, ...
+                                               ind_eactive, tol_g, ...
+                                               tol_con);
+            else
+                break
+            end
         else
             % Calculate Newton direction
             u = -(N'*B*N)\(N'*pseudo_gradient);
             h = N*u;
+            h = correct_direction(h, Q*R);
             % Recalculate constraints
-            phih = zeros(size(ind_qr));
-            for n = ind_qr'
-               phih(n) = phi{n}(x + h);
+            [n_qr, ~] = size(ind_qr);
+            phih = zeros(n_qr, 1);
+            for n = 1:n_qr
+               phih(n) = phi{ind_qr(n)}(x + h);
             end
             % Vertical step
             v = -Q*(R'\phih);
@@ -113,7 +130,6 @@ while true
             end
         end
     end
-
 end
 
 
