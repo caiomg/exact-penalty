@@ -4,6 +4,7 @@ function [N, Q, R, ind_eactive, ind_eviolated, ind_qr] = ...
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
+% ind_eactive = [];
 ind_eviolated = zeros(0, 1);
 ind_qr = zeros(0, 1);
 n_constraints = size(current_constraints, 1);
@@ -29,7 +30,7 @@ if ~isempty(ind_eactive)
     if length(ind_eactive) > 1
         for n = ind_eactive(2:end)'
             g = current_constraints(n).g;
-            if rank([A, g]) > rank(A)
+            if rank([A, g], 1e-8) > rank(A)
                 A = [A, g];
                 ind_qr = [ind_qr; n];
             end
@@ -39,6 +40,16 @@ if ~isempty(ind_eactive)
     [Q, R] = qr(A);
     % TODO: use QR decomposition to calculate nullspace
     N = null(A');
+
+    ind_null = sum(abs(R'), 1) < 1e-10;
+    N1 = Q(:, ind_null);
+    rank_n = rank(N);
+    if rank_n ~= rank(N1) || rank([N, N1], 1e-8) ~= rank_n
+        error('cmg:badnullspacerank', 'Error calculating nullspace');
+    else
+        N = N1;
+    end
+
 else
     % No active constraint
     % Test
