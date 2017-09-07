@@ -1,11 +1,17 @@
-function p = l1_function(f, phi, mu, x)
+function p = l1_function(f, phi, mu, x, ind_eactive)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
+
+if nargin < 5
+    ind_eactive = [];
+end
 
 n_constraints = length(phi);
 sum_phi = 0;
 for n = 1:n_constraints
-    sum_phi = sum_phi + min(phi{n}(x), 0);
+    if isempty(find(ind_eactive == n, 1))
+        sum_phi = sum_phi + min(phi{n}(x), 0);
+    end
 end
 p = f(x) - sum_phi/mu;
 

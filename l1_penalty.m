@@ -28,6 +28,7 @@ while true
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
                                          ind_eviolated);
 
+    p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
     if (norm(N'*pseudo_gradient) > Lambda)
         B = zeros(size(Hfx));
         for n = ind_eviolated'
@@ -39,70 +40,78 @@ while true
         h = N*u;
         x_old = x;
         x = l1_linear_search(B, pseudo_gradient, h, x, current_constraints, ...
-                             p, mu, epsilon, delta, ind_eactive);
+                             p1, mu, epsilon, delta, ind_eactive);
         if norm(x - x_old, 'inf') == 0
             [epsilon, Lambda, N, Q, R] = ...
                 l1_criticality_step(epsilon, Lambda, current_constraints, ...
                                     gfx, mu, Q, R, ind_eactive, tol_g, tol_con);
         end
         current_constraints = evaluate_constraints(phi, x);
-    elseif (~isempty(ind_eviolated) || (epsilon > tol_con) || ...
-            (Lambda > tol_g))
+    else
         % calculate multipliers
         multipliers = R\(Q'*pseudo_gradient);
 
+        B = zeros(size(Hfx));
+        for n = ind_eviolated'
+            B = B - (current_constraints(n).H)/mu;
+        end
+        for n = 1:length(ind_qr)
+            B = B - multipliers(n)*(current_constraints(ind_qr(n)).H);
+        end
+        B = B + Hfx;
+
         % Are there conditions for dropping one constraint?
         if sum(multipliers < 0 | 1/mu < multipliers)
-            [h, sigma, grad_phi_j, Q1, R1] = ...
-                                    l1_drop_constraint(Q, R, multipliers, mu);
+            [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
+                                l1_drop_constraint(Q, R, multipliers, mu);
             if ((pseudo_gradient + min(0, sigma)*grad_phi_j)'*h < -delta)
-                x = l1_linear_search(B, pseudo_gradient, h, x, ...
-                                     current_constraints, p, mu, epsilon, ...
-                                     delta, ind_eactive);
+                n_drop = ind_qr(ind_j);
+                B = B + multipliers(ind_j)*(current_constraints(n_drop).H) + min(0, sigma)*(current_constraints(n_drop).H)/mu;
+                x = l1_linear_search(B, pseudo_gradient + min(0, sigma)*grad_phi_j, h, x, ...
+                                 current_constraints, p, mu, epsilon, ...
+                                 delta, ind_eactive);
                 current_constraints = evaluate_constraints(phi, x);
+                Q = Q1;
+                R = R1;
+                ind_qr = ind_qr(ind_qr ~= n_drop);
+                ind_eactive = ind_eactive(ind_eactive ~= n_drop);
             else
                 [epsilon, Lambda, N, Q, R] = ...
                     l1_criticality_step(epsilon, Lambda, ....
-                                        current_constraints, ...
-                                        gfx, mu, Q, R, ...
-                                        ind_eactive, tol_g, ...
-                                        tol_con);
+                                    current_constraints, ...
+                                    gfx, mu, Q, R, ...
+                                    ind_eactive, tol_g, ...
+                                    tol_con);
             end
+        elseif (norm(N'*pseudo_gradient) < tol_g && ...
+                norm(min(0, vertcat(current_constraints.c)), 1) < tol_con ...
+                && isempty(find(multipliers < 0 | multipliers > 1/mu, 1)))
+            break
         else
-            B = zeros(size(Hfx));
-            for n = ind_eviolated'
-                B = B - (current_constraints(n).H)/mu;
-            end
-            for n = 1:length(ind_eactive)
-                B = B - multipliers(n)*(current_constraints(ind_eactive(n)).H);
-            end
-            B = B + Hfx;
             % Calculate Newton direction
             u = -(N'*B*N)\(N'*pseudo_gradient);
             h = N*u;
             % Recalculate constraints
-            phih = zeros(size(ind_eactive));
-            for n = 1:ind_eactive'
+            phih = zeros(size(ind_qr));
+            for n = ind_qr'
                phih(n) = phi{n}(x + h);
             end
             % Vertical step
-            v = Q*(R'\phih);
+            v = -Q*(R'\phih);
             normphi = norm([current_constraints(ind_eactive).c], 1);
             ppgrad = N'*pseudo_gradient;
             if (p(x + h + v) <= p(x) - delta*(norm(ppgrad)^2 + normphi))
                 x = x + h + v;
                 current_constraints = evaluate_constraints(phi, x);
             else
-                [epsilon, Lambda, N, Q, R] = ...
-                    l1_criticality_step(epsilon, Lambda, ....
-                                        current_constraints, ...
-                                        gfx, mu, Q, R, ...
-                                        ind_eactive, tol_g, ...
-                                        tol_con);
+                [epsilon, Lambda, N, Q, R, ind_eactive, ind_eviolated, ...
+                 ind_qr] = l1_criticality_step(epsilon, Lambda, ....
+                                               current_constraints, ...
+                                               gfx, mu, Q, R, ...
+                                               ind_eactive, tol_g, ...
+                                               tol_con);
             end
         end
-    else
-        break
     end
 
 end

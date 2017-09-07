@@ -1,4 +1,4 @@
-function [h, sigma, grad_phi_j, Q, R] = l1_drop_constraint(Q, R, ...
+function [h, sigma, grad_phi_j, Q, R, ind_j] = l1_drop_constraint(Q, R, ...
                                                            multipliers, mu)
 
 % I AM ASSUMING A = QR HAS THE SAME ORDENATION AS MULTIPLIERS!
@@ -25,7 +25,7 @@ ind_null = sum(abs(R'), 1) < tol;
 N1 = Q(:, ind_null);
 N = null(R'*Q');
 rank_n = rank(N);
-if rank_n ~= rank(N1) || rank([N, N1]) ~= rank_n
+if rank_n ~= rank(N1) || rank([N, N1], 1e-8) ~= rank_n
    error('cmg:badnullspacerank', 'Error calculating nullspace');
 end
 

@@ -29,17 +29,19 @@ g3 = @(x) quadratic(Hc, gc, cc, x);
 x0 = -2*ones(dim, 1);
 
 % Parameters
-mu = 1e-9;
-epsilon = 2;
+mu = 1e-1;
+epsilon = 1e-1;
 delta = 1e-6;
 Lambda = 0.1;
 
 nlcon = @(x) constraints({ @(y) -g2(y), @(y) -g3(y)}, {}, x);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off');
 x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options)
+p = @(x) l1_function(f, {g2}, mu, x);
+x2_fmincon = fmincon(p, x0,[],[],[],[],[],[], nlcon, fmincon_options)
 
-x0 = x_fmincon
-x = l1_penalty(f, {g2}, x0, mu, epsilon, delta, Lambda)
+%%
+x = l1_penalty(f, {g2, g3}, x0, mu, epsilon, delta, Lambda)
 tl1 = @() l1_penalty(f, {g2, g, g3}, x0, mu, epsilon, delta, Lambda);
 
 
@@ -47,3 +49,7 @@ tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
 
 % timeit(tl1)
 % timeit(tmlab)
+
+
+
+

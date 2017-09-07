@@ -12,6 +12,10 @@ n_constraints = size(current_constraints, 1);
 gamma = Inf(n_constraints, 1);
 Ik = [];
 for n = 1:n_constraints
+    if ~isempty(find(ind_eactive == n, 1))
+        % Not testing constraints which are already active
+        continue
+    end
     if current_constraints(n).c ~= 0
         Hc = current_constraints(n).H;
         gc = current_constraints(n).g;
