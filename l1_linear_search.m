@@ -64,18 +64,20 @@ while ~isempty(Ik)
     a2 = a2 + sigma*(h'*Hc*h)/mu;
 end
 
-g = pseudo_gradient + l1_extended_pseudo_gradient(mu, current_constraints, ...
-                                                  h, ind_eactive);
-m = h'*g;
-p0 = p(x0);
-if p(x0 + alpha*h) < p0 - delta
-  x = x0 + alpha*h;
-else
-    while p(x0 + alpha*h) > p0 - 0.5*m^2
-        if norm((x0 + (0.5*alpha)*h) - x0, 'inf') == 0
-            break
-        end
-        alpha = 0.5*alpha;
-    end
-    x = x0 + alpha*h;
-end
+x = x0 + alpha*h;
+
+% g = pseudo_gradient + l1_extended_pseudo_gradient(mu, current_constraints, ...
+%                                                   h, ind_eactive);
+% m = h'*g;
+% p0 = p(x0);
+% if p(x0 + alpha*h) < p0 - delta
+%   x = x0 + alpha*h;
+% else
+%     while p(x0 + alpha*h) > p0 - 0.5*m^2
+%         if norm((x0 + (0.5*alpha)*h) - x0, 'inf') == 0
+%             break
+%         end
+%         alpha = 0.5*alpha;
+%     end
+%     x = x0 + alpha*h;
+% end
