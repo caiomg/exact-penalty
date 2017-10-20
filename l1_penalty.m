@@ -21,15 +21,15 @@ current_constraints = evaluate_constraints(phi, x);
 
 iter = 0;
 finish = false;
+[fx, gfx] = f(x);
+Hfx = eye(length(x));
 while ~finish
     iter = iter + 1;
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ...
-                                 ind_eactive);
+                                 []);
     [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive);
-
-    [fx, gfx, Hfx] = f(x);
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
                                          ind_eviolated);
 
@@ -37,22 +37,48 @@ while ~finish
 
 
     if (norm(N'*pseudo_gradient) > Lambda)
+    	x_prev = x;
         B = zeros(size(Hfx));
         for n = ind_eviolated'
             B = B - (current_constraints(n).H)/mu;
         end
         B = B + Hfx;
         % Calculate Newton direction
-        u = -(N'*B*N)\(N'*pseudo_gradient);
-        h = N*u;
-        h = correct_direction(h, Q*R);
+        nBn = N'*B*N;
+        if ~issymmetric(nBn)
+            nBn = (nBn + nBn')/2;
+        end
+        if rcond(nBn) > sqrt(eps) && eigs(nBn, 1, 'SA') > sqrt(eps)
+            u = -(nBn)\(N'*pseudo_gradient);
+        else
+            u = -(N'*pseudo_gradient);
+        end
+        h0 = N*u;
+        h = correct_direction(h0, Q*R);
         x = l1_linear_search(B, pseudo_gradient, h, x, ...
                               current_constraints, p, mu, epsilon, ...
                               delta, ind_eactive);
+        if norm(x - x_prev, 'inf') ~= 0
+            gfx_prev = gfx;
+            [fx, gfx] = f(x);
+            s = x - x_prev;
+            y = gfx - gfx_prev;
+            if s'*y >= 0.2*(s'*Hfx*s)
+                theta = 1;
+            else
+                theta = 0.8*(s'*Hfx*s)/(s'*Hfx*s - s'*y);
+            end
+            Hs = Hfx*s;
+            r = theta*y + (1-theta)*(Hs);
+            t1 = - ((Hs*Hs')/(s'*Hfx*s));
+            t2 = (r*r')/(s'*r);
+            Hfx = Hfx + t1 + t2;
+        end
         current_constraints = evaluate_constraints(phi, x);
     else
         iter2 = 0;
         while true
+          	x_prev = x;
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive);
             % calculate multipliers
@@ -76,13 +102,28 @@ while ~finish
                 if ((pseudo_gradient + min(0, sigma)*grad_phi_j)'*h < -delta)
                     n_drop = ind_qr(ind_j);
                     p2 = @(x) l1_function(f, phi, mu, x, ind_eactive(ind_eactive ~= n_drop));
-                    B = B + multipliers(n_drop)*(current_constraints(n_drop).H);
+                    B = B + multipliers(ind_j)*(current_constraints(n_drop).H);
                     if current_constraints(n_drop).c < 0
                         B = B - (current_constraints(n_drop).H)/mu;
                     end
                     x = l1_linear_search(B, pseudo_gradient, h, x, ...
                                   current_constraints, p2, mu, epsilon, ...
                                   delta, ind_eactive);
+                    if norm(x - x_prev, 'inf') ~= 0
+                        gfx_prev = gfx;
+                        [fx, gfx] = f(x);
+                        s = x - x_prev;
+                        y = gfx - gfx_prev;
+                        if s'*y >= 0.2*(s'*Hfx*s)
+                            theta = 1;
+                        else
+                            theta = 0.8*(s'*Hfx*s)/(s'*Hfx*s - s'*y);
+                        end
+                        r = theta*y + (1-theta)*(Hfx*s);
+                        Hfx = Hfx - ((Hfx*s)*(s'*Hfx)/(s'*Hfx*s)) + (r*r')/(s'*r);
+                    end
+
+
                     current_constraints = evaluate_constraints(phi, x);
                     Q = Q1;
                     R = R1;
@@ -115,7 +156,11 @@ while ~finish
                 end
             else
                 % Calculate Newton direction
-                u = -(N'*B*N)\(N'*pseudo_gradient);
+                if rcond(N'*B*N) > sqrt(eps) && eigs(N'*B*N, 1, 'SA') > sqrt(eps)
+                    u = -(N'*B*N)\(N'*pseudo_gradient);
+                else
+                    u = -(N'*pseudo_gradient);
+                end
                 h = N*u;
                 h = correct_direction(h, Q*R);
                 % Recalculate constraints
@@ -131,6 +176,20 @@ while ~finish
                 if (p(x + h + v) <= p(x) - delta*(norm(ppgrad)^2 + normphi))
                     x = x + h + v;
                     current_constraints = evaluate_constraints(phi, x);
+                    if norm(x - x_prev, 'inf') ~= 0
+                        gfx_prev = gfx;
+                        [fx, gfx] = f(x);
+                        s = x - x_prev;
+                        y = gfx - gfx_prev;
+                        if s'*y >= 0.2*(s'*Hfx*s)
+                            theta = 1;
+                        else
+                            theta = 0.8*(s'*Hfx*s)/(s'*Hfx*s - s'*y);
+                        end
+                        r = theta*y + (1-theta)*(Hfx*s);
+                        Hfx = Hfx - ((Hfx*s)*(s'*Hfx)/(s'*Hfx*s)) + (r*r')/(s'*r);
+                    end
+
                 else
                     [epsilon, Lambda, N, Q, R, ind_eactive, ind_eviolated, ...
                      ind_qr] = l1_criticality_step(epsilon, Lambda, ....
