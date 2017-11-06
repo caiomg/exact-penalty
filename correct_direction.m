@@ -10,7 +10,7 @@ for column = A
     h = h - column*(h'*column)/(column'*column);
 end
 
-inexact_coordinates = find(A'*h < 0);
+inexact_coordinates = find(A'*h > 0);
 if ~isempty(inexact_coordinates)
     for n = inexact_coordinates'
         h = h - 2*A(:, n)*(h'*A(:, n))/(A(:, n)'*A(:, n));

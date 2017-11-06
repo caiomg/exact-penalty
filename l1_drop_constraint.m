@@ -9,12 +9,12 @@ tol = sqrt(eps);
 
 % TODO: try other choices
 if min(multipliers) < 0
-    sigma = 1;
+    sigma = -1;
     [~, ind_j] = min(multipliers);
     grad_phi_j = Q*R(:, ind_j);
     [Q, R] = qrdelete(Q, R, ind_j);
-elseif max(multipliers) > 1/mu
-    sigma = -1;
+elseif max(multipliers) > mu
+    sigma = 1;
     [~, ind_j] = max(multipliers);
     grad_phi_j = Q*R(:, ind_j);
     [Q, R] = qrdelete(Q, R, ind_j);

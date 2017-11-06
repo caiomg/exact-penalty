@@ -13,7 +13,7 @@ for n = 1:n_constraints
             ind_eactive(end+1, 1) = n;
         % Should this be here?
         % Maybe one constraint could be active and included as violated
-        elseif current_constraints(n).c < epsilon
+        elseif current_constraints(n).c > epsilon
             ind_eviolated(end+1, 1) = n;
         end
     end

@@ -10,10 +10,10 @@ n_constraints = length(phi);
 sum_phi = 0;
 for n = 1:n_constraints
     if isempty(find(ind_eactive == n, 1))
-        sum_phi = sum_phi + min(phi{n}(x), 0);
+        sum_phi = sum_phi + max(phi{n}(x), 0);
     end
 end
-p = f(x) - sum_phi/mu;
+p = f(x) + mu*sum_phi;
 
 end
 

@@ -1,7 +1,7 @@
-function x = l1_penalty(f, phi, x0, mu, epsilon, delta, Lambda )
+function [x, history_solution] = l1_penalty(f, phi, x0, mu, epsilon, delta, Lambda )
 %L1_PENALTY Summary of this function goes here
 %   Detailed explanation goes here
-
+global hs1
 linsolve_opts.UT = true;
 
 x = x0;
@@ -19,12 +19,16 @@ ind_eactive = zeros(0, 1);
 
 current_constraints = evaluate_constraints(phi, x);
 
+history_solution.x = x;
 iter = 0;
 finish = false;
 [fx, gfx] = f(x);
 Hfx = eye(length(x));
 while ~finish
     iter = iter + 1;
+    if iter == 2
+        1;
+    end
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ...
                                  []);
@@ -40,7 +44,7 @@ while ~finish
     	x_prev = x;
         B = zeros(size(Hfx));
         for n = ind_eviolated'
-            B = B - (current_constraints(n).H)/mu;
+            B = B + mu*(current_constraints(n).H);
         end
         B = B + Hfx;
         % Calculate Newton direction
@@ -58,6 +62,7 @@ while ~finish
         x = l1_linear_search(B, pseudo_gradient, h, x, ...
                               current_constraints, p, mu, epsilon, ...
                               delta, ind_eactive);
+        history_solution(end+1).x = x;                
         if norm(x - x_prev, 'inf') ~= 0
             gfx_prev = gfx;
             [fx, gfx] = f(x);
@@ -82,33 +87,34 @@ while ~finish
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive);
             % calculate multipliers
-            multipliers = R\(Q'*pseudo_gradient);
+            multipliers = -R\(Q'*pseudo_gradient);
     %         multipliers = linsolve(R, Q'*pseudo_gradient, linsolve_opts);
 
             B = zeros(size(Hfx));
             for n = ind_eviolated'
-                B = B - (current_constraints(n).H)/mu;
+                B = B + mu*(current_constraints(n).H);
             end
             for n = 1:length(ind_qr)
-                B = B - multipliers(n)*(current_constraints(ind_qr(n)).H);
+                B = B + multipliers(n)*(current_constraints(ind_qr(n)).H);
             end
             B = B + Hfx;
 
             % Are there conditions for dropping one constraint?
-            if sum(multipliers < 0 | 1/mu < multipliers)
+            if sum(multipliers < 0 | mu < multipliers)
                 [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
                                     l1_drop_constraint(Q, R, multipliers, mu);
                 h = correct_direction(h, Q1*R1);
-                if ((pseudo_gradient + min(0, sigma)*grad_phi_j)'*h < -delta)
+                if ((pseudo_gradient + max(0, sigma)*grad_phi_j)'*h < -delta)
                     n_drop = ind_qr(ind_j);
                     p2 = @(x) l1_function(f, phi, mu, x, ind_eactive(ind_eactive ~= n_drop));
-                    B = B + multipliers(ind_j)*(current_constraints(n_drop).H);
-                    if current_constraints(n_drop).c < 0
-                        B = B - (current_constraints(n_drop).H)/mu;
+                    B = B - multipliers(ind_j)*(current_constraints(n_drop).H);
+                    if current_constraints(n_drop).c > 0
+                        B = B + mu*(current_constraints(n_drop).H);
                     end
                     x = l1_linear_search(B, pseudo_gradient, h, x, ...
                                   current_constraints, p2, mu, epsilon, ...
                                   delta, ind_eactive);
+                    history_solution(end+1).x = x;
                     if norm(x - x_prev, 'inf') ~= 0
                         gfx_prev = gfx;
                         [fx, gfx] = f(x);
@@ -139,8 +145,8 @@ while ~finish
                 end
                 break
             elseif (norm(N'*pseudo_gradient) < tol_g && ...
-                    norm(min(0, vertcat(current_constraints.c)), 1) < tol_con ...
-                    && isempty(find(multipliers < 0 | multipliers > 1/mu, 1)))
+                    norm(max(0, vertcat(current_constraints.c)), 1) < tol_con ...
+                    && isempty(find(multipliers < 0 | multipliers > mu, 1)))
                 % Test complementarity condition
                 if norm(multipliers.*vertcat(current_constraints(ind_qr).c), 1) > tol_con
                     % Case to lower epsilon and drop constraints
@@ -156,13 +162,17 @@ while ~finish
                 end
             else
                 % Calculate Newton direction
-                if rcond(N'*B*N) > sqrt(eps) && eigs(N'*B*N, 1, 'SA') > sqrt(eps)
-                    u = -(N'*B*N)\(N'*pseudo_gradient);
+                if ~isempty(N)
+                    if rcond(N'*B*N) > sqrt(eps) && eigs(N'*B*N, 1, 'SA') > sqrt(eps)
+                        u = -(N'*B*N)\(N'*pseudo_gradient);
+                    else
+                        u = -(N'*pseudo_gradient);
+                    end
+                    h = N*u;
+                    h = correct_direction(h, Q*R);
                 else
-                    u = -(N'*pseudo_gradient);
+                    h = zeros(size(x));
                 end
-                h = N*u;
-                h = correct_direction(h, Q*R);
                 % Recalculate constraints
                 [n_qr, ~] = size(ind_qr);
                 phih = zeros(n_qr, 1);
@@ -175,6 +185,7 @@ while ~finish
                 ppgrad = N'*pseudo_gradient;
                 if (p(x + h + v) <= p(x) - delta*(norm(ppgrad)^2 + normphi))
                     x = x + h + v;
+                    history_solution(end+1).x = x;
                     current_constraints = evaluate_constraints(phi, x);
                     if norm(x - x_prev, 'inf') ~= 0
                         gfx_prev = gfx;
