@@ -8,13 +8,29 @@ if nargin < 3 || isempty(factor)
     factor = 1;
 end
 
-if nargout <= 1
-    c = cutest_cons(x, m);
+if m <= n_constraints
+    if nargout <= 1
+        c = cutest_cons(x, m);
+    else
+        [c, gc] = cutest_cons(x, m);
+    end
+    if nargout >= 3
+        Hc = cutest_ihess(x, m);
+    end
+elseif m <= n_constraints + n_variables
+    % It must be a lower bound
+    k = m - n_constraints;
+    c = problem_data_cutest.bl(k) - x(k);
+    gc = zeros(n_variables, 1);
+    gc(k) = -1;
+    Hc = zeros(n_variables);    
 else
-    [c, gc] = cutest_cons(x, m);
-end
-if nargout >= 3
-    Hc = cutest_ihess(x, m);
+    % Upper bound, then
+    k = m - n_constraints - n_variables;
+    c = x(k) - problem_data_cutest.bu(k);
+    gc = zeros(n_variables, 1);
+    gc(k) = 1;
+    Hc = zeros(n_variables);    
 end
 
 c = factor*c;
