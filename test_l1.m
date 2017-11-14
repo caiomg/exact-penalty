@@ -1,4 +1,4 @@
-dim = 17;
+dim = 15;
 
 % Objective
 Hf = 2*eye(dim);
@@ -24,7 +24,7 @@ x0 = -2*ones(dim, 1);
 x0 = -(1+3*sqrt(2))/2*ones(dim, 1);
 x0 = -1.5*ones(dim, 1);
 x0 = (1:dim)';
-x0 = -(1:dim)';
+% x0 = -(1:dim)';
 
 % Parameters
 mu = 100;

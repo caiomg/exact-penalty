@@ -29,12 +29,8 @@ for n = 1:n_constraints
         end
     end
 end
-if isempty(Ik)
-    alpha = 1;
-else
-    alpha = 0;
-end
 
+alpha = 0;
 while ~isempty(Ik)
 
     [min_gamma, ind_temp] = min(gamma(Ik));
@@ -62,6 +58,13 @@ while ~isempty(Ik)
     a = a - sigma*(g'*h)*mu;
     Hc = current_constraints(ind_gamma).H;
     a2 = a2 - sigma*(h'*Hc*h)*mu;
+end
+if alpha == 0
+    if a < 0
+        alpha = abs(a/a2);
+    else
+        error();
+    end
 end
 
 x = x0 + alpha*h;

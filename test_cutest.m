@@ -3,7 +3,7 @@ terminate_cutest_problem()
 clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
-% problem_name = 'WOMFLET';
+problem_name = 'WOMFLET';
 problem_name = 'POLAK1';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
 problem_name = 'ZY2';
@@ -16,7 +16,7 @@ f = @(x) get_cutest_objective(x);
 n_constraints = get_cutest_total_number_of_constraints();
 all_con = cell(n_constraints, 1);
 for k = 1:n_constraints
-    gk = @(x) get_cutest_constraint(x, k, 1);
+    gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
     all_con{k} = gk;
 end
 
