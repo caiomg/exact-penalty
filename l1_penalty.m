@@ -71,7 +71,7 @@ while ~finish
                Ii(end+1, 1) = constn; 
             end
         end
-        [s, fs, ind_eactive1] = cauchy_step(model, radius, N, mu, current_constraints, Ii, u, zeros(size(u)), ind_eactive, epsilon);
+        [s, fs, ind_eactive1] = cauchy_step(model, radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
         p1b = @(x) l1_function(f, phi, mu, x, ind_eactive1);
         pred = fs;
         fmodel.H = Hfx;
@@ -262,7 +262,7 @@ while ~finish
                        Ii(end+1, 1) = constn; 
                     end
                 end
-                [s, fs, ind_eactive_b] = cauchy_step(model, radius, N, mu, current_constraints, Ii, u, zeros(size(u)), ind_eactive, epsilon);
+                [s, fs, ind_eactive_b] = cauchy_step(model, radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
                 p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
                 pred1 = fs;
                 model.H = Hfx;

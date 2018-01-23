@@ -1,38 +1,30 @@
 
 % Objective
-Hf = 2*diag([1; 1; 1; 2]);
-gf = zeros(4, 1);
+Hf = zeros(3);
+gf = [0; 0; 1];
 cf = 0;
 f = @(x) quadratic(Hf, gf, cf, x);
 
 
-all_con = cell(2, 1);
+all_con = cell(1, 1);
 
-Hc = zeros(4);
-Hc(1, 2) = -1;
-Hc(2, 1) = -1;
-gc = zeros(4, 1);
-cc = 4;
+Hc = diag([10; 5; 0]);
+gc = [1e-4; 1e-3; 1];
+cc = 0;
 gk = @(x) quadratic(Hc, gc, cc, x);
 all_con{1} = gk;
 
-Hc = -2*diag([0; 0; 1; 1]);
-gc = zeros(4, 1);
-cc = 25;
+Hc = zeros(3);
+gc = [0; 0; -1];
+cc = 0;
 gk = @(x) quadratic(Hc, gc, cc, x);
 all_con{2} = gk;
 
-% Solution
-x_sol = [2; 2; 5; 0];
-
 % Initial point
-x0 = x_sol + 10*ones(size(x_sol));
-x0 = x_sol - 6*ones(size(x_sol));
-old_seed = rng('default');
-x0 = x_sol + randi(20, 4, 1) - 10;
-rng(old_seed);
-% x0 = [-1; -1; 5; -1];
-
+x0 = zeros(3, 1);
+x0(3) = -2;
+x0(2) = 0;
+x0(1) = max(roots([5, 1e-4, x0(3)]));
 
 
 
