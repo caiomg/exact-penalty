@@ -26,7 +26,6 @@ radius_max = 100;
 
 history_solution.x = x;
 history_solution.rho = NaN;
-history_counter = 1;
 iter = 0;
 finish = false;
 [fx, gfx] = f(x);
@@ -77,15 +76,17 @@ while ~finish
         fmodel.g = gfx;
         step_calculation_ok = true;
         loop_count = 0;
+        rf = 1;
         while step_calculation_ok
-            [s, fs, ind_eactive1] = cauchy_step(model, radius, N, ...
+            [s, fs, ind_eactive1] = cauchy_step(model, rf*radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, [], zeros(size(u)), ...
                                                 ind_eactive, ...
                                                 epsilon);
             Ns = N*s;
+            Ns = correct_direction(Ns, Q*R);
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-            Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 2);
+            Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
 
             %%%%%%%%%%%%
             % Predict constraint values
@@ -97,7 +98,9 @@ while ~finish
             %%%%%%%%%%%%%%%%%%
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
             v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, radius);
-            v = tr_new_vertical_step(pv, current_constraints, Ns, radius, ind_qr);
+            v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
+%             v3 = tr_new_vertical_step_alternative(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel, mu);
+            v = v1;
             normphi = norm([current_constraints(ind_eactive).c], 1);
             ppgrad = N'*pseudo_gradient;
             fmodel.H = Hfx;
@@ -106,7 +109,7 @@ while ~finish
             if pred > 0
                 break
             else
-                radius = radius/2;
+                rf = min(rf/2, norm(Ns)/norm(s));
             end
             loop_count = loop_count + 1;
             if loop_count > 5
@@ -200,16 +203,19 @@ while ~finish
                 fmodel.g = gfx;
                 fmodel.H = Hfx;
                 step_calculation_ok = true;
+                rf = 1;
                 while step_calculation_ok
-                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, radius, N1, mu, current_constraints, Ii, [], zeros(size(model.g)), ind_eactive_dropping, epsilon);
+                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*radius, N1, mu, current_constraints, Ii, [], zeros(size(model.g)), ind_eactive_dropping, epsilon);
                     Ns = N1*s;
+                    Ns = correct_direction(Ns, Q1*R1);
                     pv = @(s) -predict_descent_with_multipliers(fmodel, current_constraints, s, mu, ind_qr_dropping, multipliers_dropping);
-                    Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 2);
-                    pred = predict_descent_with_multipliers(fmodel, current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
+                    Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
+                    pred1 = predict_descent_with_multipliers(fmodel, current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
+                    pred = predict_descent(fmodel, current_constraints, Ns, mu, []);
                     if pred > 0
                         break
                     else
-                        radius = radius/2;
+                        rf = min(rf/2, norm(Ns)/norm(s));
                         contador = contador + 1;
                     end
                     if norm(Ns)/norm(s) < 0.1
@@ -218,8 +224,8 @@ while ~finish
                 end
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
-                    ared1 = p(x) - p(x + Ns);
-                    ared = p2(x) - p2(x + Ns);
+                    ared = p(x) - p(x + Ns);
+                    ared1 = p2(x) - p2(x + Ns);
                     dpred = pred - 10*eps*max(1, abs(fx));
                     dared = ared - 10*eps*max(1, abs(fx));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
