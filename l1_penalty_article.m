@@ -75,7 +75,6 @@ while ~finish
         fmodel.H = Hfx;
         fmodel.g = gfx;
         step_calculation_ok = true;
-        loop_count = 0;
         rf = 1;
         while step_calculation_ok
             [s, fs, ind_eactive1] = cauchy_step(model, rf*radius, N, ...
@@ -98,7 +97,7 @@ while ~finish
             %%%%%%%%%%%%%%%%%%
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
             v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, radius);
-            v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
+%             v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
 %             v3 = tr_new_vertical_step_alternative(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel, mu);
             v = v1;
             normphi = norm([current_constraints(ind_eactive).c], 1);
@@ -110,10 +109,6 @@ while ~finish
                 break
             else
                 rf = min(rf/2, norm(Ns)/norm(s));
-            end
-            loop_count = loop_count + 1;
-            if loop_count > 5
-                1;
             end
         end
 %%%%%%%%%%%%%
@@ -315,7 +310,7 @@ while ~finish
                 [n_qr, ~] = size(ind_qr);
                 phih = zeros(n_qr, 1);
                 for n = 1:n_qr
-                   phih(n) = current_constraints(ind_qr(n)).c;% + current_constraints(ind_qr(n)).g'*N*s + 0.5*((s'*N')*current_constraints(ind_qr(n)).H*(N*s));
+                   phih(n) = current_constraints(ind_qr(n)).c + current_constraints(ind_qr(n)).g'*N*s + 0.5*((s'*N')*current_constraints(ind_qr(n)).H*(N*s));
                 end
                 %%%%%%%%%%%%%%%%%%                
                 
