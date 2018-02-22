@@ -1,4 +1,4 @@
-function v = tr_new_vertical_step(p, cmodel, h, radius, ind_constraints, p_gradient)
+function v = tr_new_vertical_step(p, cmodel, h, radius, ind_constraints, fmodel)
 
 max_iter = 10; % backtracking iterations
 min_dec = 0; % minimum decrease accepted
@@ -7,15 +7,17 @@ n_constraints = length(cmodel);
 if ~isempty(ind_constraints)
     g = zeros(size(cmodel(1).g));
     B = zeros(size(cmodel(1).H));
-    
+    p_gradient = zeros(size(cmodel(1).g));
 
     for m = ind_constraints'
         % New values for the model
         c1 = cmodel(m).c + cmodel(m).g'*h + 0.5*(h'*cmodel(m).H*h);
         g1 = (cmodel(m).g + cmodel(m).H*h);
         % Summing
-        g = g + g1*c1;
-        B = B + ((g1*g1') + cmodel(m).H*c1);
+        if c1 > 0
+            g = g + 2*g1*c1;
+            B = B + ((g1*g1') + cmodel(m).H*c1);
+        end
     end
     
     v = zeros(size(h));
