@@ -17,7 +17,7 @@ for k = 1:n_functions
         if difference > max_diff
             max_diff = difference;
         end
-        if abs(difference) > 10*eps
+        if abs(difference) > max(10*eps(max(abs(model.fvalues(k, :)))), sqrt(eps))
             error('cmg:tr_interpolation_error', 'Interpolation error');
         end
     end
