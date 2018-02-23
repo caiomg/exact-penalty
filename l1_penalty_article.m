@@ -79,9 +79,7 @@ Hfx = eye(length(x));
 [~, ~, Hfx] = f(x);
 while ~finish
     iter = iter + 1;
-    if iter == 2
-        1;
-    end
+
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ...
                                  []);
@@ -385,8 +383,8 @@ while ~finish
                     pred = pred_hv;
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                ared1 = p(x) - p(x + N*s + v);
-                ared = p2(x) - p2(x + N*s + v);
+                ared = p(x) - p(x + N*s + v);
+                ared1 = p2(x) - p2(x + N*s + v);
                 dpred = pred - 10*eps*max(1, abs(fx));
                 dared = ared - 10*eps*max(1, abs(fx));
                 if abs(dared) < 10*eps && abs(dpred) < 10*eps
