@@ -13,7 +13,7 @@ function model = try_to_add_interpolation_point(model, new_point, ...
     
     model.points(:, n_points+1) = new_point;
     for nf = 1:n_functions
-        model.fvalues(nf, n_points+1) = new_point_fvals{nf};
+        model.fvalues(nf, n_points+1) = new_point_fvals(nf);
     end
 
     % Model improvement algorithm will improve poisedness of model
