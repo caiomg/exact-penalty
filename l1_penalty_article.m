@@ -33,9 +33,7 @@ Hfx = eye(length(x));
 [~, ~, Hfx] = f(x);
 while ~finish
     iter = iter + 1;
-    if iter == 2
-        1;
-    end
+
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ...
                                  []);
