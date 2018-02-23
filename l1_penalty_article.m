@@ -176,7 +176,7 @@ while ~finish
             end
         end
         if rho > 0.1
-            x = x + Ns + v;
+            x = trial_point;
             step_accepted = true;
 %             trmodel = move_trust_region(trmodel, x, new_center_fvals, ...
 %                                    fphi, options)
@@ -269,7 +269,8 @@ while ~finish
                 end
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
-                    p_trial = p(x + Ns);
+                    trial_point = x + Ns;
+                    p_trial = p(trial_point);
                     ared = px - p_trial;
                     ared1 = p2(x) - p2(x + Ns);
                     dpred = pred - 10*eps*max(1, abs(px));
@@ -296,7 +297,7 @@ while ~finish
                         dropping_succeeded = false;
                     end
                     if rho > 0.1
-                        x = x + Ns;
+                        x = trial_point;
                         step_accepted = true;
                         px = p_trial;
                         [~, fmodel.g, fmodel.H] = f(x);
@@ -379,7 +380,8 @@ while ~finish
                     pred = pred_hv;
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                p_trial = p(x + N*s + v);
+                trial_point = x + N*s + v;
+                p_trial = p(trial_point);
                 ared = px - p_trial;
                 ared1 = p2(x) - p2(x + N*s + v);
                 dpred = pred - 10*eps*max(1, abs(px));
@@ -399,7 +401,7 @@ while ~finish
                     end
                 end
                 if rho > 0.1
-                    x = x + N*s + v;
+                    x = trial_point;
                     current_constraints = evaluate_constraints(phi, x);
                     step_accepted = true;
                     px = p_trial;
