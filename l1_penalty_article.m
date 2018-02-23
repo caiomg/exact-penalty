@@ -47,7 +47,7 @@ fval_current = trmodel.fvalues(1, 1);
 
 
 
-global x_prev
+global x_prev % to be removed
 linsolve_opts.UT = true;
 
 x0 = initial_points(:, 1);
@@ -157,7 +157,7 @@ while ~finish
         end
 %%%%%%%%%%%%%
         trial_point = x + Ns + v;
-        p_trial = p(trial_point);
+        [p_trial, trial_fvalues] = p(trial_point);
         ared = px - p_trial;
         dpred = pred - 10*eps*max(1, abs(px));
         dared = ared - 10*eps*max(1, abs(px));
@@ -178,16 +178,16 @@ while ~finish
         if rho > 0.1
             x = trial_point;
             step_accepted = true;
-%             trmodel = move_trust_region(trmodel, x, new_center_fvals, ...
-%                                    fphi, options)
+            trmodel = move_trust_region(trmodel, x, trial_fvalues, ...
+                                   fphi, options);
             px = p_trial;
             [~, fmodel.g, fmodel.H] = f(x);
             current_constraints = evaluate_constraints(phi, x);
         else
             step_accepted = false;
-%             trmodel = try_to_add_interpolation_point(trmodel, x, ...
-%                                                 new_point_fvals, ...
-%                                                 fphi, options)
+            trmodel = try_to_add_interpolation_point(trmodel, x, ...
+                                                trial_fvalues, ...
+                                                fphi, options);
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
@@ -270,7 +270,7 @@ while ~finish
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
                     trial_point = x + Ns;
-                    p_trial = p(trial_point);
+                    [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
                     ared1 = p2(x) - p2(x + Ns);
                     dpred = pred - 10*eps*max(1, abs(px));
@@ -301,9 +301,18 @@ while ~finish
                         step_accepted = true;
                         px = p_trial;
                         [~, fmodel.g, fmodel.H] = f(x);
-                        current_constraints = evaluate_constraints(phi, x);
+                        current_constraints = evaluate_constraints(phi, ...
+                                                                   x);
+                        trmodel = move_trust_region(trmodel, x, ...
+                                                    trial_fvalues, ...
+                                                    fphi, options);
+
                     else
                         step_accepted = false;
+                        trmodel = try_to_add_interpolation_point(trmodel, ...
+                                                                 x, ...
+                                                                 trial_fvalues, fphi, options);
+
                     end
                 else
                     dropping_succeeded = false;
@@ -381,7 +390,7 @@ while ~finish
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
                 trial_point = x + N*s + v;
-                p_trial = p(trial_point);
+                [p_trial, trial_fvalues] = p(trial_point);
                 ared = px - p_trial;
                 ared1 = p2(x) - p2(x + N*s + v);
                 dpred = pred - 10*eps*max(1, abs(px));
@@ -406,8 +415,15 @@ while ~finish
                     step_accepted = true;
                     px = p_trial;
                     [~, fmodel.g, fmodel.H] = f(x);
+                    trmodel = move_trust_region(trmodel, x, ...
+                                                trial_fvalues, fphi, options);
+
                 else
                     step_accepted = false;
+                    trmodel = try_to_add_interpolation_point(trmodel, x, ...
+                                                             trial_fvalues, ...
+                                                             fphi, options);
+
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
@@ -426,7 +442,9 @@ while ~finish
             if dropping_constraint
                 break
             end
+            check_interpolation(trmodel);
         end
+        check_interpolation(trmodel);
     end
 
 end
