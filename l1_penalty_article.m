@@ -1,10 +1,56 @@
-function [x, history_solution] = l1_penalty_article(f, phi, x0, mu, epsilon, delta, Lambda)
+function [x, history_solution] = l1_penalty_article(f, phi, initial_points, mu, epsilon, delta, Lambda)
 %L1_PENALTY Summary of this function goes here
 %   Detailed explanation goes here
+
+options = struct('tol_radius', 1e-5, 'tol_f', 1e-6, ...
+                       'eps_c', 1e-5, 'eta_0', 0, 'eta_1', 0.1, ...
+                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
+                        'initial_radius', 1, 'radius_max', 1e3, ...
+                        'criticality_mu', 100, 'criticality_beta', 10, ...
+                        'criticality_omega', 0.5, 'basis', 'full quadratic', ...
+                        'pivot_threshold', 1/6);
+
+all_f = {f, phi{:}};
+n_functions = size(all_f, 2);
+initial_fvalues = [];
+[dimension, n_initial_points] = size(initial_points);
+% Calculating function values for other points of the set
+for nf = 1:n_functions
+    for k = 1:n_initial_points
+        initial_fvalues(nf, k) = all_f{nf}(initial_points(:, k));
+    end
+end
+
+% Calculating basis of polynomials
+switch options.basis
+    case 'linear'
+        basis = natural_basis(dimension, dimension+1);
+    case 'full quadratic'
+        basis = natural_basis(dimension);
+    case 'diagonal hessian'
+        basis = powell_basis(dimension);
+end
+
+% Initializing model structure
+trmodel.points = initial_points;
+trmodel.fvalues = initial_fvalues;
+trmodel.radius = options.initial_radius;
+trmodel.basis = basis;
+
+fphi = {f, phi{:}}';
+
+% Completing set of interpolation points and calculating polynomial
+% model
+trmodel = complete_interpolation_set(trmodel, fphi, options);
+
+fval_current = trmodel.fvalues(1, 1);
+
+
 
 global x_prev
 linsolve_opts.UT = true;
 
+x0 = initial_points(:, 1);
 x = x0;
 n_variables = size(x, 1);
 n_constraints = size(phi, 1);
@@ -77,7 +123,7 @@ while ~finish
         step_calculation_ok = true;
         rf = 1;
         while step_calculation_ok
-            [s, fs, ind_eactive1] = cauchy_step(model, rf*radius, N, ...
+            [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, [], zeros(size(u)), ...
                                                 ind_eactive, ...
@@ -112,6 +158,7 @@ while ~finish
             end
         end
 %%%%%%%%%%%%%
+        trial_point = x + Ns + v;
         ared = p(x) - p(x + Ns + v);
         dpred = pred - 10*eps*max(1, abs(fx));
         dared = ared - 10*eps*max(1, abs(fx));
@@ -122,16 +169,23 @@ while ~finish
         end
         if rho < 0.25
             radius = radius/4;
+            trmodel.radius = trmodel.radius/4;
         else
             if rho > 3/4 && norm(s) > 0.85*radius
                 radius = min(2*radius, radius_max);
+                trmodel.radius = min(2*trmodel.radius, radius_max);
             end
         end
         if rho > 0.1
             x = x + Ns + v;
             step_accepted = true;
+%             trmodel = move_trust_region(trmodel, x, new_center_fvals, ...
+%                                    fphi, options)
         else
             step_accepted = false;
+%             trmodel = try_to_add_interpolation_point(trmodel, x, ...
+%                                                 new_point_fvals, ...
+%                                                 fphi, options)
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
@@ -230,9 +284,11 @@ while ~finish
                     end
                     if rho < 0.25
                         radius = radius/4;
+                        trmodel.radius = trmodel.radius/4;
                     else
                         if rho > 3/4 && norm(s) > 0.85*radius
                             radius = min(2*radius, radius_max);
+                            trmodel.radius = min(2*trmodel.radius, radius_max);
                         end
                     end
                     if rho > 0.1
@@ -340,9 +396,11 @@ while ~finish
                 end
                 if rho < 0.25
                     radius = radius/4;
+                    trmodel.radius = trmodel.radius/4;
                 else
                     if rho > 3/4 && norm(s) > 0.85*radius
                         radius = min(2*radius, radius_max);
+                        trmodel.radius = min(2*trmodel.radius, radius_max);
                     end
                 end
                 if rho > 0.1
