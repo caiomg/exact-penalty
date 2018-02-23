@@ -31,6 +31,7 @@ finish = false;
 [fx, gfx] = f(x);
 Hfx = eye(length(x));
 [~, ~, Hfx] = f(x);
+px = p(x);
 while ~finish
     iter = iter + 1;
 
@@ -110,9 +111,10 @@ while ~finish
             end
         end
 %%%%%%%%%%%%%
-        ared = p(x) - p(x + Ns + v);
-        dpred = pred - 10*eps*max(1, abs(fx));
-        dared = ared - 10*eps*max(1, abs(fx));
+        p_trial = p(x + Ns + v);
+        ared = px - p_trial;
+        dpred = pred - 10*eps*max(1, abs(px));
+        dared = ared - 10*eps*max(1, abs(px));
         if abs(dared) < 10*eps && abs(dpred) < 10*eps
             rho = 1;
         else
@@ -128,6 +130,7 @@ while ~finish
         if rho > 0.1
             x = x + Ns + v;
             step_accepted = true;
+            px = p_trial;
         else
             step_accepted = false;
         end
@@ -217,10 +220,11 @@ while ~finish
                 end
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
-                    ared = p(x) - p(x + Ns);
+                    p_trial = p(x + Ns);
+                    ared = px - p_trial;
                     ared1 = p2(x) - p2(x + Ns);
-                    dpred = pred - 10*eps*max(1, abs(fx));
-                    dared = ared - 10*eps*max(1, abs(fx));
+                    dpred = pred - 10*eps*max(1, abs(px));
+                    dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
                         rho = 1;
                     else
@@ -236,6 +240,7 @@ while ~finish
                     if rho > 0.1
                         x = x + Ns;
                         step_accepted = true;
+                        px = p_trial;
                     else
                         step_accepted = false;
                     end
@@ -327,10 +332,11 @@ while ~finish
                     pred = pred_hv;
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                ared = p(x) - p(x + N*s + v);
+                p_trial = p(x + N*s + v);
+                ared = px - p_trial;
                 ared1 = p2(x) - p2(x + N*s + v);
-                dpred = pred - 10*eps*max(1, abs(fx));
-                dared = ared - 10*eps*max(1, abs(fx));
+                dpred = pred - 10*eps*max(1, abs(px));
+                dared = ared - 10*eps*max(1, abs(px));
                 if abs(dared) < 10*eps && abs(dpred) < 10*eps
                     rho = 1;
                 else
@@ -347,6 +353,7 @@ while ~finish
                     x = x + N*s + v;
                     current_constraints = evaluate_constraints(phi, x);
                     step_accepted = true;
+                    px = p_trial;
                 else
                     step_accepted = false;
                 end
