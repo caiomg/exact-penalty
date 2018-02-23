@@ -232,22 +232,21 @@ while ~finish
                             radius = min(2*radius, radius_max);
                         end
                     end
-                    if rho > 0.1
-                        x = x + Ns;
-                        step_accepted = true;
-                        px = p_trial;
-                        [~, fmodel.g, fmodel.H] = f(x);
-                    else
-                        step_accepted = false;
-                    end
                     % Testing 'line-search' condition
+                    % IMPROVE THIS TEST!!!
                     if (N*(N'*current_constraints(n_drop).g))'*pseudo_gradient > delta
                         dropping_succeeded = true;
                     else
                         dropping_succeeded = false;
                     end
-                    if step_accepted
+                    if rho > 0.1
+                        x = x + Ns;
+                        step_accepted = true;
+                        px = p_trial;
+                        [~, fmodel.g, fmodel.H] = f(x);
                         current_constraints = evaluate_constraints(phi, x);
+                    else
+                        step_accepted = false;
                     end
                 else
                     dropping_succeeded = false;
