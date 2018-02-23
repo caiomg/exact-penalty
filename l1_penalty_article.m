@@ -52,7 +52,7 @@ linsolve_opts.UT = true;
 
 x0 = initial_points(:, 1);
 x = x0;
-n_variables = size(x, 1);
+dimension = size(x, 1);
 n_constraints = size(phi, 1);
 tol_g = 1e-6;
 tol_con = 1e-6;
@@ -60,7 +60,7 @@ gamma1 = 0.01;
 
 p = @(x) l1_function(f, phi, mu, x);
 % QR decomposition of constraints gradients matrix A
-Q = zeros(n_variables, 0);
+Q = zeros(dimension, 0);
 R = zeros(0, 0);
 ind_eactive = zeros(0, 1);
 
@@ -74,9 +74,13 @@ history_solution.x = x;
 history_solution.rho = NaN;
 iter = 0;
 finish = false;
-[fx, gfx] = f(x);
-Hfx = eye(length(x));
-[~, ~, Hfx] = f(x);
+[~, fmodel.g] = f(x);
+fmodel.H = eye(length(x));
+[~, ~, fmodel.H] = f(x);
+
+fmodel.g = fmodel.g;
+fmodel.H = fmodel.H;
+px = p(x);
 while ~finish
     iter = iter + 1;
 
@@ -85,19 +89,19 @@ while ~finish
                                  []);
     [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive);
-    pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
+    pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_eviolated);
 
     p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
 
 
     if (norm(N'*pseudo_gradient) > max(Lambda, tol_g))
-        	x_prev = x;
-        B = zeros(size(Hfx));
+        x_prev = x;
+        B = zeros(dimension);
         for n = ind_eviolated'
             B = B + mu*(current_constraints(n).H);
         end
-        B = B + Hfx;
+        B = B + fmodel.H;
         % Calculate Newton direction
         nBn = N'*B*N;
         if rcond(nBn) > sqrt(eps) && (pseudo_gradient'*(N*N'))*B*((N*N')*pseudo_gradient) > sqrt(eps) 
@@ -115,9 +119,7 @@ while ~finish
                Ii(end+1, 1) = constn; 
             end
         end
-        radius_good_model = radius;
-        fmodel.H = Hfx;
-        fmodel.g = gfx;
+
         step_calculation_ok = true;
         rf = 1;
         while step_calculation_ok
@@ -146,8 +148,6 @@ while ~finish
             v = v1;
             normphi = norm([current_constraints(ind_eactive).c], 1);
             ppgrad = N'*pseudo_gradient;
-            fmodel.H = Hfx;
-            fmodel.g = gfx;
             pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
             if pred > 0
                 break
@@ -157,9 +157,10 @@ while ~finish
         end
 %%%%%%%%%%%%%
         trial_point = x + Ns + v;
-        ared = p(x) - p(x + Ns + v);
-        dpred = pred - 10*eps*max(1, abs(fx));
-        dared = ared - 10*eps*max(1, abs(fx));
+        p_trial = p(trial_point);
+        ared = px - p_trial;
+        dpred = pred - 10*eps*max(1, abs(px));
+        dared = ared - 10*eps*max(1, abs(px));
         if abs(dared) < 10*eps && abs(dpred) < 10*eps
             rho = 1;
         else
@@ -179,6 +180,9 @@ while ~finish
             step_accepted = true;
 %             trmodel = move_trust_region(trmodel, x, new_center_fvals, ...
 %                                    fphi, options)
+            px = p_trial;
+            [~, fmodel.g, fmodel.H] = f(x);
+            current_constraints = evaluate_constraints(phi, x);
         else
             step_accepted = false;
 %             trmodel = try_to_add_interpolation_point(trmodel, x, ...
@@ -187,15 +191,11 @@ while ~finish
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
-        if norm(x - x_prev, 'inf') ~= 0
-            [fx, gfx, Hfx] = f(x);
-            current_constraints = evaluate_constraints(phi, x);
-        end
     else
         iter2 = 0;
         while true
             p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
-            pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
+            pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                                  ind_eviolated);
 
           	x_prev = x;
@@ -209,15 +209,15 @@ while ~finish
             tol_multipliers = 10*norm(correction);
     %         multipliers = linsolve(R, Q'*pseudo_gradient, linsolve_opts);
 
-            Bv = zeros(size(Hfx));
+            Bv = zeros(dimension);
             for n = ind_eviolated'
                 Bv = Bv + mu*(current_constraints(n).H);
             end
-            Bm = zeros(size(Hfx));
+            Bm = zeros(dimension);
             for n = 1:length(ind_qr)
                 Bm = Bm + multipliers(n)*(current_constraints(ind_qr(n)).H);
             end
-            B = Bv + Bm + Hfx;
+            B = Bv + Bm + fmodel.H;
 
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
@@ -235,7 +235,7 @@ while ~finish
                 p2 = @(x) l1_function(f, phi, mu, x, ind_eactive_dropping);
                 B = B - multipliers(ind_j)*(current_constraints(n_drop).H);
                 if current_constraints(n_drop).c > 0
-                    pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, [ind_eviolated; n_drop]);
+                    pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, [ind_eviolated; n_drop]);
                     B = B + mu*(current_constraints(n_drop).H);
                 end
                 model.B = N1'*B*N1;
@@ -247,8 +247,6 @@ while ~finish
                     end
                 end
                 contador = 0;
-                fmodel.g = gfx;
-                fmodel.H = Hfx;
                 step_calculation_ok = true;
                 rf = 1;
                 while step_calculation_ok
@@ -271,10 +269,11 @@ while ~finish
                 end
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
-                    ared = p(x) - p(x + Ns);
+                    p_trial = p(x + Ns);
+                    ared = px - p_trial;
                     ared1 = p2(x) - p2(x + Ns);
-                    dpred = pred - 10*eps*max(1, abs(fx));
-                    dared = ared - 10*eps*max(1, abs(fx));
+                    dpred = pred - 10*eps*max(1, abs(px));
+                    dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
                         rho = 1;
                     else
@@ -289,17 +288,21 @@ while ~finish
                             trmodel.radius = min(2*trmodel.radius, radius_max);
                         end
                     end
-                    if rho > 0.1
-                        x = x + Ns;
-                        step_accepted = true;
-                    else
-                        step_accepted = false;
-                    end
                     % Testing 'line-search' condition
+                    % IMPROVE THIS TEST!!!
                     if (N*(N'*current_constraints(n_drop).g))'*pseudo_gradient > delta
                         dropping_succeeded = true;
                     else
                         dropping_succeeded = false;
+                    end
+                    if rho > 0.1
+                        x = x + Ns;
+                        step_accepted = true;
+                        px = p_trial;
+                        [~, fmodel.g, fmodel.H] = f(x);
+                        current_constraints = evaluate_constraints(phi, x);
+                    else
+                        step_accepted = false;
                     end
                 else
                     dropping_succeeded = false;
@@ -308,10 +311,7 @@ while ~finish
 
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
-                if norm(x - x_prev, 'inf') ~= 0
-                    [fx, gfx, Hfx] = f(x);
-                    current_constraints = evaluate_constraints(phi, x);
-                end
+
                 Q = Q1;
                 R = R1;
                 ind_qr = ind_qr(ind_qr ~= n_drop);
@@ -356,8 +356,6 @@ while ~finish
                 [s, fs, ind_eactive_b] = cauchy_step(model, radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
                 p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
                 pred_h = fs;
-                fmodel.H = Hfx;
-                fmodel.g = gfx;                
                 pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
                 %%%%%%%%%%%%
                 % Predict constraint values
@@ -373,8 +371,6 @@ while ~finish
                 v = tr_new_vertical_step(pv, current_constraints, N*s, radius, ind_qr);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
-                fmodel.H = Hfx;
-                fmodel.g = gfx;
                 pred_hv = predict_descent(fmodel, current_constraints, N*s + v, mu, []);
                 if pred_hv < delta*(norm(ppgrad)^2 + normphi) && pred_hv < pred_h
                     pred = pred_h;
@@ -383,10 +379,11 @@ while ~finish
                     pred = pred_hv;
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                ared = p(x) - p(x + N*s + v);
+                p_trial = p(x + N*s + v);
+                ared = px - p_trial;
                 ared1 = p2(x) - p2(x + N*s + v);
-                dpred = pred - 10*eps*max(1, abs(fx));
-                dared = ared - 10*eps*max(1, abs(fx));
+                dpred = pred - 10*eps*max(1, abs(px));
+                dared = ared - 10*eps*max(1, abs(px));
                 if abs(dared) < 10*eps && abs(dpred) < 10*eps
                     rho = 1;
                 else
@@ -405,14 +402,13 @@ while ~finish
                     x = x + N*s + v;
                     current_constraints = evaluate_constraints(phi, x);
                     step_accepted = true;
+                    px = p_trial;
+                    [~, fmodel.g, fmodel.H] = f(x);
                 else
                     step_accepted = false;
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
-                if norm(x - x_prev, 'inf') ~= 0
-                    [fx, gfx, Hfx] = f(x);
-                end
 
             end
             iter2 = iter2 + 1;
@@ -420,7 +416,7 @@ while ~finish
                 [epsilon, Lambda, N, Q, R, ind_eactive, ind_eviolated, ...
                  ind_qr] = l1_criticality_step(epsilon, Lambda, ....
                                                current_constraints, ...
-                                               gfx, mu, Q, R, ...
+                                               fmodel.g, mu, Q, R, ...
                                                [], tol_g, ...
                                                tol_con); 
                break

@@ -7,8 +7,8 @@ problem_name = 'HS100';
 problem_name = 'WOMFLET';
 problem_name = 'POLAK1';
 problem_name = 'SNAKE';
-% problem_name = 'POLAK3'; % Second derivative of cons. too much important
-% problem_name = 'ZY2';
+problem_name = 'POLAK3'; % Second derivative of cons. too much important
+problem_name = 'ZY2';
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 prob.equatn
 
@@ -28,7 +28,9 @@ x0 = prob.x;
 
 % Parameters
 mu = 20;
-% mu = 10000; % needed for SNAKE
+if strcmp(problem_name, 'SNAKE')
+    mu = 10000;
+end
 epsilon = 2;
 delta = 1e-6;
 Lambda = 0.1;
