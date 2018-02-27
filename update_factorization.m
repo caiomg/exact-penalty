@@ -19,14 +19,12 @@ for n = 1:n_eactive
 end
 % TODO: use information of previous QR decomposition
 [Q, R] = qr(A);
-% TODO: use QR decomposition to calculate nullspace
-N = null(A');
 
 ind_null = sum(abs(R'), 1) < 1e-10;
 N1 = Q(:, ind_null);
-rank_n = rank(N);
-if rank_n ~= rank(N1) || rank([N, N1], 1e-8) ~= rank_n
-    error('cmg:badnullspacerank', 'Error calculating nullspace');
+if size(N1, 2) < size(A, 1) - rank(A)
+    N = null(A');
+    %error('cmg:badnullspacerank', 'Error calculating nullspace');
 else
     N = N1;
 end
