@@ -40,19 +40,21 @@ nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                'SpecifyObjectiveGradient', true);
 global xsol
-x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options)
-fx_fmincon = f(x_fmincon)
+x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
+fx_fmincon = f(x_fmincon);
 xsol = x_fmincon;
 %%
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
 [x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda)
 fx = f(x)
 
+error_obj = fx_fmincon - fx
+error_x = norm(x_fmincon - x)
 
 tl1 = @() l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
 tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
-time_exact_penalty = timeit(tl1)
-time_fmincon = timeit(tmlab)
+% time_exact_penalty = timeit(tl1)
+% time_fmincon = timeit(tmlab)
 
 terminate_cutest_problem()
 
