@@ -1,5 +1,13 @@
 function max_diff = check_interpolation(model)
 
+% Tolerance
+if model.radius < 1e-3 || model.scale_factor_x < 1e-3
+    tol_1 = 100*eps;
+else
+    tol_1 = 10*eps;
+end
+tol_2 = sqrt(eps);
+
 % Remove center from all points
 h = model.points;
 n_points = size(model.points, 2);
@@ -17,7 +25,7 @@ for k = 1:n_functions
         if difference > max_diff
             max_diff = difference;
         end
-        if abs(difference) > max(10*eps(max(abs(model.fvalues(k, :)))), sqrt(eps))
+        if abs(difference) > max(tol_1*max(abs(model.fvalues(k, :))), tol_2)
             error('cmg:tr_interpolation_error', 'Interpolation error');
         end
     end
