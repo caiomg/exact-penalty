@@ -184,14 +184,14 @@ while ~finish
             [~, fmodel.g, fmodel.H] = f(x);
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = evaluate_constraints(phi, x);
-            %current_constraints = extract_constraints_from_tr_model(trmodel);
+            current_constraints = extract_constraints_from_tr_model(trmodel);
         else
             step_accepted = false;
             trmodel = try_to_add_interpolation_point(trmodel, x, ...
                                                 trial_fvalues, ...
                                                 fphi, options);
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-            %current_constraints = extract_constraints_from_tr_model(trmodel);
+            current_constraints = extract_constraints_from_tr_model(trmodel);
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
@@ -310,7 +310,7 @@ while ~finish
                                                     trial_fvalues, ...
                                                     fphi, options);
                         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-                        %current_constraints = extract_constraints_from_tr_model(trmodel);
+                        current_constraints = extract_constraints_from_tr_model(trmodel);
                     else
                         step_accepted = false;
                         trmodel = try_to_add_interpolation_point(trmodel, ...
@@ -318,7 +318,7 @@ while ~finish
                                                                  trial_fvalues, fphi, options);
                         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
                         current_constraints = evaluate_constraints(phi, x);
-                        %current_constraints = extract_constraints_from_tr_model(trmodel);
+                        current_constraints = extract_constraints_from_tr_model(trmodel);
                     end
                 else
                     dropping_succeeded = false;
@@ -424,14 +424,14 @@ while ~finish
                     trmodel = move_trust_region(trmodel, x, ...
                                                 trial_fvalues, fphi, options);
                     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-                    %current_constraints = extract_constraints_from_tr_model(trmodel);
+                    current_constraints = extract_constraints_from_tr_model(trmodel);
                 else
                     step_accepted = false;
                     trmodel = try_to_add_interpolation_point(trmodel, x, ...
                                                              trial_fvalues, ...
                                                              fphi, options);
                     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-                    %current_constraints = extract_constraints_from_tr_model(trmodel);
+                    current_constraints = extract_constraints_from_tr_model(trmodel);
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
@@ -452,9 +452,8 @@ while ~finish
             end
             check_interpolation(trmodel); % TO BE REMOVED!
         end
-        check_interpolation(trmodel); % TO BE REMOVED!
     end
-
+    check_interpolation(trmodel); % TO BE REMOVED!
 end
 
 
