@@ -16,7 +16,7 @@ original_dir = cd(problem_path_cutest);
 % Making sure we have the absolute path
 problem_path_cutest = pwd();
 problem_data_cutest = cutest_setup();
-all_cutest_constraints = setup_cutest_constraints()
+all_cutest_constraints = setup_cutest_constraints();
 cd(original_dir);
 addpath(problem_path_cutest); % I should be sanitizing this...
 if nargout >= 1
