@@ -155,7 +155,8 @@ while ~finish
             end
         end
 %%%%%%%%%%%%%
-        trial_point = x + Ns + v;
+        step = Ns + v;
+        trial_point = x + step;
         p_trial = p(trial_point);
         ared = px - p_trial;
         dpred = pred - 10*eps*max(1, abs(px));
@@ -266,7 +267,8 @@ while ~finish
                 end
                 if step_calculation_ok
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers_dropping, ind_qr_dropping);
-                    trial_point = x + Ns;
+                    step = Ns;
+                    trial_point = x + step;
                     p_trial = p(trial_point);
                     ared = px - p_trial;
                     ared1 = p2(x) - p2(x + Ns);
@@ -375,7 +377,8 @@ while ~finish
                     pred = pred_hv;
                 end
                 p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                trial_point = x + N*s + v;
+                step = N*s + v;
+                trial_point = x + step;
                 p_trial = p(trial_point);
                 ared = px - p_trial;
                 ared1 = p2(x) - p2(x + N*s + v);
