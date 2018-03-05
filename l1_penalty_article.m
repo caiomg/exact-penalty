@@ -10,6 +10,10 @@ options = struct('tol_radius', 1e-5, 'tol_f', 1e-6, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
                         'pivot_threshold', 1/6);
 
+gamma_0 = 0.0625;
+gamma_1 = 0.5;
+gamma_2 = 2;
+
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
 initial_fvalues = [];
@@ -167,10 +171,12 @@ while ~finish
             rho = dared/dpred;
         end
         if rho < 0.25
-            trmodel.radius = trmodel.radius/4;
+            gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+            trmodel.radius = gamma_dec*trmodel.radius;
         else
-            if rho > 3/4 && norm(s) > 0.85*trmodel.radius
-                trmodel.radius = min(2*trmodel.radius, radius_max);
+            if rho > 3/4
+                radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
             end
         end
         if rho > 0.1
@@ -280,10 +286,12 @@ while ~finish
                         rho = dared/dpred;
                     end
                     if rho < 0.25
-                        trmodel.radius = trmodel.radius/4;
+                        gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+                        trmodel.radius = gamma_dec*trmodel.radius;
                     else
-                        if rho > 3/4 && norm(s) > 0.85*trmodel.radius
-                            trmodel.radius = min(2*trmodel.radius, radius_max);
+                        if rho > 3/4
+                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
                         end
                     end
                     % Testing 'line-search' condition
@@ -390,10 +398,12 @@ while ~finish
                     rho = dared/dpred;
                 end
                 if rho < 0.25
-                    trmodel.radius = trmodel.radius/4;
+                    gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+                    trmodel.radius = gamma_dec*trmodel.radius;
                 else
-                    if rho > 3/4 && norm(s) > 0.85*trmodel.radius
-                        trmodel.radius = min(2*trmodel.radius, radius_max);
+                    if rho > 3/4
+                        radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                        trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
                     end
                 end
                 if rho > 0.1
