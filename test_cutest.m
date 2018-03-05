@@ -4,11 +4,11 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-problem_name = 'WOMFLET';
-problem_name = 'POLAK1';
-problem_name = 'SNAKE';
-problem_name = 'POLAK3'; % Second derivative of cons. too much important
-problem_name = 'ZY2';
+% problem_name = 'WOMFLET';
+% problem_name = 'POLAK1';
+% problem_name = 'SNAKE';
+% problem_name = 'POLAK3'; % Second derivative of cons. too much important
+% problem_name = 'ZY2';
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 prob.equatn
 
@@ -27,7 +27,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 20;
+mu = 40;
 if strcmp(problem_name, 'SNAKE')
     mu = 10000;
 end
@@ -50,9 +50,9 @@ fx = f(x)
 
 
 tl1 = @() l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
-tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
-time_exact_penalty = timeit(tl1)
-time_fmincon = timeit(tmlab)
+% tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
+% time_exact_penalty = timeit(tl1)
+% time_fmincon = timeit(tmlab)
 
 terminate_cutest_problem()
 
