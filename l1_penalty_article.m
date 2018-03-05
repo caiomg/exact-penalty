@@ -67,7 +67,6 @@ ind_eactive = zeros(0, 1);
 
 current_constraints = evaluate_constraints(phi, x);
 
-radius = 1;
 radius_max = 100;
 
 history_solution.x = x;
@@ -142,7 +141,7 @@ while ~finish
             end
             %%%%%%%%%%%%%%%%%%
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-            v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, radius);
+            v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, trmodel.radius);
 %             v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
 %             v3 = tr_new_vertical_step_alternative(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel, mu);
             v = v1;
@@ -167,11 +166,9 @@ while ~finish
             rho = dared/dpred;
         end
         if rho < 0.25
-            radius = radius/4;
             trmodel.radius = trmodel.radius/4;
         else
-            if rho > 3/4 && norm(s) > 0.85*radius
-                radius = min(2*radius, radius_max);
+            if rho > 3/4 && norm(s) > 0.85*trmodel.radius
                 trmodel.radius = min(2*trmodel.radius, radius_max);
             end
         end
@@ -254,7 +251,7 @@ while ~finish
                 step_calculation_ok = true;
                 rf = 1;
                 while step_calculation_ok
-                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*radius, N1, mu, current_constraints, Ii, [], zeros(size(model.g)), ind_eactive_dropping, epsilon);
+                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*trmodel.radius, N1, mu, current_constraints, Ii, [], zeros(size(model.g)), ind_eactive_dropping, epsilon);
                     Ns = N1*s;
                     Ns = correct_direction(Ns, Q1*R1);
                     pv = @(s) -predict_descent_with_multipliers(fmodel, current_constraints, s, mu, ind_qr_dropping, multipliers_dropping);
@@ -285,11 +282,9 @@ while ~finish
                         rho = dared/dpred;
                     end
                     if rho < 0.25
-                        radius = radius/4;
                         trmodel.radius = trmodel.radius/4;
                     else
-                        if rho > 3/4 && norm(s) > 0.85*radius
-                            radius = min(2*radius, radius_max);
+                        if rho > 3/4 && norm(s) > 0.85*trmodel.radius
                             trmodel.radius = min(2*trmodel.radius, radius_max);
                         end
                     end
@@ -369,7 +364,7 @@ while ~finish
                        Ii(end+1, 1) = constn; 
                     end
                 end
-                [s, fs, ind_eactive_b] = cauchy_step(model, radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
+                [s, fs, ind_eactive_b] = cauchy_step(model, trmodel.radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
                 p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
                 pred_h = fs;
                 pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
@@ -382,9 +377,9 @@ while ~finish
                 end
                 %%%%%%%%%%%%%%%%%%                
                 
-                v = tr_vertical_step(p, x, Q, R, phih, N*s, radius);
+                v = tr_vertical_step(p, x, Q, R, phih, N*s, trmodel.radius);
                 pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-                v = tr_new_vertical_step(pv, current_constraints, N*s, radius, ind_qr);
+                v = tr_new_vertical_step(pv, current_constraints, N*s, trmodel.radius, ind_qr);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 pred_hv = predict_descent(fmodel, current_constraints, N*s + v, mu, []);
@@ -407,11 +402,9 @@ while ~finish
                     rho = dared/dpred;
                 end
                 if rho < 0.25
-                    radius = radius/4;
                     trmodel.radius = trmodel.radius/4;
                 else
-                    if rho > 3/4 && norm(s) > 0.85*radius
-                        radius = min(2*radius, radius_max);
+                    if rho > 3/4 && norm(s) > 0.85*trmodel.radius
                         trmodel.radius = min(2*trmodel.radius, radius_max);
                     end
                 end
