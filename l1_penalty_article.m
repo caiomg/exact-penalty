@@ -72,9 +72,12 @@ ind_eactive = zeros(0, 1);
 current_constraints = evaluate_constraints(phi, x);
 
 radius_max = 100;
-
+clear global history_solution
+global history_solution
 history_solution.x = x;
 history_solution.rho = NaN;
+history_solution.radius = trmodel.radius;
+
 iter = 0;
 finish = false;
 [~, fmodel.g] = f(x);
@@ -126,29 +129,51 @@ while ~finish
         step_calculation_ok = true;
         rf = 1;
         while step_calculation_ok
+            d = solve_tr_problem(model.B, model.g, trmodel.radius);
             [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
-                                                Ii, [], zeros(size(u)), ...
+                                                Ii, d, zeros(size(u)), ...
                                                 ind_eactive, ...
                                                 epsilon);
             Ns = N*s;
-            Ns = correct_direction(Ns, Q*R);
+%             Ns = correct_direction(Ns, Q*R);
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-            Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
+%             Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
 
             %%%%%%%%%%%%
             % Predict constraint values
             [n_qr, ~] = size(ind_qr);
             phih = zeros(n_qr, 1);
             for n = 1:n_qr
-               phih(n) = current_constraints(ind_qr(n)).c + current_constraints(ind_qr(n)).g'*Ns + 0.5*((s'*N')*current_constraints(ind_qr(n)).H*(Ns));
+               phih(n) = current_constraints(ind_qr(n)).c;% + current_constraints(ind_qr(n)).g'*Ns + 0.5*(Ns'*current_constraints(ind_qr(n)).H*(Ns));
+
             end
+
+
+%             [nphi, nA] = update_constraint_information(current_constraints, ind_qr, Ns);
+%             if norm(phih - nphi) > sqrt(eps)
+%                 error();
+%             end
             %%%%%%%%%%%%%%%%%%
             pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-            v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, trmodel.radius);
+%             v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, trmodel.radius);
+            v2 = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, rf*trmodel.radius);
+%             if norm(Ns + v2) - rf*trmodel.radius > 10*eps
+%                 1;
+%             end
 %             v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
 %             v3 = tr_new_vertical_step_alternative(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel, mu);
-            v = v1;
+%             if norm(v2, inf) == 0
+%                 v = v1;
+%             else
+%                 if pv(h+v1) < pv(h+v2)
+%                     v1_melhor = v1_melhor + 1;
+%                 else
+%                     v2_melhor = v2_melhor + 1;
+%                 end
+%                 v = v2;
+%             end
+            v = v2;%zeros(size(Ns));
             normphi = norm([current_constraints(ind_eactive).c], 1);
             ppgrad = N'*pseudo_gradient;
             pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
@@ -195,6 +220,7 @@ while ~finish
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
+        history_solution(end).radius = trmodel.radius;
     else
         iter2 = 0;
         while true
@@ -254,7 +280,8 @@ while ~finish
                 step_calculation_ok = true;
                 rf = 1;
                 while step_calculation_ok
-                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*trmodel.radius, N1, mu, current_constraints, Ii, [], zeros(size(model.g)), ind_eactive_dropping, epsilon);
+                    d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                    [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*trmodel.radius, N1, mu, current_constraints, Ii, d, zeros(size(model.g)), ind_eactive_dropping, epsilon);
                     Ns = N1*s;
                     Ns = correct_direction(Ns, Q1*R1);
                     pv = @(s) -predict_descent_with_multipliers(fmodel, current_constraints, s, mu, ind_qr_dropping, multipliers_dropping);
@@ -317,6 +344,7 @@ while ~finish
 
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
+                history_solution(end).radius = trmodel.radius;
 
                 Q = Q1;
                 R = R1;
@@ -359,7 +387,8 @@ while ~finish
                        Ii(end+1, 1) = constn; 
                     end
                 end
-                [s, fs, ind_eactive_b] = cauchy_step(model, trmodel.radius, N, mu, current_constraints, Ii, [], zeros(size(u)), ind_eactive, epsilon);
+                d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                [s, fs, ind_eactive_b] = cauchy_step(model, trmodel.radius, N, mu, current_constraints, Ii, d, zeros(size(u)), ind_eactive, epsilon);
                 p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
                 pred_h = fs;
                 pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
@@ -373,8 +402,9 @@ while ~finish
                 %%%%%%%%%%%%%%%%%%                
                 
                 v = tr_vertical_step(p, x, Q, R, phih, N*s, trmodel.radius);
+                v = tr_vertical_step_new(fmodel, current_constraints, mu, N*s, ind_eactive, ind_eviolated, trmodel.radius);
                 pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-                v = tr_new_vertical_step(pv, current_constraints, N*s, trmodel.radius, ind_qr);
+%                 v = tr_new_vertical_step(pv, current_constraints, N*s, trmodel.radius, ind_qr);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 pred_hv = predict_descent(fmodel, current_constraints, N*s + v, mu, []);
@@ -417,6 +447,7 @@ while ~finish
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
+                history_solution(end).radius = trmodel.radius;
 
             end
             iter2 = iter2 + 1;
