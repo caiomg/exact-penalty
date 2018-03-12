@@ -295,7 +295,8 @@ while ~finish
                         contador = contador + 1;
                     end
                     if norm(Ns)/norm(s) < 0.1
-                        step_calculation_ok = false;
+                        step_calculation_ok = false; % currently
+                                                     % never happens
                     end
                 end
                 if step_calculation_ok
@@ -365,7 +366,7 @@ while ~finish
                 end
             else
                 %%%%%%%%%%%%
-                % Calculate Newton direction
+                % Second order horizontal step
                 if ~isempty(N)
                     if rcond(N'*B*N) > sqrt(eps) && (pseudo_gradient'*(N*N'))*B*((N*N')*pseudo_gradient) > sqrt(eps) 
                         u = -(N'*B*N)\(N'*pseudo_gradient);
@@ -387,63 +388,73 @@ while ~finish
                        Ii(end+1, 1) = constn; 
                     end
                 end
-                d = solve_tr_problem(model.B, model.g, trmodel.radius);
-                [s, fs, ind_eactive_b] = cauchy_step(model, trmodel.radius, N, mu, current_constraints, Ii, d, zeros(size(u)), ind_eactive, epsilon);
-                p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
-                pred_h = fs;
-                pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
-                %%%%%%%%%%%%
-                % Predict constraint values
-                [n_qr, ~] = size(ind_qr);
-                phih = zeros(n_qr, 1);
-                for n = 1:n_qr
-                   phih(n) = current_constraints(ind_qr(n)).c + current_constraints(ind_qr(n)).g'*N*s + 0.5*((s'*N')*current_constraints(ind_qr(n)).H*(N*s));
-                end
-                %%%%%%%%%%%%%%%%%%                
-                
-                v = tr_vertical_step(p, x, Q, R, phih, N*s, trmodel.radius);
-                v = tr_vertical_step_new(fmodel, current_constraints, mu, N*s, ind_eactive, ind_eviolated, trmodel.radius);
-                pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-%                 v = tr_new_vertical_step(pv, current_constraints, N*s, trmodel.radius, ind_qr);
-                normphi = norm([current_constraints(ind_eactive).c], 1);
-                ppgrad = N'*pseudo_gradient;
-                pred_hv = predict_descent(fmodel, current_constraints, N*s + v, mu, []);
-                if pred_hv < delta*(norm(ppgrad)^2 + normphi) && pred_hv < pred_h
-                    pred = pred_h;
-                    v = zeros(size(v));
-                else
-                    pred = pred_hv;
-                end
-                p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                step = N*s + v;
-                trial_point = x + step;
-                p_trial = p(trial_point);
-                ared = px - p_trial;
-                ared1 = p2(x) - p2(x + N*s + v);
-                dpred = pred - 10*eps*max(1, abs(px));
-                dared = ared - 10*eps*max(1, abs(px));
-                if abs(dared) < 10*eps && abs(dpred) < 10*eps
-                    rho = 1;
-                else
-                    rho = dared/dpred;
-                end
-                if rho < 0.25
-                    gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
-                    trmodel.radius = gamma_dec*trmodel.radius;
-                else
-                    if rho > 3/4
-                        radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
-                        trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+                step_calculation_ok = true;
+                rf = 1;
+                while step_calculation_ok
+
+                    d = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
+                    [s, fs, ind_eactive_b] = cauchy_step(model, rf*trmodel.radius, N, mu, current_constraints, Ii, d, zeros(size(u)), ind_eactive, epsilon);
+                    p1b = @(x) l1_function(f, phi, mu, x, ind_eactive_b);
+                    pred_h = fs;
+                    pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
+                    %%%%%%%%%%%%
+                    % Predict constraint values
+                    [n_qr, ~] = size(ind_qr);
+                    phih = zeros(n_qr, 1);
+                    for n = 1:n_qr
+                        phih(n) = current_constraints(ind_qr(n)).c + current_constraints(ind_qr(n)).g'*N*s + 0.5*((s'*N')*current_constraints(ind_qr(n)).H*(N*s));
+                    end
+                    %%%%%%%%%%%%%%%%%%
+                    v = tr_vertical_step(p, x, Q, R, phih, N*s, trmodel.radius);
+                    v = tr_vertical_step_new(fmodel, current_constraints, mu, N*s, ind_eactive, ind_eviolated, rf*trmodel.radius);
+                    pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
+                    %                 v = tr_new_vertical_step(pv, current_constraints, N*s, trmodel.radius, ind_qr);
+                    normphi = norm([current_constraints(ind_eactive).c], 1);
+                    ppgrad = N'*pseudo_gradient;
+                    pred = predict_descent(fmodel, current_constraints, ...
+                                              N*s + v, mu, []);
+                    if pred > 0 || rf < 1e-3
+                        break
+                    else
+                        rf = rf/2;
                     end
                 end
-                if rho > 0.1
-                    x = trial_point;
-                    current_constraints = evaluate_constraints(phi, x);
-                    step_accepted = true;
-                    px = p_trial;
-                    [~, fmodel.g, fmodel.H] = f(x);
-                else
+                if pred < delta*(norm(ppgrad)^2 + normphi)
+                    % Better not to try now
                     step_accepted = false;
+                else
+                    % Compute ared and all...
+                    p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
+                    step = N*s + v;
+                    trial_point = x + step;
+                    p_trial = p(trial_point);
+                    ared = px - p_trial;
+                    ared1 = p2(x) - p2(x + N*s + v);
+                    dpred = pred - 10*eps*max(1, abs(px));
+                    dared = ared - 10*eps*max(1, abs(px));
+                    if abs(dared) < 10*eps && abs(dpred) < 10*eps
+                        rho = 1;
+                    else
+                        rho = dared/dpred;
+                    end
+                    if rho < 0.25
+                        gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+                        trmodel.radius = gamma_dec*trmodel.radius;
+                    else
+                        if rho > 3/4
+                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+                        end
+                    end
+                    if rho > 0.1
+                        x = trial_point;
+                        current_constraints = evaluate_constraints(phi, x);
+                        step_accepted = true;
+                        px = p_trial;
+                        [~, fmodel.g, fmodel.H] = f(x);
+                    else
+                        step_accepted = false;
+                    end
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
