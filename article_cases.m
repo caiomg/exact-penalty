@@ -28,9 +28,9 @@ for k = 1:n_problems
     % Constraints
     n_constraints = get_cutest_total_number_of_constraints();
     all_con = cell(n_constraints, 1);
-    for k = 1:n_constraints
-        gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
-        all_con{k} = gk;
+    for n = 1:n_constraints
+        gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
+        all_con{n} = gk;
     end
 
     % Initial point
