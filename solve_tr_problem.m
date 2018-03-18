@@ -1,4 +1,4 @@
-function s = solve_tr_problem(H, g, radius)
+function [s, fs] = solve_tr_problem(H, g, radius)
 
 theta = 0.01;
 
@@ -88,5 +88,7 @@ elseif norm(s) > radius
         end
     end
 end
+
+fs = g'*s + 0.5*(s'*H*s);
 
 end

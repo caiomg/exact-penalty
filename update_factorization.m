@@ -7,16 +7,34 @@ n_variables = size(Q, 1);
 n_eactive = size(ind_eactive, 1);
 ind_qr = zeros(0, 1);
 A = zeros(n_variables, 0);
-rank_a = 0;
 for n = 1:n_eactive
-    if norm(current_constraints(ind_eactive(n)).g, 1) > tol
-        if rank([A, current_constraints(ind_eactive(n)).g], tol) > rank_a
-            A = [A, current_constraints(ind_eactive(n)).g];
-            rank_a = rank_a + 1;
-            ind_qr = [ind_qr; ind_eactive(n)];
-        end
+    norm_n = norm(current_constraints(ind_eactive(n)).g, 1);
+    if norm_n > tol
+        A = [A, current_constraints(ind_eactive(n)).g];
+        ind_qr(end+1, 1) = ind_eactive(n);
     end
 end
+% Testing degeneracy
+[L, U, P] = lu(A');
+degenerate = false;
+if size(L, 1) > n_variables
+    L = L(1:n_variables, :);
+    ind_qr = P*ind_qr;
+    ind_qr = ind_qr(1:n_variables, :);
+    degenerate = true;
+end
+su = sum(abs(U), 2);
+for n = 1:size(U, 1)
+    if su(n) < tol
+        U(n, n) = rand()*10*tol;
+        degenerate = true;
+    end
+end
+if degenerate
+    A = U'*L';
+end
+
+
 % TODO: use information of previous QR decomposition
 [Q, R] = qr(A);
 % TODO: use QR decomposition to calculate nullspace
@@ -24,9 +42,10 @@ N = null(A');
 
 ind_null = sum(abs(R'), 1) < 1e-10;
 N1 = Q(:, ind_null);
-rank_n = rank(N);
-if rank_n ~= rank(N1) || rank([N, N1], 1e-8) ~= rank_n
-    error('cmg:badnullspacerank', 'Error calculating nullspace');
+rank_n = size(N, 2);
+if rank_n ~= size(N1, 2) || rank([N, N1], 1e-8) ~= rank_n
+    1;
+%     error('cmg:badnullspacerank', 'Error calculating nullspace');
 else
     N = N1;
 end
