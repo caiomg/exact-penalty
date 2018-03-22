@@ -73,8 +73,6 @@ ind_eactive = zeros(0, 1);
 current_constraints = evaluate_constraints(phi, x);
 
 radius_max = 100;
-clear global history_solution
-global history_solution
 history_solution.x = x;
 history_solution.rho = NaN;
 history_solution.radius = trmodel.radius;
@@ -101,14 +99,15 @@ while ~finish
 
     p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
 
-
+    Bv = zeros(dimension);
+    for n = ind_eviolated'
+        Bv = Bv + mu*(current_constraints(n).H);
+    end
+    B = Bv + fmodel.H;
     if (norm(N'*pseudo_gradient) > max(Lambda, tol_g))
         x_prev = x;
-        B = zeros(dimension);
-        for n = ind_eviolated'
-            B = B + mu*(current_constraints(n).H);
-        end
-        B = B + fmodel.H;
+
+
         % Calculate Newton direction
         nBn = N'*B*N;
         if rcond(nBn) > sqrt(eps) && (pseudo_gradient'*(N*N'))*B*((N*N')*pseudo_gradient) > sqrt(eps) 
@@ -131,27 +130,35 @@ while ~finish
         rf = 1;
         while step_calculation_ok
             [d, fd] = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
-            [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
+            [s, fs, ind_eactive1] = cauchy_step(model, trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, d, zeros(size(u)), ...
                                                 ind_eactive, ...
                                                 epsilon);
             
             Ns = N*s;
-            v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, rf*trmodel.radius);
-            pred = predict_descent(fmodel, current_constraints, Ns + v, mu, ind_qr);
+            pred_r = predict_descent(fmodel, current_constraints, Ns, mu, ind_qr);
             
-            if pred > 0 && pred > -0.5*fd
+            if pred_r > 0 && pred_r > -0.5*fd
                 break
             else
                 gamma_dec = 0.75;%max(0.5, gamma_1*norm(Ns)/(rf*trmodel.radius));
                 rf = gamma_dec*rf;
             end
         end
+        [Ns2, pred] = line_search_full_domain(fmodel, current_constraints, mu, Ns, trmodel.radius);
+        if norm(Ns2) < 0.5*norm(Ns)
+            1;
+        end
+        Ns = Ns2;
 %         v = zeros(size(v));
+        v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
         normphi = norm([current_constraints(ind_eactive).c], 1);
         ppgrad = N'*pseudo_gradient;
         pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
+        if pred < 0
+            pred = pred_r;
+        end
 %%%%%%%%%%%%%
         step = Ns + v;
         trial_point = x + step;
@@ -186,6 +193,9 @@ while ~finish
 %             trmodel = try_to_add_interpolation_point(trmodel, x, ...
 %                                                 new_point_fvals, ...
 %                                                 fphi, options)
+        end
+        if abs(rho - 1) < 1e-4 && norm(step) < 0.1*norm(N*s)
+            Lambda = Lambda*1.5;
         end
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
