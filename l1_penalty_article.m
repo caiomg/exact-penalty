@@ -46,7 +46,7 @@ fphi = {f, phi{:}}';
 
 % Completing set of interpolation points and calculating polynomial
 % model
-% trmodel = complete_interpolation_set(trmodel, fphi, options);
+trmodel = complete_interpolation_set(trmodel, fphi, options);
 
 fval_current = trmodel.fvalues(1, 1);
 
@@ -70,7 +70,7 @@ R = zeros(0, 0);
 ind_eactive = zeros(0, 1);
 
 
-current_constraints = evaluate_constraints(phi, x);
+current_constraints = extract_constraints_from_tr_model(trmodel);
 
 radius_max = 100;
 history_solution.x = x;
@@ -79,12 +79,8 @@ history_solution.radius = trmodel.radius;
 
 iter = 0;
 finish = false;
-[~, fmodel.g] = f(x);
-fmodel.H = eye(length(x));
-[~, ~, fmodel.H] = f(x);
+[~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
 
-fmodel.g = fmodel.g;
-fmodel.H = fmodel.H;
 px = p(x);
 while ~finish
     iter = iter + 1;
@@ -188,7 +184,6 @@ while ~finish
             px = p_trial;
             [~, fmodel.g, fmodel.H] = f(x);
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-            current_constraints = evaluate_constraints(phi, x);
             current_constraints = extract_constraints_from_tr_model(trmodel);
         else
             step_accepted = false;
