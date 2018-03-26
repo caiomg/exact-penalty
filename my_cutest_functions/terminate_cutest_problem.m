@@ -7,7 +7,14 @@ global problem_data_cutest
 if ~isempty(problem_path_cutest)
     original_dir = pwd();
     cd(problem_path_cutest);
-    cutest_terminate();
+    try
+        cutest_terminate();
+    catch exception
+        % Ignoring one exception
+        if ~startsWith(exception.message, 'cutest_setup must be called first')
+            retrhow(exception);
+        end
+    end
     cd(original_dir);
     rmpath(problem_path_cutest);
 
