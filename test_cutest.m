@@ -4,12 +4,14 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-problem_name = 'WOMFLET';
-% problem_name = 'POLAK1';
+% problem_name = 'WOMFLET';
+problem_name = 'POLAK1';
 % problem_name = 'SNAKE';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
-% problem_name = 'ZY2';
-problem_name = 'HS88';
+% problem_name = 'QC';
+problem_name = 'HAIFAS';
+% problem_name = 'LOOTSMA';
+% problem_name = 'HS88';
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
 % Objective
@@ -33,7 +35,7 @@ mu = 100;
 if strcmp(problem_name, 'SNAKE')
     mu = 10000;
 end
-epsilon = 2;
+epsilon = 1;
 delta = 1e-6;
 Lambda = 0.1;
 
@@ -49,12 +51,12 @@ counter.get_count()
 counter.reset_count()
 
 %%
+p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
 [x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda)
 fx = f(x)
 
-error_obj = fx_fmincon - fx
-error_x = norm(x_fmincon - x)
+rng(p_seed);
 
 counter.get_count()
 counter.reset_count()

@@ -13,6 +13,7 @@ options = struct('tol_radius', 1e-5, 'tol_f', 1e-6, ...
 gamma_0 = 0.0625;
 gamma_1 = 0.5;
 gamma_2 = 2;
+ut_option.UT = true;
 
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
@@ -45,7 +46,7 @@ fphi = {f, phi{:}}';
 
 % Completing set of interpolation points and calculating polynomial
 % model
-trmodel = complete_interpolation_set(trmodel, fphi, options);
+% trmodel = complete_interpolation_set(trmodel, fphi, options);
 
 fval_current = trmodel.fvalues(1, 1);
 
@@ -129,60 +130,28 @@ while ~finish
         step_calculation_ok = true;
         rf = 1;
         while step_calculation_ok
-            d = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
+            [d, fd] = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
             [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, d, zeros(size(u)), ...
                                                 ind_eactive, ...
                                                 epsilon);
+            
             Ns = N*s;
-%             Ns = correct_direction(Ns, Q*R);
-            pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-%             Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
-
-            %%%%%%%%%%%%
-            % Predict constraint values
-            [n_qr, ~] = size(ind_qr);
-            phih = zeros(n_qr, 1);
-            for n = 1:n_qr
-               phih(n) = current_constraints(ind_qr(n)).c;% + current_constraints(ind_qr(n)).g'*Ns + 0.5*(Ns'*current_constraints(ind_qr(n)).H*(Ns));
-
-            end
-
-
-%             [nphi, nA] = update_constraint_information(current_constraints, ind_qr, Ns);
-%             if norm(phih - nphi) > sqrt(eps)
-%                 error();
-%             end
-            %%%%%%%%%%%%%%%%%%
-            pv = @(s) -predict_descent(fmodel, current_constraints, s, mu);
-%             v1 = tr_vertical_step(pv, x, Q, R, phih, Ns, trmodel.radius);
-            v2 = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, rf*trmodel.radius);
-%             if norm(Ns + v2) - rf*trmodel.radius > 10*eps
-%                 1;
-%             end
-%             v2 = tr_new_vertical_step(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel);
-%             v3 = tr_new_vertical_step_alternative(pv, current_constraints, Ns, rf*radius, ind_qr, fmodel, mu);
-%             if norm(v2, inf) == 0
-%                 v = v1;
-%             else
-%                 if pv(h+v1) < pv(h+v2)
-%                     v1_melhor = v1_melhor + 1;
-%                 else
-%                     v2_melhor = v2_melhor + 1;
-%                 end
-%                 v = v2;
-%             end
-            v = v2;%zeros(size(Ns));
-            normphi = norm([current_constraints(ind_eactive).c], 1);
-            ppgrad = N'*pseudo_gradient;
-            pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
-            if pred > 0
+            v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, rf*trmodel.radius);
+            pred = predict_descent(fmodel, current_constraints, Ns + v, mu, ind_qr);
+            
+            if pred > 0 && pred > -0.5*fd
                 break
             else
-                rf = min(rf/2, norm(Ns)/norm(s));
+                gamma_dec = 0.75;%max(0.5, gamma_1*norm(Ns)/(rf*trmodel.radius));
+                rf = gamma_dec*rf;
             end
         end
+%         v = zeros(size(v));
+        normphi = norm([current_constraints(ind_eactive).c], 1);
+        ppgrad = N'*pseudo_gradient;
+        pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
 %%%%%%%%%%%%%
         step = Ns + v;
         trial_point = x + step;
@@ -236,9 +205,10 @@ while ~finish
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive);
             % calculate multipliers
-            multipliers_a = -R\(Q'*pseudo_gradient);
-            remain = -(Q*R*multipliers_a + pseudo_gradient);
-            correction = R\(Q'*remain);
+            rows_qr = size(R, 1) - size(N, 2);
+            multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1:rows_qr)'*pseudo_gradient), ut_option);
+            remain = -((Q*R)*multipliers_a + pseudo_gradient);
+            correction = linsolve(R(1:rows_qr, :), Q(:, 1:rows_qr)'*remain, ut_option);
             multipliers = multipliers_a + correction;
             tol_multipliers = 10*norm(correction);
     %         multipliers = linsolve(R, Q'*pseudo_gradient, linsolve_opts);
@@ -284,23 +254,18 @@ while ~finish
                 step_calculation_ok = true;
                 rf = 1;
                 while step_calculation_ok
-                    d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                    [d, fd] = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
+                    pred_d = predict_descent(fmodel, current_constraints, N1*d, mu, []);
                     [s, fs, ind_eactive_dropping_b] = cauchy_step(model, rf*trmodel.radius, N1, mu, current_constraints, Ii, d, zeros(size(model.g)), ind_eactive_dropping, epsilon);
                     Ns = N1*s;
-                    Ns = correct_direction(Ns, Q1*R1);
                     pv = @(s) -predict_descent_with_multipliers(fmodel, current_constraints, s, mu, ind_qr_dropping, multipliers_dropping);
-                    Ns = simple_backtracking_line_search(pv, zeros(size(x)), Ns, 0, 0.9, 50);
                     pred1 = predict_descent_with_multipliers(fmodel, current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
                     pred = predict_descent(fmodel, current_constraints, Ns, mu, []);
-                    if pred > 0
+                    if pred > 0 && pred/pred_d > 0.5
                         break
                     else
-                        rf = min(rf/2, norm(Ns)/norm(s));
-                        contador = contador + 1;
-                    end
-                    if norm(Ns)/norm(s) < 0.1
-                        step_calculation_ok = false; % currently
-                                                     % never happens
+                        gamma_dec = max(gamma_0, gamma_1*norm(Ns)/(rf*trmodel.radius));
+                        rf = gamma_dec*rf;
                     end
                 end
                 if step_calculation_ok

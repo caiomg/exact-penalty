@@ -26,7 +26,8 @@ N1 = Q(:, ind_null);
 N = null(R'*Q');
 rank_n = rank(N);
 if rank_n ~= rank(N1) || rank([N, N1], 1e-8) ~= rank_n
-   error('cmg:badnullspacerank', 'Error calculating nullspace');
+    1;
+%    error('cmg:badnullspacerank', 'Error calculating nullspace');
 end
 
 h = sigma*(N*(N'*grad_phi_j));
