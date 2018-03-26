@@ -43,7 +43,7 @@ for k = 1:n_problems
     fcount_fmincon = counter.get_count();
 
     counter.reset_count();
-    counter.set_max_count(10000);
+    counter.set_max_count(5000);
 
     solved = true;
     try
