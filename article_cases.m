@@ -5,9 +5,6 @@ global problem_data_cutest
 
 % Parameters
 mu = 100;
-% if strcmp(problem_name, 'SNAKE')
-%     mu = 10000;
-% end
 epsilon = 2;
 delta = 1e-6;
 Lambda = 0.1;
@@ -44,17 +41,31 @@ for k = 1:n_problems
     %%
 
     fcount_fmincon = counter.get_count();
+
     counter.reset_count();
+    counter.set_max_count(10000);
 
+    solved = true;
+    try
+        [x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
+    catch error
+        results(k, 1).except = error;
+        solved = false;
+    end
+    if solved
+        fx = f(x);
 
-    [x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
-    fx = f(x);
+        fcount = counter.get_count();
 
-    fcount = counter.get_count();
-    counter.reset_count();
-
-    error_obj = fx_fmincon - fx;
-    error_x = norm(x_fmincon - x);
+        error_obj = fx_fmincon - fx;
+        error_x = norm(x_fmincon - x);
+    else
+        x = [];
+        hs2 = [];
+        fx = [];
+        error_obj = [];
+        error_x = [];
+    end
 
     results(k, 1).name = problem_name;
     results(k, 1).x = x;
