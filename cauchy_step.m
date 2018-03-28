@@ -1,4 +1,4 @@
-function  [s, fs, ind_eactive] = cauchy_step(m0, radius, N, mu, con_models, Ii0, d0, w0, ind_eactive, epsilon)
+function  [s, fs, ind_eactive] = cauchy_step(m0, radius, N, mu, con_models, Ii0, d0, w0, ind_eactive, epsilon, d00)
 %CAUCHY_STEP Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,6 +11,9 @@ if isempty(w0)
     w = zeros(size(d0));
 else
     w = w0;
+end
+if nargin < 11 || isempty(d00)
+    d00 = d0;
 end
 
 Ii = Ii0;
@@ -81,6 +84,8 @@ while ~isempty(IM)
             nc = constraint_changed;
         elseif constraint_changed < 0
             nc = -constraint_changed;
+            % Recover 2nd order term
+            m1.B = m1.B + mu*N'*con_models(n).H*N;
         else
             break;
         end
@@ -88,25 +93,27 @@ while ~isempty(IM)
                  (d'*N'*(con_models(nc).H*N*w1 + con_models(nc).g))/...
                  ((con_models(nc).H*N*w1 + con_models(nc).g)'*...
                  (con_models(nc).H*N*w1 + con_models(nc).g));
-        A1 = [];
-        for e = 1:n_constraints
-            if (isempty(find(Ii == e, 1)) && ~isempty(find(Ii0 == e, 1))) || e == nc
-                A1 = [A1, (con_models(nc).H*N*w1 + con_models(nc).g)];
+%         A1 = [];
+%         for e = 1:n_constraints
+%             if (isempty(find(Ii == e, 1)) && ~isempty(find(Ii0 == e, 1))) || e == nc
+%                 A1 = [A1, (con_models(nc).H*N*w1 + con_models(nc).g)];
+%             end
+%         end
+%         A1 = N'*A1;
+%         d1 = correct_direction(d1, A1);
+        if d1'*d00 > 0
+            [s, segment_descent] = cauchy_step(m1, radius, N, mu, con_models, Ii, d1, w1, ind_eactive, epsilon, d00);
+            pstep = w1 - s;
+            if segment_descent > mu*(0.5*(pstep'*N'*con_models(nc).H*N*pstep) + (con_models(nc).H'*N*w1 + con_models(nc).g)'*N*pstep)
+                % Accept
+                total_descent = total_descent + segment_descent;
+                if constraint_changed < 0
+                    total_descent = total_descent - mu*(0.5*(pstep'*N'*con_models(nc).H*N*pstep) + (con_models(nc).H'*N*w1 + con_models(nc).g)'*N*pstep);
+                end
+            else
+                % Rollback
+                s = w1;
             end
-        end
-        A1 = N'*A1;
-        d1 = correct_direction(d1, A1);
-        [s, segment_descent] = cauchy_step(m1, radius, N, mu, con_models, Ii, d1, w1, ind_eactive, epsilon);
-        pstep = w1 - s;
-        if segment_descent > mu*(0.5*(pstep'*N'*con_models(nc).H*N*pstep) + (con_models(nc).H'*N*w1 + con_models(nc).g)'*N*pstep)
-            % Accept
-            total_descent = total_descent + segment_descent;
-            if constraint_changed < 0
-                total_descent = total_descent - mu*(0.5*(pstep'*N'*con_models(nc).H*N*pstep) + (con_models(nc).H'*N*w1 + con_models(nc).g)'*N*pstep);
-            end
-        else
-            % Rollback
-            s = w1;
         end
         fs = total_descent;
         break;
