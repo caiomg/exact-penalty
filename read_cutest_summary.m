@@ -1,21 +1,19 @@
 function [f_count, fval] = read_cutest_summary(filename)
 
-    magic_str = ['************************ CUTEst statistics **********' ...
-                 '**************'];
-    fcount_str = '# objective functions   =';
-    fval_str = 'Final f                 =';
+    magic_str = '\** CUTEst statistics \**';
+    fcount_str = 'objective functions\s*=';
+    fval_str = 'Final f\s*=';
 
 
     contents = fileread(filename);
-    final_stats_idx = strfind(contents, magic_str);
+    final_stats_idx = regexp(contents, magic_str);
 
     contents = contents(final_stats_idx:end);
-    count_p = strfind(contents, fcount_str);
-    contents = contents(count_p + length(fcount_str):end);
-    f_count = sscanf(contents, '%f');
 
-    fval_p = strfind(contents, fval_str);
-    contents = contents(fval_p + length(fval_str):end);
-    fval = sscanf(contents, '%f');
+    count_p = regexp(contents, fcount_str, 'end');
+    f_count = sscanf(contents(count_p+1:end), '%f');
+
+    fval_p = regexp(contents, fval_str, 'end');
+    fval = sscanf(contents(fval_p+1:end), '%f');
 
 end
