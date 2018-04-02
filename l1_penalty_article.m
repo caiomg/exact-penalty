@@ -308,7 +308,7 @@ while ~finish
                     dropping_succeeded = false;
                     step_accepted = false;
                     gamma_dec = max(gamma_0, gamma_1*norm(s)/trmodel.radius);
-%                     trmodel.radius = gamma_dec*trmodel.radius;
+                    trmodel.radius = gamma_dec*trmodel.radius;
                 end
                 history_solution(end+1).x = x;
                 history_solution(end).rho = rho;
@@ -366,7 +366,7 @@ while ~finish
                     % Better not to try now
                     step_accepted = false;
                     gamma_dec = max(gamma_0, gamma_1*norm(s)/trmodel.radius);
-%                     trmodel.radius = gamma_dec*trmodel.radius;
+                    trmodel.radius = gamma_dec*trmodel.radius;
                 else
                     % Compute ared and all...
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
