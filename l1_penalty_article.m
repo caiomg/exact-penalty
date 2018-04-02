@@ -160,7 +160,7 @@ while ~finish
         end
 %%%%%%%%%%%%%
         step = Ns + v;
-        [step, pred] = line_search_full_domain(fmodel, current_constraints, mu, Ns + v, trmodel.radius);
+%         [step, pred] = line_search_full_domain(fmodel, current_constraints, mu, Ns + v, trmodel.radius);
         trial_point = x + step;
         p_trial = p(trial_point);
         ared = px - p_trial;
@@ -266,9 +266,9 @@ while ~finish
                 Ns = N1*s;
                 pred1 = predict_descent_with_multipliers(fmodel, ...
                                                          current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
-                [step, pred] = line_search_full_domain(fmodel, ...
-                                                       current_constraints, ...
-                                                       mu, Ns, trmodel.radius);
+%                 [step, pred] = line_search_full_domain(fmodel, ...
+%                                                        current_constraints, ...
+%                                                        mu, Ns, trmodel.radius);
                 if pred > delta
                     dropping_succeeded = true;
 %                     step = Ns;
@@ -356,7 +356,7 @@ while ~finish
                 pred = predict_descent(fmodel, current_constraints, ...
                                        N*s + v, mu, []);
                 if pred < delta*(norm(ppgrad)^2 + normphi)
-                    [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
+%                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
                                              mu, Ns, ind_eactive, ...
                                              ind_eviolated, trmodel.radius);
