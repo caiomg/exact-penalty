@@ -73,7 +73,8 @@ current_constraints = evaluate_constraints(phi, x);
 
 radius_max = 100;
 history_solution.x = x;
-history_solution.rho = NaN;
+rho = nan;
+history_solution.rho = rho;
 history_solution.radius = trmodel.radius;
 
 iter = 0;
@@ -349,7 +350,7 @@ while ~finish
                 pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
                 v = tr_vertical_step_new(fmodel, current_constraints, ...
                                          mu, N*s, ind_eactive, ...
-                                         ind_eviolated, rf*trmodel.radius);
+                                         ind_eviolated, trmodel.radius);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 pred = predict_descent(fmodel, current_constraints, ...
@@ -358,7 +359,7 @@ while ~finish
                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
                                              mu, Ns, ind_eactive, ...
-                                             ind_eviolated, rf*trmodel.radius);
+                                             ind_eviolated, trmodel.radius);
                     pred = predict_descent(fmodel, current_constraints, ...
                                            Ns + v, mu, []);
                 end
