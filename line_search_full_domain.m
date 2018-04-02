@@ -1,4 +1,4 @@
-function [s, pred] = line_search_full_domain(fmodel, cmodel, mu, s0, radius)
+function [s, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s0, radius)
 
 if nargin < 5 || isempty(radius)
     radius = norm(s);
@@ -13,8 +13,8 @@ if pred0 < 0
     for n = 1:n_constraints
         if cmodel(n).c > 0 || ...
                (cmodel(n).c ==0 && ...
-                ((cmodel(n).g'*s0 + 0.5*(s0'*cmodel(n).H*s0) > 0) || ...
-                (0.5*cmodel(n).g'*s0 + 0.125*(s0'*cmodel(n).H*s0) > 0)))
+                ((cmodel(n).g'*s0) > 0) || ...
+                ((cmodel(n).g'*s0 == 0) && (s0'*cmodel(n).H*s0 > 0)))
             g = g + mu*cmodel(n).g;
             B = B + mu*cmodel(n).H;
             active(end+1) = n;
@@ -54,41 +54,29 @@ if pred0 < 0
     end
     [gamma, ind_temp] = sort(gamma);
     IM = IM(ind_temp);
-
+    local_minima = [];
+    local_minima_values = [];
+    tl = 0;
     while ~isempty(IM)
         tu = gamma(1);
         n = IM(1);
         gamma = gamma(2:end);
         IM = IM(2:end);
-        w = zeros(size(s0));
 
         if g'*s0 > 0
             % Ascent
-            break
+            0;
         elseif s0'*B*s0 < 0
-            segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*tu^2 + g'*s0*tu);
-            total_descent = total_descent + segment_descent;
-            alpha_s = tu;
+            local_minima(end+1) = tu;
         else
             % Minimizing the quadratic model in direction d
             tau = -((s0'*B*s0)\(g'*s0));
-            if tau < alpha_s
-                % does this occur?
-                s = w + alpha_s*s0;
-                fs = total_descent;
-                break;
+            if tau < tl
+                0;
             elseif tau < tu
-                segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*tau^2 + g'*s0*tau);
-                total_descent = total_descent + segment_descent;
-                alpha_s = tau;
-                s = w + alpha_s*s0;
-                fs = total_descent;
-                % change the active set?
-                break
+                local_minima(end+1) = tau;
             else
-                segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*tu^2 + g'*s0*tu);
-                total_descent = total_descent + segment_descent;
-                alpha_s = tu;
+                local_minima(end+1) = tu;
             end
         end
         if sign(alpha_s*((s0'*N')*cmodel(n).H*(N*s0)) + cmodel(n).g'*N*s0) > 0
@@ -100,42 +88,45 @@ if pred0 < 0
             g = g - mu*N'*cmodel(n).g;
             constraint_changed = -n;
         end
-    end    
-    if ~exist('s', 'var')
-        if g'*s0 > 0
-            % Ascent
-            s = alpha_s*s0;
-            fs = total_descent;
-        elseif s0'*B*s0 < 0
-            segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*gamma_tr^2 + g'*s0*gamma_tr);
-            alpha_s = gamma_tr;
-            s = alpha_s*s0;
-            total_descent = total_descent + segment_descent;
-            fs = total_descent;
+        tl = tu;
+    end
+    tu = gamma_tr;
+    if g'*s0 > 0
+        % Ascent
+        0;
+    elseif s0'*B*s0 < 0
+        local_minima(end+1) = tu;
+    else
+        % Minimizing the quadratic model in direction d
+        tau = -((s0'*B*s0)\(g'*s0));
+        if tau < tl
+            0;
+        elseif tau < tu
+            local_minima(end+1) = tau;
         else
-            % Minimizing the quadratic model in direction d
-            tau = -(g'*s0)/(s0'*B*s0);
-            if tau < alpha_s
-                % does this occur?
-                s = alpha_s*s0;
-                fs = total_descent;
-            elseif tau < gamma_tr
-                segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*tau^2 + g'*s0*tau);
-                total_descent = total_descent + segment_descent;
-                alpha_s = tau;
-                s = alpha_s*s0;
-                fs = total_descent;
-            else
-                segment_descent = (0.5*(s0'*B*s0)*alpha_s^2 + g'*s0*alpha_s) - (0.5*(s0'*B*s0)*gamma_tr^2 + g'*s0*gamma_tr);
-                total_descent = total_descent + segment_descent;
-                alpha_s = gamma_tr;
-                s = alpha_s*s0;
-                fs = total_descent;
-            end
+            local_minima(end+1) = tu;
         end
     end
-    pred = fs;
+    n_minima = length(local_minima);
+    pred = 0;
+    for n = 1:n_minima
+        s_n = local_minima(n)*s0;
+        pred_n = predict_descent(fmodel, cmodel, s_n, mu, []);
+        if pred_n > pred
+            pred = pred_n;
+            s = s_n;
+        end
+    end
+    if pred > 0
+        status = true;
+    else
+        % Rollback
+        s = s0;
+        pred = pred0;
+        status = false;
+    end
 else
     s = s0;
     pred = pred0;
+    status = true;
 end
