@@ -33,7 +33,7 @@ switch options.basis
     case 'full quadratic'
         basis = natural_basis(dimension);
     case 'diagonal hessian'
-        basis = powell_basis(dimension);
+        basis = diagonal_basis(dimension);
 end
 
 % Initializing model structure
