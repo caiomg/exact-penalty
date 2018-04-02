@@ -77,18 +77,20 @@ while ~isempty(IM)
     if (B'*w + g)'*d > 0
         % Ascent
         m1 = m0;
-        m1.B = B;
-        m1.g = g;
         w1 = w + alpha*d;
         if constraint_changed > 0
             nc = constraint_changed;
+            m1.B = B;
+            m1.g = g;
         elseif constraint_changed < 0
             nc = -constraint_changed;
             % Recover 2nd order term
-            m1.B = m1.B + mu*N'*con_models(n).H*N;
+            m1.B = B + mu*(N'*con_models(nc).H*N);
+            m1.g = g + mu*(N'*con_models(nc).g);
         else
             break;
         end
+        Ii = Ii(Ii ~= nc);
         d1 = d - N'*(con_models(nc).H*N*w1 + con_models(nc).g)*...
                  (d'*N'*(con_models(nc).H*N*w1 + con_models(nc).g))/...
                  ((con_models(nc).H*N*w1 + con_models(nc).g)'*...
@@ -103,7 +105,7 @@ while ~isempty(IM)
 %         d1 = correct_direction(d1, A1);
         if d1'*d00 > 0
             [s, segment_descent] = cauchy_step(m1, radius, N, mu, con_models, Ii, d1, w1, ind_eactive, epsilon, d00);
-            pstep = w1 - s;
+            pstep = s - w1;
             if segment_descent > mu*(0.5*(pstep'*N'*con_models(nc).H*N*pstep) + (con_models(nc).H'*N*w1 + con_models(nc).g)'*N*pstep)
                 % Accept
                 total_descent = total_descent + segment_descent;
@@ -155,9 +157,9 @@ while ~isempty(IM)
         g = g - mu*N'*con_models(n).g;
         constraint_changed = -n;
     end
-    if isempty(find(IM == n, 1))
-        Ii = Ii(Ii ~= n);
-    end
+%     if isempty(find(IM == n, 1))
+%         Ii = Ii(Ii ~= n);
+%     end
 end
 if ~exist('s', 'var')
     
