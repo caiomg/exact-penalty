@@ -93,7 +93,7 @@ while ~finish
         identify_new_constraints(current_constraints, epsilon, ...
                                  []);
     [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
-                                                  Q, R, ind_eactive);
+                                                  Q, R, ind_eactive, false);
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_eviolated);
 
@@ -214,7 +214,7 @@ while ~finish
 
           	x_prev = x;
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
-                                                  Q, R, ind_eactive);
+                                                  Q, R, ind_eactive, true);
             % calculate multipliers
             rows_qr = size(R, 1) - size(N, 2);
             multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1:rows_qr)'*pseudo_gradient), ut_option);
