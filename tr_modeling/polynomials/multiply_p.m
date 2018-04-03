@@ -4,7 +4,7 @@ function polynomial = multiply_p(polynomial, factor)
 polynomial.coefficients  = factor*polynomial.coefficients;
 
 if (max(isnan(polynomial.coefficients)))
-    warning('cmg:nancoeff', 'NaN coefficient');
+    error('cmg:nancoeff', 'NaN coefficient');
 end
 
 end

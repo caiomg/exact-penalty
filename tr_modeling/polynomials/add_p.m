@@ -9,7 +9,7 @@ polynomial.dimension = p1.dimension;
 polynomial.coefficients = p1.coefficients + p2.coefficients;
 
 if (max(isnan(polynomial.coefficients)))
-    warning('cmg:nancoeff', 'NaN coefficient');
+    error('cmg:nancoeff', 'NaN coefficient');
 end
 
 end
