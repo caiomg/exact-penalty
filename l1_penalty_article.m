@@ -131,7 +131,7 @@ while ~finish
         rf = 1;
         while step_calculation_ok
             [d, fd] = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
-            [s, fs, ind_eactive1] = cauchy_step(model, trmodel.radius, N, ...
+            [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, d, zeros(size(u)), ...
                                                 ind_eactive, ...
@@ -155,13 +155,19 @@ while ~finish
         v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
         normphi = norm([current_constraints(ind_eactive).c], 1);
         ppgrad = N'*pseudo_gradient;
-        pred = predict_descent(fmodel, current_constraints, Ns + v, mu, []);
+        step = Ns + v;
+        pred = predict_descent(fmodel, current_constraints, step, mu, []);
         if pred < 0
-            pred = pred_r;
+            [step1, pred1, status] = line_search_full_domain(fmodel, current_constraints, mu, Ns + v, trmodel.radius);
+            [Ns2, pred, status] = line_search_full_domain(fmodel, current_constraints, mu, Ns, trmodel.radius);
+            v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius);
+            step = Ns2 + v;
+            pred = predict_descent(fmodel, current_constraints, step, mu, []);
+            if status
+                trmodel.radius = norm(step);
+            end
         end
 %%%%%%%%%%%%%
-        step = Ns + v;
-%         [step, pred] = line_search_full_domain(fmodel, current_constraints, mu, Ns + v, trmodel.radius);
         trial_point = x + step;
         p_trial = p(trial_point);
         ared = px - p_trial;
