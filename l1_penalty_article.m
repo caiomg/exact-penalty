@@ -270,7 +270,9 @@ while ~finish
 %                 [step, pred] = line_search_full_domain(fmodel, ...
 %                                                        current_constraints, ...
 %                                                        mu, Ns, trmodel.radius);
-                if pred1 > delta
+                pred = pred1;
+                step = Ns;
+                if pred > delta
                     dropping_succeeded = true;
 %                     step = Ns;
                     trial_point = x + step;
@@ -367,14 +369,14 @@ while ~finish
                 ppgrad = N'*pseudo_gradient;
                 pred = predict_descent(fmodel, current_constraints, ...
                                        N*s + v, mu, []);
-                if pred < delta*(norm(ppgrad)^2 + normphi)
-%                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
-                    v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                             mu, Ns, ind_eactive, ...
-                                             ind_eviolated, trmodel.radius);
-                    pred = predict_descent(fmodel, current_constraints, ...
-                                           Ns + v, mu, []);
-                end
+%                 if pred < delta*(norm(ppgrad)^2 + normphi)
+% %                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
+%                     v = tr_vertical_step_new(fmodel, current_constraints, ...
+%                                              mu, Ns, ind_eactive, ...
+%                                              ind_eviolated, trmodel.radius);
+%                     pred = predict_descent(fmodel, current_constraints, ...
+%                                            Ns + v, mu, []);
+%                 end
                 if pred < delta*(norm(ppgrad)^2 + normphi)
                     % Better not to try now
                     step_accepted = false;
