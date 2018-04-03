@@ -228,7 +228,7 @@ while ~finish
             remain = -((Q*R)*multipliers_a + pseudo_gradient);
             correction = linsolve(R(1:rows_qr, :), Q(:, 1:rows_qr)'*remain, ut_option);
             multipliers = multipliers_a + correction;
-            tol_multipliers = 10*norm(correction);
+            tol_multipliers = 10*max(norm(correction), eps);
     %         multipliers = linsolve(R, Q'*pseudo_gradient, linsolve_opts);
 
             Bv = zeros(dimension);
@@ -244,21 +244,34 @@ while ~finish
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
             if sum(multipliers < -tol_multipliers | mu < multipliers - tol_multipliers)
-                dropping_constraint = true;
-                [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
-                                    l1_drop_constraint(Q, R, multipliers, mu);
-                h = correct_direction(h, Q1*R1);
-                ind_null = sum(abs(R1'), 1) < 1e-10;
-                N1 = Q1(:, ind_null);
-                n_drop = ind_qr(ind_j);
-                ind_eactive_dropping = ind_eactive(ind_eactive ~= n_drop);
-                ind_qr_dropping = ind_qr(ind_qr ~= n_drop);
-                multipliers_dropping = multipliers([(1:ind_j-1)';(ind_j+1:end)']);
-                p2 = @(x) l1_function(f, phi, mu, x, ind_eactive_dropping);
-                B = B - multipliers(ind_j)*(current_constraints(n_drop).H);
-                if current_constraints(n_drop).c > 0
-                    pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, [ind_eviolated; n_drop]);
-                    B = B + mu*(current_constraints(n_drop).H);
+                multipliers_dropping = multipliers;
+                ind_qr_dropping = ind_qr;
+                ind_eactive_dropping = ind_eactive;
+                Q1 = Q;
+                R1 = R;
+                while sum(multipliers_dropping < -tol_multipliers | mu < multipliers_dropping - tol_multipliers)
+                    %%%
+                    dropping_constraint = true;
+                    [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
+                                        l1_drop_constraint(Q1, R1, multipliers_dropping, mu, tol_multipliers);
+                    ind_null = sum(abs(R1'), 1) < 1e-10;
+                    N1 = Q1(:, ind_null);
+                    n_drop = ind_qr_dropping(ind_j);
+                    ind_eactive_dropping = ind_eactive_dropping(ind_eactive_dropping ~= n_drop);
+                    ind_qr_dropping = ind_qr_dropping(ind_qr_dropping ~= n_drop);
+                    %%%%
+                    rows_qr = size(R1, 1) - size(N1, 2);
+                    multipliers_dropping = -linsolve(R1(1:rows_qr, :), (Q1(:, 1:rows_qr)'*pseudo_gradient), ut_option);
+                    remain = -((Q1*R1)*multipliers_dropping + pseudo_gradient);
+                    correction = linsolve(R1(1:rows_qr, :), Q1(:, 1:rows_qr)'*remain, ut_option);
+                    multipliers_dropping = multipliers_dropping + correction;
+                    tol_multipliers = 10*max(norm(correction), eps);
+                    %%%%
+                    B = B - multipliers(ind_j)*(current_constraints(n_drop).H);
+                    if current_constraints(n_drop).c > 0
+                        pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, [ind_eviolated; n_drop]);
+                        B = B + mu*(current_constraints(n_drop).H);
+                    end
                 end
                 model.B = N1'*B*N1;
                 model.g = N1'*pseudo_gradient;
@@ -273,18 +286,13 @@ while ~finish
                 Ns = N1*s;
                 pred1 = predict_descent_with_multipliers(fmodel, ...
                                                          current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
-%                 [step, pred] = line_search_full_domain(fmodel, ...
-%                                                        current_constraints, ...
-%                                                        mu, Ns, trmodel.radius);
-                pred = pred1;
+                pred = predict_descent(fmodel, current_constraints, Ns, mu, []);
                 step = Ns;
                 if pred > delta
                     dropping_succeeded = true;
-%                     step = Ns;
                     trial_point = x + step;
                     p_trial = p(trial_point);
                     ared = px - p_trial;
-                    ared1 = p2(x) - p2(x + Ns);
                     dpred = pred - 10*eps*max(1, abs(px));
                     dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
