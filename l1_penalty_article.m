@@ -26,6 +26,7 @@ for nf = 1:n_functions
     end
 end
 
+options.basis = 'diagonal hessian';
 % Calculating basis of polynomials
 switch options.basis
     case 'linear'
@@ -60,6 +61,7 @@ dimension = size(x, 1);
 n_constraints = size(phi, 1);
 tol_g = 1e-6;
 tol_con = 1e-6;
+tol_radius = options.tol_radius;
 gamma1 = 0.01;
 
 p = @(x) l1_function(f, phi, mu, x);
@@ -268,7 +270,7 @@ while ~finish
 %                 [step, pred] = line_search_full_domain(fmodel, ...
 %                                                        current_constraints, ...
 %                                                        mu, Ns, trmodel.radius);
-                if pred > delta
+                if pred1 > delta
                     dropping_succeeded = true;
 %                     step = Ns;
                     trial_point = x + step;
@@ -438,10 +440,16 @@ while ~finish
                 break
             end
             check_interpolation(trmodel); % TO BE REMOVED!
+            if trmodel.radius < tol_radius
+                finish = true;
+                break
+            end
         end
     end
     check_interpolation(trmodel); % TO BE REMOVED!
+    if trmodel.radius < tol_radius
+        finish = true;
+    end
 end
-
 
 end
