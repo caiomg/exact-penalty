@@ -4,12 +4,12 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-% problem_name = 'WOMFLET';
-problem_name = 'POLAK1';
+problem_name = 'WOMFLET';
+% problem_name = 'POLAK1';
 % problem_name = 'SNAKE';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
 % problem_name = 'QC';
-problem_name = 'CB2';
+% problem_name = 'CB2';
 % problem_name = 'LOOTSMA';
 % problem_name = 'HS88';
 prob = setup_cutest_problem(problem_name, '../my_problems/');
