@@ -2,10 +2,10 @@ function [x, history_solution] = l1_penalty_article(f, phi, initial_points, mu, 
 %L1_PENALTY Summary of this function goes here
 %   Detailed explanation goes here
 
-options = struct('tol_radius', 1e-5, 'tol_f', 1e-6, ...
+options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                        'eps_c', 1e-5, 'eta_0', 0, 'eta_1', 0.1, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
-                        'initial_radius', 1, 'radius_max', 1e3, ...
+                        'initial_radius', 1, 'radius_max', 1e4, ...
                         'criticality_mu', 100, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
                         'pivot_threshold', 1/6);
@@ -58,8 +58,9 @@ x0 = initial_points(:, 1);
 x = x0;
 dimension = size(x, 1);
 n_constraints = size(phi, 1);
-tol_g = 1e-6;
-tol_con = 1e-6;
+tol_g = 1e-5;
+tol_con = 1e-5;
+tol_radius = options.tol_radius;
 gamma1 = 0.01;
 
 p = @(x) l1_function(f, phi, mu, x);
@@ -71,7 +72,7 @@ ind_eactive = zeros(0, 1);
 
 current_constraints = evaluate_constraints(phi, x);
 
-radius_max = 100;
+radius_max = options.radius_max;
 history_solution.x = x;
 rho = nan;
 history_solution.rho = rho;
@@ -422,9 +423,15 @@ while ~finish
             if dropping_constraint
                 break
             end
+            if trmodel.radius < tol_radius
+                finish = true;
+                break
+            end
         end
     end
-
+    if trmodel.radius < tol_radius
+        finish = true;
+    end
 end
 
 
