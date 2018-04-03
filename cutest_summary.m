@@ -23,18 +23,39 @@ all_problems = {'BURKEHAN' 'HIMMELP2' 'HIMMELP3' 'HIMMELP4' 'HIMMELP5' ...
                 'HAIFAS' 'HS116' 'HS117' 'HS118' 'DEMBO7' 'MAKELA3' ...
                 'MAKELA4' 'OPTPRLOC' };
 
-package = 'cobyla';
-directory = fullfile('..', 'my_problems');
-
 n_problems = length(all_problems);
+            
+sif_directory = '/home/caio/local/cutest/sif';
+sol_str = '*LO SOLTN';
+for n = 1:n_problems
+    problem = all_problems{n};
+    filename = fullfile(sif_directory, [problem, '.SIF']);
+    sif_contents = fileread(filename);
+    ind_sol = regexp(sif_contents, sol_str, 'end') + 1;
+    solution = sscanf(sif_contents(ind_sol:end), '%f');
+    result_sif(n, 1).solution = solution;
+end            
+            
+package = 'cobyla';
+r_directory = fullfile('..', 'my_problems');
+
 result_cutest(n_problems, 1).f_count = [];
 result_cutest(n_problems, 1).fval = [];
 for n = 1:n_problems
     problem = all_problems{n};
-    this_directory = fullfile(directory, problem);
+    this_directory = fullfile(r_directory, problem);
     summary_filename = [problem '_result_' package];
     summary_filename = fullfile(this_directory, summary_filename);
-    [fc, fv] = read_cutest_summary(summary_filename);
+    [fc, fv, x] = read_cutest_summary(summary_filename);
+    result_cutest(n, 1).name = problem;
     result_cutest(n, 1).f_count = fc;
     result_cutest(n, 1).fval = fv;
+    result_cutest(n, 1).x = x;
+    result_cutest(n, 1).sol_fval = result_sif(n, 1).solution;
+end
+
+for n = 1:n_problems
+    if ~isempty(result_cutest(n).sol_fval)
+        result_cutest(n).error = result_cutest(n).fval - result_cutest(n).sol_fval;
+    end
 end
