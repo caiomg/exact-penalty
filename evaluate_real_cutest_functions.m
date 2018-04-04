@@ -2,6 +2,7 @@ function results = evaluate_real_cutest_functions(results)
 
 n_problems = length(results);
 terminate_cutest_problem()
+clear global problem_path_cutest problem_name_cutest problem_data_cutest
 
 for n = 1:n_problems
 
@@ -23,6 +24,6 @@ for n = 1:n_problems
 
     results(n).real_f = f_obj(results(n).x);
     results(n).real_c = nlcon(results(n).x);
+    terminate_cutest_problem()
     
 end
-terminate_cutest_problem()
