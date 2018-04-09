@@ -50,13 +50,14 @@ log_fd = fopen(log_filename, 'w');
 
 
 % Parameters
-mu = 10;
+mu = 8;
 epsilon = 2;
 delta = 1e-6;
 Lambda = 0.1;
 
 final_filenames = {};
-for iter = 1:10
+all_results = {};
+for iter = 1:12
     clear results;
 
     fprintf(log_fd, ['mu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
@@ -135,8 +136,12 @@ for iter = 1:10
 
         print_results(results(k, 1), log_fd);
         print_results(results(k, 1));
+
+        all_results{end+1} = results;
+
         filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
-        save(filename, 'results', 'mu', 'epsilon', 'delta', 'Lambda', 'final_filenames');
+        save(filename, 'all_results', 'results', 'mu', 'epsilon', ...
+             'delta', 'Lambda', 'final_filenames');
 
         terminate_cutest_problem();
     end
