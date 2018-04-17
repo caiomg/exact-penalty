@@ -7,7 +7,7 @@ function succeeded = check_run_single(results)
     succeeded = false(n_problems, 1);
     for k = 1:n_problems
         if ~isempty(results(k, 1).nphi) && results(k, 1).nphi < tol_c
-            succeeded(n_problems, 1) = true;
+            succeeded(k, 1) = true;
         end
     end
 
