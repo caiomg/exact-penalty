@@ -105,16 +105,6 @@ while ~finish
     if (norm(N'*pseudo_gradient) > max(Lambda, tol_g))
         x_prev = x;
 
-
-        % Calculate Newton direction
-        nBn = N'*B*N;
-        if rcond(nBn) > sqrt(eps) && (pseudo_gradient'*(N*N'))*B*((N*N')*pseudo_gradient) > sqrt(eps) 
-            u = -(nBn)\(N'*pseudo_gradient);
-        else
-            u = -(N'*pseudo_gradient);
-        end
-        h0 = N*u;
-        h = correct_direction(h0, Q*R);
         model.B = N'*B*N;
         model.g = N'*pseudo_gradient;
         Ii = zeros(0, 1);
