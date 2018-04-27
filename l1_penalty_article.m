@@ -117,7 +117,8 @@ while ~finish
         step_calculation_ok = true;
         rf = 1;
         while step_calculation_ok
-            [d, fd] = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
+            % d = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
+            d = truncated_cg_step(model.B, model.g, rf*trmodel.radius);
             [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, d, zeros(size(d)), ...
@@ -271,7 +272,8 @@ while ~finish
                        Ii(end+1, 1) = constn; 
                     end
                 end
-                [d, fd] = solve_tr_problem(model.B, model.g, trmodel.radius);
+                % d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                d = truncated_cg_step(model.B, model.g, rf*trmodel.radius);
                 [s, fs, ind_eactive_dropping_b] = cauchy_step(model, trmodel.radius, N1, mu, current_constraints, Ii, d, zeros(size(model.g)), ind_eactive_dropping, epsilon);
                 Ns = N1*s;
                 pred1 = predict_descent_with_multipliers(fmodel, ...
@@ -357,7 +359,8 @@ while ~finish
                     end
                 end
                 step_calculation_ok = true;
-                d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                % d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                d = truncated_cg_step(model.B, model.g, rf*trmodel.radius);
                 [s, fs, ind_eactive_b] = cauchy_step(model, ...
                                                      trmodel.radius, ...
                                                      N, mu, ...
