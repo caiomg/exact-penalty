@@ -55,7 +55,31 @@ for n = 1:n_problems
 end
 
 for n = 1:n_problems
+    problem = all_problems{n};
+    terminate_cutest_problem();
+    prob = setup_cutest_problem(problem, '../my_problems/');
+
+    % Objective
+    f_obj = @(x) get_cutest_objective(x);
+
+    % Constraints
+    n_constraints = get_cutest_total_number_of_constraints();
+    all_con = cell(n_constraints, 1);
+    for k = 1:n_constraints
+        gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
+        all_con{k} = gk;
+    end
+    nlcon = @(x) constraints(all_con, {}, x, 1);
+
     if ~isempty(result_cutest(n).sol_fval)
         result_cutest(n).error = result_cutest(n).fval - result_cutest(n).sol_fval;
     end
+    if ~isempty(result_cutest(n, 1).x)
+        result_cutest(n).real_c = norm(max(0, nlcon(result_cutest(n, 1).x)));
+        result_cutest(n).real_f = f_obj(result_cutest(n, 1).x);
+    end
+    terminate_cutest_problem();
 end
+
+results_cobyla = result_cutest
+
