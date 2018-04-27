@@ -55,10 +55,14 @@ epsilon = 2;
 delta = 1e-6;
 Lambda = 0.1;
 
+all_mu = [100, 500, 1000, 1500, 2000, 4000, 8000];
+
 final_filenames = {};
 all_results = {};
-for iter = 1:12
+for iter = 1:length(all_mu)
     clear results;
+
+    mu = all_mu(iter);
 
     fprintf(log_fd, ['mu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
                      'Lambda = % 8g\n\n'], mu, epsilon, delta, Lambda);
@@ -137,7 +141,7 @@ for iter = 1:12
         print_results(results(k, 1), log_fd);
         print_results(results(k, 1));
 
-        all_results{end+1} = results;
+        all_results{iter} = results;
 
         filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
         save(filename, 'all_results', 'results', 'mu', 'epsilon', ...
@@ -146,5 +150,4 @@ for iter = 1:12
         terminate_cutest_problem();
     end
     final_filenames{iter, 1} = filename;
-    mu = mu*2;
 end
