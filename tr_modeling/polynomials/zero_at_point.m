@@ -6,12 +6,14 @@ p = p1;
 px = evaluate_polynomial(p, x);
 p2x = evaluate_polynomial(p2, x);
 
-for k = 1:2
+iter = 1;
+while px ~= 0
     p = add_p(p, multiply_p(p2, -px/p2x));
     px = evaluate_polynomial(p, x);
-    if px == 0
+    if iter >= 2
         break
     end
+    iter = iter + 1;
 end
 
 end
