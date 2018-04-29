@@ -1,4 +1,4 @@
-function basis = powell_basis(dimension)
+function basis = diagonal_basis(dimension)
 % Quadratic polynomial basis without crossed products (diagonal
 % Hessian)
 
