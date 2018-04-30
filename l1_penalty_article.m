@@ -71,7 +71,6 @@ R = zeros(0, 0);
 ind_eactive = zeros(0, 1);
 
 
-current_constraints = extract_constraints_from_tr_model(trmodel);
 
 radius_max = options.radius_max;
 history_solution.x = x;
@@ -81,9 +80,8 @@ history_solution.radius = trmodel.radius;
 
 iter = 0;
 finish = false;
-[~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-
-px = p(x);
+[px, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+current_constraints = extract_constraints_from_tr_model(trmodel);
 while ~finish
     iter = iter + 1;
 
@@ -186,7 +184,6 @@ while ~finish
             trmodel = move_trust_region(trmodel, x, trial_fvalues, ...
                                    fphi, options);
             px = p_trial;
-            [~, fmodel.g, fmodel.H] = f(x);
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = extract_constraints_from_tr_model(trmodel);
         else
@@ -305,7 +302,6 @@ while ~finish
                         x = trial_point;
                         step_accepted = true;
                         px = p_trial;
-                        [~, fmodel.g, fmodel.H] = f(x);
                         current_constraints = evaluate_constraints(phi, x);
                         trmodel = move_trust_region(trmodel, x, ...
                                                     trial_fvalues, ...
