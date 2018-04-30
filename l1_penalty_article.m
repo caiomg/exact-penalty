@@ -80,8 +80,9 @@ history_solution.radius = trmodel.radius;
 
 iter = 0;
 finish = false;
-[px, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+[fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
 current_constraints = extract_constraints_from_tr_model(trmodel);
+px = fx + mu*sum(max(0, [current_constraints.c]));
 while ~finish
     iter = iter + 1;
 
