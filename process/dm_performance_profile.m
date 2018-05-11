@@ -1,22 +1,23 @@
-function [rho, tau] = dm_performance_profile(computing_time, success)
+function [rho, tau] = dm_performance_profile(computing_time)
 
 [n_problems, n_solvers] = size(computing_time);
 
-if nargin < 2 || isempty(success)
-    success = true(n_problems, 1);
-end
 
-r = zeros(size(computing_time)) + max(max(computing_time)) + 1;
+best_time = min(computing_time, [], 2);
+success = ~isnan(best_time);
+n_success = sum(success);
 
+% Removing failures from all algorithms
+computing_time = computing_time(success, :);
+best_time = best_time(success);
 
-for k = 1:n_problems
-    if success(k)
-        r(k, :) = computing_time(k, :)/min(computing_time(k, :));
-    end
+r = zeros(size(computing_time));
+for k = 1:n_success
+    r(k, :) = computing_time(k, :)/best_time(k);
 end
 
 tau = unique(sort(r(:)));
-tau = tau(1:end-1); % removing rM
+tau = tau(~isnan(tau)); % removing rM
 n_tau = length(tau);
 rho = zeros(n_tau, n_solvers);
 

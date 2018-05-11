@@ -1,11 +1,11 @@
 
-tries = 12;
+tries = length(all_results);
 n_problems = 134
 succeeded = false(n_problems, tries);
 all_results2 = {};
 for k = 1:tries
-    succeeded(:, k) = check_run_single(all_results{k*n_problems});
-    all_results2{end+1} = all_results{k*n_problems};
+    succeeded(:, k) = check_run_single(all_results{k});
+    all_results2{end+1} = all_results{k};
 end
 
 
