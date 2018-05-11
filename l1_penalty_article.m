@@ -303,7 +303,6 @@ while ~finish
                         x = trial_point;
                         step_accepted = true;
                         px = p_trial;
-                        current_constraints = evaluate_constraints(phi, x);
                         trmodel = move_trust_region(trmodel, x, ...
                                                     trial_fvalues, ...
                                                     fphi, options);
@@ -315,7 +314,6 @@ while ~finish
                                                                  x, ...
                                                                  trial_fvalues, fphi, options);
                         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-                        current_constraints = evaluate_constraints(phi, x);
                         current_constraints = extract_constraints_from_tr_model(trmodel);
                     end
                     Q = Q1;
