@@ -12,7 +12,8 @@ pv = @(s) -predict_descent(fmodel, cmodel, s, mu);
 if ~isempty(ind_eactive)
     [nphi, A] = update_constraint_information(cmodel, ind_eactive, h);
     [phiB, B] = update_constraint_information(cmodel, [ind_eactive(nphi > 0); ind_eviolated], h);
-    pp_grad = fmodel.g + mu*sum(B, 2);
+    pp_grad = (fmodel.g + fmodel.H*h) + mu*sum(B, 2);
+%     pp_grad = fmodel.g + mu*sum(B, 2);
 
 
 

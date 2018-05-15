@@ -10,6 +10,7 @@ options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
                         'pivot_threshold', 1/6);
 
+
 gamma_0 = 0.0625;
 gamma_1 = 0.5;
 gamma_2 = 2;
@@ -137,22 +138,35 @@ while ~finish
                 end
             end
         end
-
+        pred = predict_descent(fmodel, current_constraints, Ns, mu, []);
+        if pred < 0
+            1;
+        end
+    
 %         v = zeros(size(v));
-        v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
+        v1 = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
+        v2 = tr_vertical_step(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
+%        v3 = tr_vertical_step_cg_origin(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius, Q, R);
         normphi = norm([current_constraints(ind_eactive).c], 1);
         ppgrad = N'*pseudo_gradient;
-        step = Ns + v;
+        pred = predict_descent(fmodel, current_constraints, Ns+v1, mu, []);
+        pred_cg = predict_descent(fmodel, current_constraints, Ns+v2, mu, []);
+        step = Ns + v2;
         pred = predict_descent(fmodel, current_constraints, step, mu, []);
+
         if pred < 0
-            [step1, pred1, status] = line_search_full_domain(fmodel, current_constraints, mu, Ns + v, trmodel.radius);
-            [Ns2, pred, status] = line_search_full_domain(fmodel, current_constraints, mu, Ns, trmodel.radius);
-            v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius);
-            step = Ns2 + v;
+            h2 = tr_horizontal_cg_step(fmodel, current_constraints, mu, ind_eactive, ind_eviolated, trmodel.radius, N, [], []);
+            Ns2 = h2;
+%            [Ns2, pred, status] = line_search_full_domain(fmodel, current_constraints, mu, Ns, trmodel.radius);
+%            v1 = tr_vertical_step_new(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius);
+            v2 = tr_vertical_step(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius);
+%            v3 = tr_vertical_step_cg_origin(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius, Q, R);
+            step = Ns2 + v2;
             pred = predict_descent(fmodel, current_constraints, step, mu, []);
-            if status
-                trmodel.radius = norm(step);
+            if pred < 0
+                pred = inf;
             end
+            trmodel.radius = norm(step);
         end
 %%%%%%%%%%%%%
         trial_point = x + step;
@@ -276,6 +290,8 @@ while ~finish
                 Ns = N1*s;
                 pred1 = predict_descent_with_multipliers(fmodel, ...
                                                          current_constraints, Ns, mu, ind_qr_dropping, multipliers_dropping);
+                h2 = tr_horizontal_cg_step(fmodel, current_constraints, mu, ind_eactive, ind_eviolated, trmodel.radius, N1, multipliers_dropping, ind_qr_dropping);
+                Ns = h2;                                     
                 pred = predict_descent(fmodel, current_constraints, Ns, mu, []);
                 step = Ns;
                 if pred > delta
@@ -355,7 +371,7 @@ while ~finish
                 end
                 step_calculation_ok = true;
                 d = solve_tr_problem(model.B, model.g, trmodel.radius);
-                % d = truncated_cg_step(model.B, model.g, trmodel.radius);
+                % d = trunnncated_cg_step(model.B, model.g, trmodel.radius);
                 [s, fs, ind_eactive_b] = cauchy_step(model, ...
                                                      trmodel.radius, ...
                                                      N, mu, ...
@@ -364,13 +380,25 @@ while ~finish
                                                      zeros(size(model.g)), ...
                                                      ind_eactive, epsilon);
                 pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
-                v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                         mu, N*s, ind_eactive, ...
+                Ns = N*s;
+                h2 = tr_horizontal_cg_step(fmodel, current_constraints, mu, ind_eactive, ind_eviolated, trmodel.radius, N, multipliers, ind_qr);
+                Ns = h2;
+                v1 = tr_vertical_step_new(fmodel, current_constraints, ...
+                                         mu, Ns, ind_eactive, ...
                                          ind_eviolated, trmodel.radius);
+                                     
+                v2 = tr_vertical_step(fmodel, current_constraints, ...
+                                         mu, Ns, ind_eactive, ...
+                                         ind_eviolated, trmodel.radius);
+%                  v3 = tr_vertical_step_cg_origin(fmodel, current_constraints, ...
+%                                          mu, N*s, ind_eactive, ...
+%                                          ind_eviolated, trmodel.radius, Q, R);
+                v = v2;
+                step = Ns + v;                     
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 pred = predict_descent(fmodel, current_constraints, ...
-                                       N*s + v, mu, []);
+                                       step, mu, []);
 %                 if pred < delta*(norm(ppgrad)^2 + normphi)
 % %                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
 %                     v = tr_vertical_step_new(fmodel, current_constraints, ...
@@ -387,7 +415,6 @@ while ~finish
                 else
                     % Compute ared and all...
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                    step = N*s + v;
                     trial_point = x + step;
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
@@ -455,5 +482,4 @@ while ~finish
         finish = true;
     end
 end
-
 end

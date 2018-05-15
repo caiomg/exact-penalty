@@ -1,7 +1,7 @@
 function [s, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s0, radius)
 
 if nargin < 5 || isempty(radius)
-    radius = norm(s);
+    radius = norm(s0);
 end
 
 pred0 = predict_descent(fmodel, cmodel, s0, mu, []);

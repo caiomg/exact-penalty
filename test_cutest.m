@@ -4,7 +4,7 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-problem_name = 'WOMFLET';
+% problem_name = 'WOMFLET';
 % problem_name = 'POLAK1';
 % problem_name = 'SNAKE';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
@@ -31,13 +31,13 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 100;
+mu = 500;
 if strcmp(problem_name, 'SNAKE')
     mu = 10000;
 end
-epsilon = 1;
+epsilon = 0.5;
 delta = 1e-6;
-Lambda = 0.1;
+Lambda = 0.5;
 
 
 nlcon = @(x) constraints(all_con, {}, x, 1);

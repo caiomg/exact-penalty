@@ -1,9 +1,8 @@
-function v = tr_vertical_step(fmodel, cmodel, mu, h, ind_eactive, ind_eviolated, radius)
+function v = tr_vertical_step_cg_origin(fmodel, cmodel, mu, h, ind_eactive, ind_eviolated, radius, Q, R)
 
 
 opts_lt.LT = true;
 tol_r = 1e-8;
-tol_g = 1e-6;
 dim = size(fmodel.g, 1);
 n_cons = length(cmodel);
 ls_steps = 10;
@@ -11,8 +10,8 @@ ls_factor = 0.75;
 pv = @(s) -predict_descent(fmodel, cmodel, s, mu);
 
 if ~isempty(ind_eactive)
-    [nphi, A] = update_constraint_information(cmodel, 1:n_cons, h);
-    A = A(:, ind_eactive);
+    [nphi, Ah] = update_constraint_information(cmodel, 1:n_cons, h);
+    Ah = Ah(:, ind_eactive);
 
     ind_pgrad = (1:n_cons)';
     ind_pgrad = ind_pgrad(nphi > 0);
@@ -21,8 +20,14 @@ if ~isempty(ind_eactive)
     pp_grad = (fmodel.g + fmodel.H*h) + mu*sum(B, 2);
 
 
+    gk0 = Ah*nphi;
+    A = Q*R;
     gk = A*nphi;
-    g_mn = A'\nphi;
+    
+%     if gk0'*pp_grad > 0 && gk0'*gk > 0
+%         gk = gk0;
+%     end
+%     g_mn = A'\nphi;
 
     if gk'*pp_grad < 0
         % Try reseting the direction
@@ -33,12 +38,12 @@ if ~isempty(ind_eactive)
 %         end
     end
     H = A*A';
-    v = zeros(size(h));
+    v = zeros(dim, 1);
     pk = -gk;
     % Tolerance!!
     for k = 1:dim
-        if norm(h + v) > radius - tol_r || norm(pk) < tol_g
-            break
+        if norm(h+v) - radius < tol_r
+            break;
         end
         remaining_radius = roots([pk'*pk, 2*(h + v)'*pk, (h + v)'*(h + v) - radius^2]);
         radiusk = max(remaining_radius)*norm(pk);
@@ -47,8 +52,11 @@ if ~isempty(ind_eactive)
         for n = 1:n_cons
             cmodelk(n) = shift_model(cmodel(n), h + v);
         end
-    
+        try
         [sk, ~, status] = line_search_full_domain(fmodelk, cmodelk, mu, tpoint, radiusk);
+        catch erro
+            rethrow(erro);
+        end
         if status
             v = v + sk;
         end
