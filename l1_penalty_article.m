@@ -443,14 +443,14 @@ while ~finish
             if dropping_constraint
                 break
             end
-            check_interpolation(trmodel); % TO BE REMOVED!
+%             check_interpolation(trmodel); % TO BE REMOVED!
             if trmodel.radius < tol_radius
                 finish = true;
                 break
             end
         end
     end
-    check_interpolation(trmodel); % TO BE REMOVED!
+%     check_interpolation(trmodel); % TO BE REMOVED!
     if trmodel.radius < tol_radius
         finish = true;
     end
