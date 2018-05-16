@@ -24,7 +24,10 @@ all_problems = {'BURKEHAN' 'HIMMELP2' 'HIMMELP3' 'HIMMELP4' 'HIMMELP5' ...
                 'MAKELA4' 'OPTPRLOC' };
 
 n_problems = length(all_problems);
-            
+
+tol_c = 1e-3;
+tol_g = 1e-3;
+
 sif_directory = '/home/caio/local/cutest/sif';
 sol_str = '*LO SOLTN';
 for n = 1:n_problems
@@ -38,6 +41,7 @@ end
             
 package = 'cobyla';
 r_directory = fullfile('..', 'my_problems');
+
 
 result_cutest(n_problems, 1).f_count = [];
 result_cutest(n_problems, 1).fval = [];
@@ -77,6 +81,9 @@ for n = 1:n_problems
     if ~isempty(result_cutest(n, 1).x)
         result_cutest(n).real_c = norm(max(0, nlcon(result_cutest(n, 1).x)));
         result_cutest(n).real_f = f_obj(result_cutest(n, 1).x);
+        [is_kkt, lgrad] = check_kkt(f_obj, all_con, result_cutest(n, 1).x, tol_c, tol_g);
+        result_cutest(n).kkt = is_kkt;
+        result_cutest(n).lgrad = lgrad;
     end
     terminate_cutest_problem();
 end

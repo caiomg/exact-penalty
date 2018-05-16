@@ -1,6 +1,6 @@
 %results_cobyla = evaluate_real_cutest_functions(results_cobyla);
 
-tol_c = 1e-4;
+tol_c = 1e-3;
 tol_f = 1e-1;
 
 tmax = 9000;
