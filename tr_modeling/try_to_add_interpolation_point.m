@@ -11,9 +11,12 @@ function model = try_to_add_interpolation_point(model, new_point, ...
     end
     n_points = size(model.points, 2);
     
-    model.points(:, n_points+1) = new_point;
-    for nf = 1:n_functions
-        model.fvalues(nf, n_points+1) = new_point_fvals(nf);
+    % No NaN value to be added
+    if ~sum(isnan(new_point_fvals)) && ~sum(isinf(new_point_fvals))
+        model.points(:, n_points+1) = new_point;
+        for nf = 1:n_functions
+            model.fvalues(nf, n_points+1) = new_point_fvals(nf);
+        end
     end
 
     % Model improvement algorithm will improve poisedness of model

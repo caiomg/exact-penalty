@@ -2,51 +2,71 @@ function [model, smallest_pivot] = complete_interpolation_set(model, functions, 
 % COMPLETE_INTERPOLATION_SET -- ensures the model has points so
 % that interpolation is possible
 
-points_abs = model.points;
-center = points_abs(:, 1);
-basis = model.basis;
-fvalues = model.fvalues;
 radius = model.radius;
 
-basis_size = length(basis);
+for tries = 1:4
+    points_abs = model.points;
+    center = points_abs(:, 1);
+    basis = model.basis;
+    fvalues = model.fvalues;
+    
+    basis_size = length(basis);
 
-[dimension, p_ini] = size(points_abs);
+    [dimension, p_ini] = size(points_abs);
 
-n_interpolating_functions = length(functions);
+    n_interpolating_functions = length(functions);
 
-% Scaling points to be in a ball of radius 1 around origin
-points_scaled = points_abs;
-max_norm = 0;
-for column = 1:p_ini
-    points_scaled(:, column) = points_abs(:, column) - center;
-    norm_current = norm(points_scaled(:, column), 2);
-    max_norm = max(max_norm, norm_current);
-end
-if max_norm > 0
-    scale_factor_x = max_norm;
-else
-    scale_factor_x = radius;
-end
-for column = 1:p_ini
-    points_scaled(:, column) = points_scaled(:, column)/scale_factor_x;
-end
+    % Scaling points to be in a ball of radius 1 around origin
+    points_scaled = points_abs;
+    max_norm = 0;
+    for column = 1:p_ini
+        points_scaled(:, column) = points_abs(:, column) - center;
+        norm_current = norm(points_scaled(:, column), 2);
+        max_norm = max(max_norm, norm_current);
+    end
+    if max_norm > 0
+        scale_factor_x = max_norm;
+    else
+        scale_factor_x = radius;
+    end
+    for column = 1:p_ini
+        points_scaled(:, column) = points_scaled(:, column)/scale_factor_x;
+    end
 
-% Perform the actual completion of interpolation set
-[points_scaled, indices, smallest_pivot] = ...
-        change_interpolation_set_lu(points_scaled, basis);
+    % Perform the actual completion of interpolation set
+    [points_scaled, indices, smallest_pivot] = ...
+            change_interpolation_set_lu(points_scaled, basis);
 
-% Calculate new points in absolute coordinates
-for k = p_ini+1:size(points_scaled, 2)
-    points_abs(:, k) = scale_factor_x*points_scaled(:, k) + center;
-end
+    % Calculate new points in absolute coordinates
+    for k = p_ini+1:size(points_scaled, 2)
+        points_abs(:, k) = scale_factor_x*points_scaled(:, k) + center;
+    end
 
-% Calculate new function values
-for k = p_ini+1:size(points_scaled, 2)
-    for nf = 1:n_interpolating_functions
-        fvalues(nf, k) = functions{nf}(points_abs(:, k));
+    % Calculate new function values
+    bad_value = false;
+    for k = p_ini+1:size(points_scaled, 2)
+        for nf = 1:n_interpolating_functions
+            fvalues(nf, k) = functions{nf}(points_abs(:, k));
+            if isinf(fvalues(nf, k)) || isnan(fvalues(nf, k))
+                bad_value = true;
+            end
+            if bad_value
+                break
+            end
+        end
+        if bad_value
+            break
+        end
+    end
+    if bad_value
+        radius = 0.5*radius;
+    else
+        break
     end
 end
-
+if bad_value
+    error('cmg:bad_fvalue', 'Bad f value');
+end
 % Reordering information
 points_abs = points_abs(:, indices);
 points_scaled = points_scaled(:, indices);
