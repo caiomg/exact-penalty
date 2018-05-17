@@ -21,6 +21,6 @@ function model = try_to_add_interpolation_point(model, new_point, ...
 
     % Model improvement algorithm will improve poisedness of model
     % new point may be added or not
-    model = improve_model(model, functions, options);
+    model = improve_model_new(model, functions, options);
     
 end

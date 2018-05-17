@@ -1,4 +1,4 @@
-function [s, fs] = solve_tr_problem(H, g, radius)
+function [s, fs] = ms_step(H, g, radius)
 
 theta = 0.01;
 
@@ -38,21 +38,16 @@ else
    [va, ind_va] = min(diag(Dv));
    u = V(:, ind_va);
    % A bit higher
-   lambda = abs(va)*1.01 + sqrt(eps);
-   while true
+   lambda = abs(va)*1.01 + eps(max(1, norm(H, 1)));
+   for k = 1:10
        try
-        R = chol(H + lambda*eye(size(H)));
-        catch exception
-            if strcmp(exception.identifier, 'MATLAB:posdef')
-                lambda = lambda*1.05;
-                continue
-            else
-                rethrow(exception);
-            end
+           R = chol(H + lambda*eye(size(H)));
+           break
+       catch current_exception
+           % One more try with other tolerance...
+           lambda = lambda*1.05;
        end
-       break
    end
-   
    lambda_l = -va;
 end
 
@@ -63,14 +58,11 @@ if lambda > 0 && norm(s) < radius
     alphas = roots([u'*u, 2*s'*u, s'*s - radius^2]);
     s1 = s + alphas(1)*u;
     s2 = s + alphas(2)*u;
-    alphas = roots([u'*u, -2*s'*u, s'*s - radius^2]);
-    s3 = s + alphas(1)*u;
-    s4 = s + alphas(2)*u;
-    values = [0.5*(s1'*H*s1) + g'*s1, 0.5*(s2'*H*s2) + g'*s2, ...
-              0.5*(s3'*H*s3) + g'*s3, 0.5*(s4'*H*s4) + g'*s4];
-    [~, ind] = min(values);
-    s1234 = [s1, s2, s3, s4];
-    s = s1234(:, ind);
+    if 0.5*(s1'*H*s1) + g'*s1 < 0.5*(s2'*H*s2) + g'*s2
+        s = s1;
+    else
+        s = s2;
+    end
 elseif norm(s) > radius
     lambda_u = norm(g)/radius + norm(H, inf);
     while abs(norm(s) - radius) > kappa_easy*radius
@@ -90,7 +82,7 @@ elseif norm(s) > radius
         end
         y = linsolve(R', -g, linopts_l);
         s = linsolve(R, y, linopts_u);
-        if lambda_u - lambda_l < 10*eps(max(abs(lambda_u), 1))
+        if lambda_u - lambda_l < 10*eps
             break
         end
         if radius - norm(s) > 0

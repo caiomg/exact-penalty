@@ -8,7 +8,7 @@ options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'initial_radius', 0.5, 'radius_max', 1e4, ...
                         'criticality_mu', 100, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
-                        'pivot_threshold', 1/6);
+                        'pivot_threshold', 1/6, 'poised_radius_factor', 1, 'pivot_imp', 1.1);
 
 gamma_0 = 0.0625;
 gamma_1 = 0.5;
@@ -47,7 +47,7 @@ fphi = {f, phi{:}}';
 
 % Completing set of interpolation points and calculating polynomial
 % model
-trmodel = complete_interpolation_set(trmodel, fphi, options);
+trmodel = complete_interpolation_set_new(trmodel, fphi, options);
 
 fval_current = trmodel.fvalues(1, 1);
 
