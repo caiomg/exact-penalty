@@ -21,6 +21,16 @@ function model = try_to_add_interpolation_point(model, new_point, ...
 
     % Model improvement algorithm will improve poisedness of model
     % new point may be added or not
-    model = improve_model(model, functions, options);
-    
+    maxk = 4;
+    for k = 1:maxk
+        try
+            model = improve_model(model, functions, options);
+        catch exception
+            if k < maxk && strcmp(exception.identifier, 'cmg:bad_fvalue')
+                trmodel.radius = 0.5*trmodel.radius;
+            else
+                rethrow(exception);
+            end
+        end
+    end 
 end

@@ -47,6 +47,9 @@ if smallest_pivot < tol_pivot
     for k = p_ini+1:size(points_scaled, 2)
         for nf = 1:n_interpolating_functions
             fvalues(nf, k) = functions{nf}(points_abs(:, k));
+            if isnan(fvalues(nf, k)) || isinf(fvalues(nf, k))
+                error('cmg:bad_fvalue', 'Bad function value');
+            end
         end
     end
 
