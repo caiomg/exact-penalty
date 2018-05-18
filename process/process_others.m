@@ -12,6 +12,7 @@ l1_solved = false(n_problems, tries);
 cobyla_better = zeros(n_problems, tries);
 cobyla_evals = tmax + zeros(n_problems, 1);
 l1_evals = tmax + zeros(n_problems, tries);
+l1_kkt = false(n_problems, tries);
 
 for k = 1:n_problems
     sol_fval = [];
@@ -33,6 +34,7 @@ for k = 1:n_problems
     
     for m = 1:tries
         this_results = all_results2{m};
+        l1_kkt(k, m) = this_results(k).kkt;
         if ~isempty(this_results(k).nphi) && this_results(k).nphi < tol_c && this_results(k).error_obj < 1
             n_evals_this = this_results(k).fcount;
             problems_solved_l1(n_evals_this:end, m) = 1 + ...

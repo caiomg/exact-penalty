@@ -5,6 +5,7 @@ computing_time = [l1_evals(:, k), cobyla_evals];
 [rho, tau] = dm_performance_profile(computing_time);
 figure(2)
 semilogx(tau, rho);
+ylim([0, 1]);
 figure(1)
 perf(computing_time, 1);
 k = k+1;
