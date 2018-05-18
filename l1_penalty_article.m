@@ -118,6 +118,12 @@ while ~finish
         while step_calculation_ok
             d = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
             % d = truncated_cg_step(model.B, model.g, rf*trmodel.radius);
+
+            if norm(d) < 0.1*trmodel.radius && ~is_lambda_poised(trmodel, options)
+                trmodel = improve_model(trmodel, fphi, options);
+                continue
+            end
+
             [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
                                                 mu, current_constraints, ...
                                                 Ii, d, zeros(size(d)), ...
