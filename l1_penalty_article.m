@@ -176,7 +176,8 @@ while ~finish
         else
             rho = dared/dpred;
         end
-        if rho < 0.25
+        geometry_ok = is_lambda_poised(trmodel, options);
+        if rho < 0.25 && geometry_ok
             gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
             trmodel.radius = gamma_dec*trmodel.radius;
         else
@@ -201,9 +202,7 @@ while ~finish
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = extract_constraints_from_tr_model(trmodel);
         end
-%         if abs(rho - 1) < 1e-4 && norm(step) < 0.1*norm(N*s)
-%             Lambda = Lambda*1.5;
-%         end
+
         history_solution(end+1).x = x;
         history_solution(end).rho = rho;
         history_solution(end).radius = trmodel.radius;
@@ -296,7 +295,8 @@ while ~finish
                     else
                         rho = dared/dpred;
                     end
-                    if rho < 0.25
+                    geometry_ok = is_lambda_poised(trmodel, options);
+                    if rho < 0.25 && geometry_ok
                         gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
                         trmodel.radius = gamma_dec*trmodel.radius;
                     else
@@ -348,6 +348,7 @@ while ~finish
                     finish = true;
                     break
                 else
+                    % Maybe flag for a vertical step
                     step_accepted = false;
                 end
             else
@@ -405,7 +406,8 @@ while ~finish
                     else
                         rho = dared/dpred;
                     end
-                    if rho < 0.25
+                    geometry_ok = is_lambda_poised(trmodel, options);
+                    if rho < 0.25 && geometry_ok
                         gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
                         trmodel.radius = gamma_dec*trmodel.radius;
                     else
