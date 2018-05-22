@@ -18,7 +18,7 @@ model = improve_model(model, f, options);
 [~, f_grad] = get_model_matrices(model, 0);
 cmodel = extract_constraints_from_tr_model(model);
 [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, epsilon, []);
-[N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
+[N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
 pseudo_gradient = l1_pseudo_gradient(f_grad, mu, cmodel, ind_eviolated);
 q1 = N'*pseudo_gradient;
 q2 = [cmodel(ind_qr).c]';
@@ -36,7 +36,7 @@ while (model.radius > mu*measure)
     [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, ...
                                                       epsilon, []);
     [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
-                                             ind_eactive, false);
+                                             ind_eactive, true);
     pseudo_gradient = l1_pseudo_gradient(f_grad, mu, cmodel, ind_eviolated);
     q1 = N'*pseudo_gradient;
     q2 = [cmodel(ind_qr).c]';
