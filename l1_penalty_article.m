@@ -412,7 +412,7 @@ while ~finish
                 if pred < delta*(norm(ppgrad)^2 + normphi)
                     % Better not to try now
                     step_accepted = false;
-                    gamma_dec = max(gamma_0, gamma_1*norm(s)/trmodel.radius);
+                    gamma_dec = max(gamma_0, gamma_1*norm(Ns+v)/trmodel.radius);
                     trmodel.radius = gamma_dec*trmodel.radius;
                 else
                     % Compute ared and all...
