@@ -3,10 +3,10 @@ function [x, history_solution] = l1_penalty_article(f, phi, initial_points, mu, 
 %   Detailed explanation goes here
 
 options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                       'eps_c', 1e-5, 'eta_0', 0, 'eta_1', 0.1, ...
+                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'initial_radius', 0.5, 'radius_max', 1e4, ...
-                        'criticality_mu', 100, 'criticality_beta', 10, ...
+                        'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
                         'pivot_threshold', 1/6);
 
@@ -14,6 +14,8 @@ gamma_0 = 0.0625;
 gamma_1 = 0.5;
 gamma_2 = 2;
 ut_option.UT = true;
+eta_1 = options.eta_1;
+eta_2 = options.eta_2;
 
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
@@ -84,8 +86,6 @@ finish = false;
 current_constraints = extract_constraints_from_tr_model(trmodel);
 px = fx + mu*sum(max(0, [current_constraints.c]));
 while ~finish
-    iter = iter + 1;
-
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ...
                                  []);
@@ -93,8 +93,6 @@ while ~finish
                                                   Q, R, ind_eactive, false);
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_eviolated);
-
-    p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
 
     Bv = zeros(dimension);
     for n = ind_eviolated'
@@ -113,41 +111,19 @@ while ~finish
             end
         end
 
-        step_calculation_ok = true;
-        rf = 1;
-        while step_calculation_ok
-            d = solve_tr_problem(model.B, model.g, rf*trmodel.radius);
-            % d = truncated_cg_step(model.B, model.g, rf*trmodel.radius);
+        d = solve_tr_problem(model.B, model.g, trmodel.radius);
+%       d = truncated_cg_step(model.B, model.g, trmodel.radius);
 
-            if norm(d) < 0.1*trmodel.radius && ~is_lambda_poised(trmodel, options)
-                trmodel = improve_model(trmodel, fphi, options);
-                continue
-            end
-
-            [s, fs, ind_eactive1] = cauchy_step(model, rf*trmodel.radius, N, ...
-                                                mu, current_constraints, ...
-                                                Ii, d, zeros(size(d)), ...
-                                                ind_eactive, ...
-                                                epsilon);
-            
-            Ns = N*s;
-            pred_r = predict_descent(fmodel, current_constraints, Ns, mu, ind_qr);
-            
-            if pred_r > 0% && norm(s) > 0.1*norm(d)
-                break
-            else
-                gamma_dec = 0.75;%max(0.5, gamma_1*norm(Ns)/(rf*trmodel.radius));
-                rf = gamma_dec*rf;
-                if rf < 1e-100
-                    1;
-                end
-            end
-        end
+%         [s, fs, ind_eactive1] = cauchy_step(model, trmodel.radius, N, ...
+%                                             mu, current_constraints, ...
+%                                             Ii, d, zeros(size(d)), ...
+%                                             ind_eactive, ...
+%                                             epsilon);
+        %Ns = N*s;
+        [Ns, pred, status] = line_search_full_domain(fmodel, current_constraints, mu, N*d, trmodel.radius);
 
 %         v = zeros(size(v));
         v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns, ind_eactive, ind_eviolated, trmodel.radius);
-        normphi = norm([current_constraints(ind_eactive).c], 1);
-        ppgrad = N'*pseudo_gradient;
         step = Ns + v;
         pred = predict_descent(fmodel, current_constraints, step, mu, []);
         if pred < 0
@@ -156,37 +132,29 @@ while ~finish
             v = tr_vertical_step_new(fmodel, current_constraints, mu, Ns2, ind_eactive, ind_eviolated, trmodel.radius);
             step = Ns2 + v;
             pred = predict_descent(fmodel, current_constraints, step, mu, []);
-            if status
-                trmodel.radius = norm(step);
-            end
         end
 %%%%%%%%%%%%%
-        trial_point = x + step;
-        [p_trial, trial_fvalues] = p(trial_point);
-        ared = px - p_trial;
-        if ared < 0
-            dpred = pred - 10*eps*max(1, abs(px));
-            dared = ared - 10*eps*max(1, abs(px));
+        if pred < 0 || norm(step) < 0.1*trmodel.radius
+            rho = -inf;
         else
-            dpred = pred;
-            dared = ared;
-        end
-        if abs(dared) < 10*eps && abs(dpred) < 10*eps
-            rho = 1;
-        else
-            rho = dared/dpred;
-        end
-        geometry_ok = is_lambda_poised(trmodel, options);
-        if rho < 0.25 && geometry_ok
-            gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
-            trmodel.radius = gamma_dec*trmodel.radius;
-        else
-            if rho > 3/4
-                radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
-                trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+            trial_point = x + step;
+            [p_trial, trial_fvalues] = p(trial_point);
+            ared = px - p_trial;
+            if ared < 0
+                dpred = pred - 10*eps*max(1, abs(px));
+                dared = ared - 10*eps*max(1, abs(px));
+            else
+                dpred = pred;
+                dared = ared;
+            end
+            if abs(dared) < 10*eps && abs(dpred) < 10*eps
+                rho = 1;
+            else
+                rho = dared/dpred;
             end
         end
-        if rho > 0.1
+        geometry_ok = is_lambda_poised(trmodel, options);
+        if rho > eta_2 || (rho > eta_1 && geometry_ok)
             x = trial_point;
             step_accepted = true;
             trmodel = move_trust_region(trmodel, x, trial_fvalues, ...
@@ -202,18 +170,22 @@ while ~finish
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = extract_constraints_from_tr_model(trmodel);
         end
-
-        history_solution(end+1).x = x;
-        history_solution(end).rho = rho;
-        history_solution(end).radius = trmodel.radius;
+        if rho < eta_2 && geometry_ok
+            gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+            trmodel.radius = gamma_dec*trmodel.radius;
+        else
+            if rho > eta_2
+                radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+            end
+        end
     else
         iter2 = 0;
         while true
-            p1 = @(x) l1_function(f, phi, mu, x, ind_eactive);
+          	x_prev = x;
             pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                                  ind_eviolated);
 
-          	x_prev = x;
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive, true);
             % calculate multipliers
@@ -225,17 +197,7 @@ while ~finish
             tol_multipliers = 10*max(norm(correction), eps);
     %         multipliers = linsolve(R, Q'*pseudo_gradient, linsolve_opts);
 
-            Bv = zeros(dimension);
-            for n = ind_eviolated'
-                Bv = Bv + mu*(current_constraints(n).H);
-            end
-            Bm = zeros(dimension);
-            for n = 1:length(ind_qr)
-                Bm = Bm + multipliers(n)*(current_constraints(ind_qr(n)).H);
-            end
-            B = Bv + Bm + fmodel.H;
-
-            if (norm(N'*pseudo_gradient) < tol_g)
+            if (norm(N'*pseudo_gradient) < 100*tol_g)
                 [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
                                               mu, options);
                 [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
@@ -261,12 +223,25 @@ while ~finish
                 if ~sum(multipliers < -tol_multipliers |...
                         mu < multipliers - tol_multipliers) 
                     phih = [current_constraints(ind_qr).c]';
-                    if norm(phih) < tol_con
-                        finish = true;
-                        break
+                    if norm(N'*pseudo_gradient) < tol_g
+                        if norm(phih) < tol_con
+                            finish = true;
+                            break
+                        end
                     end
                 end
             end
+            
+            Bv = zeros(dimension);
+            for n = ind_eviolated'
+                Bv = Bv + mu*(current_constraints(n).H);
+            end
+            Bm = zeros(dimension);
+            for n = 1:length(ind_qr)
+                Bm = Bm + multipliers(n)*(current_constraints(ind_qr(n)).H);
+            end
+            B = Bv + Bm + fmodel.H;
+
                 
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
@@ -329,16 +304,7 @@ while ~finish
                         rho = dared/dpred;
                     end
                     geometry_ok = is_lambda_poised(trmodel, options);
-                    if rho < 0.25 && geometry_ok
-                        gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
-                        trmodel.radius = gamma_dec*trmodel.radius;
-                    else
-                        if rho > 3/4
-                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
-                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
-                        end
-                    end
-                    if rho > 0.1
+                    if rho > eta_2 || (rho > eta_1 && geometry_ok)
                         x = trial_point;
                         step_accepted = true;
                         px = p_trial;
@@ -355,6 +321,15 @@ while ~finish
                         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
                         current_constraints = extract_constraints_from_tr_model(trmodel);
                     end
+                    if rho < eta_2 && geometry_ok
+                        gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+                        trmodel.radius = gamma_dec*trmodel.radius;
+                    else
+                        if rho > eta_2
+                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+                        end
+                    end
                     Q = Q1;
                     R = R1;
                     ind_qr = ind_qr(ind_qr ~= n_drop);
@@ -362,13 +337,9 @@ while ~finish
                 else % min decrease not satisfied
                     dropping_succeeded = false;
                     step_accepted = false;
-                    gamma_dec = max(gamma_0, gamma_1*norm(s)/trmodel.radius);
+                    gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(s)/trmodel.radius);
                     trmodel.radius = gamma_dec*trmodel.radius;
                 end
-                history_solution(end+1).x = x;
-                history_solution(end).rho = rho;
-                history_solution(end).radius = trmodel.radius;
-
             else
                 if ~isempty(N)
                     model.B = N'*B*N;
@@ -379,7 +350,6 @@ while ~finish
                            Ii(end+1, 1) = constn; 
                         end
                     end
-                    step_calculation_ok = true;
                     d = solve_tr_problem(model.B, model.g, trmodel.radius);
                     % d = truncated_cg_step(model.B, model.g, trmodel.radius);
                     [s, fs, ind_eactive_b] = cauchy_step(model, ...
@@ -401,27 +371,17 @@ while ~finish
                 ppgrad = N'*pseudo_gradient;
                 pred = predict_descent(fmodel, current_constraints, ...
                                        Ns + v, mu, []);
-%                 if pred < delta*(norm(ppgrad)^2 + normphi)
-% %                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
-%                     v = tr_vertical_step_new(fmodel, current_constraints, ...
-%                                              mu, Ns, ind_eactive, ...
-%                                              ind_eviolated, trmodel.radius);
-%                     pred = predict_descent(fmodel, current_constraints, ...
-%                                            Ns + v, mu, []);
-%                 end
                 if pred < delta*(norm(ppgrad)^2 + normphi)
                     % Better not to try now
                     step_accepted = false;
-                    gamma_dec = max(gamma_0, gamma_1*norm(Ns+v)/trmodel.radius);
+                    gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(Ns+v)/trmodel.radius);
                     trmodel.radius = gamma_dec*trmodel.radius;
                 else
                     % Compute ared and all...
-                    p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
                     step = Ns + v;
                     trial_point = x + step;
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
-% %                     ared1 = p2(x) - p2(trial_point);
                     dpred = pred - 10*eps*max(1, abs(px));
                     dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
@@ -430,16 +390,7 @@ while ~finish
                         rho = dared/dpred;
                     end
                     geometry_ok = is_lambda_poised(trmodel, options);
-                    if rho < 0.25 && geometry_ok
-                        gamma_dec = max(gamma_0, gamma_1*norm(step)/trmodel.radius);
-                        trmodel.radius = gamma_dec*trmodel.radius;
-                    else
-                        if rho > 3/4
-                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
-                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
-                        end
-                    end
-                    if rho > 0.1
+                    if rho > eta_2 || (rho > eta_1 && geometry_ok)
                         x = trial_point;
                         step_accepted = true;
                         px = p_trial;
@@ -455,11 +406,16 @@ while ~finish
                         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
                         current_constraints = extract_constraints_from_tr_model(trmodel);
                     end
+                    if rho < eta_2 && geometry_ok
+                        gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
+                        trmodel.radius = gamma_dec*trmodel.radius;
+                    else
+                        if rho > eta_2
+                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
+                        end
+                    end
                 end
-                history_solution(end+1).x = x;
-                history_solution(end).rho = rho;
-                history_solution(end).radius = trmodel.radius;
-
             end
             iter2 = iter2 + 1;
             if ~step_accepted || (dropping_constraint && ~dropping_succeeded)
@@ -474,14 +430,30 @@ while ~finish
             if dropping_constraint
                 break
             end
-%             check_interpolation(trmodel); % TO BE REMOVED!
+            interp_error = check_interpolation(trmodel); % TO BE REMOVED!
+%             if pred > 0 && rho > eta_2 && pred < interp_error
+%                 gamma_dec = gamma_1;
+%                 trmodel.radius = gamma_dec*trmodel.radius;
+%                 trmodel = improve_model(trmodel, fphi, options);
+%             end
             if trmodel.radius < tol_radius
                 finish = true;
                 break
             end
+            history_solution(end+1).x = x;
+            history_solution(end).rho = rho;
+            history_solution(end).radius = trmodel.radius;
         end
     end
-%     check_interpolation(trmodel); % TO BE REMOVED!
+    history_solution(end+1).x = x;
+    history_solution(end).rho = rho;
+    history_solution(end).radius = trmodel.radius;
+    interp_error = check_interpolation(trmodel); % TO BE REMOVED!
+%     if pred > 0 && rho > eta_2 && pred < interp_error
+%         gamma_dec = gamma_1;
+%         trmodel.radius = gamma_dec*trmodel.radius;
+%         trmodel = improve_model(trmodel, fphi, options);
+%     end
     if trmodel.radius < tol_radius
         finish = true;
     end

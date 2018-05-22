@@ -62,12 +62,13 @@ if pred0 < 0
         n = IM(1);
         gamma = gamma(2:end);
         IM = IM(2:end);
-
+        success = false;
         if g'*s0 > 0
             % Ascent
             0;
         elseif s0'*B*s0 < 0
             local_minima(end+1) = tu;
+            success = true;
         else
             % Minimizing the quadratic model in direction d
             tau = -((s0'*B*s0)\(g'*s0));
@@ -75,11 +76,13 @@ if pred0 < 0
                 0;
             elseif tau < tu
                 local_minima(end+1) = tau;
+                success = true;
             else
                 local_minima(end+1) = tu;
+                success = true;
             end
         end
-        if sign(alpha_s*((s0'*N')*cmodel(n).H*(N*s0)) + cmodel(n).g'*N*s0) > 0
+        if sign(tu*((s0'*N')*cmodel(n).H*(N*s0)) + cmodel(n).g'*N*s0) > 0
             B = B + mu*N'*cmodel(n).H*N;
             g = g + mu*N'*cmodel(n).g;
             constraint_changed = n;

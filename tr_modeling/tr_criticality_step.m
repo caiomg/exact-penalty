@@ -19,6 +19,9 @@ model = improve_model(model, f, options);
 cmodel = extract_constraints_from_tr_model(model);
 [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, epsilon, []);
 [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
+if isempty(N)
+    epsilon = 0.5*epsilon;
+end
 pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
 q1 = N'*pseudo_gradient;
 q2 = [cmodel(ind_qr).c]';
@@ -37,17 +40,30 @@ while (model.radius > crit_mu*measure)
                                                       epsilon, []);
     [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
                                              ind_eactive, true);
+    if isempty(N)
+        epsilon = 0.5*epsilon;
+    end
     pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
     q1 = N'*pseudo_gradient;
+    if isempty(q1)
+        q1 = 0;
+    end
     q2 = [cmodel(ind_qr).c]';
+    if isempty(q2)
+        q2 = 0;
+    end
 
     measure = sqrt(q1'*q1 + q2'*q2);
+    try
     if (model.radius < tol_radius || ...
         beta*measure < tol_f)
         % Better break.
         % Not the end of this algorithm, but satisfies stopping
         % condition for outer algorithm anyway...
         break;
+    end
+    catch erro
+        rethrow(erro)
     end
 end
 
