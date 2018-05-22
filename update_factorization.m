@@ -46,7 +46,7 @@ else
     inserted = 0;
     for n = 1:n_eactive
         this_grad = current_constraints(ind_eactive(n)).g;
-        norm_n = norm(this_grad, 1);
+        norm_n = norm(A*(R\(Q'*this_grad)) - this_grad, 1);
         if norm_n > tol
             % Try to add column
             [Q, R] = qrinsert(Q, R, inserted + 1, this_grad);
