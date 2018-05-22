@@ -28,7 +28,7 @@ function model = try_to_add_interpolation_point(model, new_point, ...
             break
         catch exception
             if k < maxk && strcmp(exception.identifier, 'cmg:bad_fvalue')
-                trmodel.radius = 0.5*trmodel.radius;
+                model.radius = 0.5*model.radius;
             else
                 rethrow(exception);
             end

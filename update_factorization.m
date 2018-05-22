@@ -3,7 +3,7 @@ function [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
 
 tol = 1e-8;
 
-n_variables = size(Q, 1);
+n_variables = size(current_constraints(1).g, 1);
 n_eactive = size(ind_eactive, 1);
 ind_qr = zeros(0, 1);
 A = zeros(n_variables, 0);

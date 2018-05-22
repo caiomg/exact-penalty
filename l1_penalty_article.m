@@ -235,6 +235,39 @@ while ~finish
             end
             B = Bv + Bm + fmodel.H;
 
+            if (norm(N'*pseudo_gradient) < tol_g)
+                [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
+                                              mu, options);
+                [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+                current_constraints = ...
+                    extract_constraints_from_tr_model(trmodel);
+                [ind_eactive, ind_eviolated] = ...
+                    identify_new_constraints(current_constraints, epsilon, []);
+                [N, Q, R, ind_qr] = update_factorization(current_constraints, [], ...
+                                                         [], ...
+                                                         ind_eactive, false);
+                pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
+                                                     current_constraints, ...
+                                                     ind_eviolated);
+                multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1: ...
+                                                              rows_qr)'*pseudo_gradient), ut_option);
+                remain = -((Q*R)*multipliers_a + pseudo_gradient);
+                correction = linsolve(R(1:rows_qr, :), Q(:, 1: ...
+                                                         rows_qr)'*remain, ...
+                                      ut_option);
+                multipliers = multipliers_a + correction;
+                tol_multipliers = 10*max(norm(correction), eps);
+                
+                if ~sum(multipliers < -tol_multipliers |...
+                        mu < multipliers - tol_multipliers) 
+                    phih = [current_constraints(ind_qr).c]';
+                    if norm(phih) < tol_con
+                        finish = true;
+                        break
+                    end
+                end
+            end
+                
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
             if sum(multipliers < -tol_multipliers | mu < multipliers - tol_multipliers)
@@ -336,48 +369,38 @@ while ~finish
                 history_solution(end).rho = rho;
                 history_solution(end).radius = trmodel.radius;
 
-
-            elseif (norm(N'*pseudo_gradient) < tol_g)% && ...
-                    %~isempty(find(multipliers > -10*eps & multipliers < mu + 10*(eps(mu)), 1)))
-                n_qr = size(ind_qr, 1);
-                phih = zeros(n_qr, 1);
-                for n = 1:n_qr
-                   phih(n) = current_constraints(ind_qr(n)).c;
-                end
-                if norm(phih) < tol_con
-                    finish = true;
-                    break
-                else
-                    % Maybe flag for a vertical step
-                    step_accepted = false;
-                end
             else
-                model.B = N'*B*N;
-                model.g = N'*pseudo_gradient;
-                Ii = zeros(0, 1);
-                for constn = 1:n_constraints
-                    if isempty(find(ind_eactive == constn, 1))
-                       Ii(end+1, 1) = constn; 
+                if ~isempty(N)
+                    model.B = N'*B*N;
+                    model.g = N'*pseudo_gradient;
+                    Ii = zeros(0, 1);
+                    for constn = 1:n_constraints
+                        if isempty(find(ind_eactive == constn, 1))
+                           Ii(end+1, 1) = constn; 
+                        end
                     end
+                    step_calculation_ok = true;
+                    d = solve_tr_problem(model.B, model.g, trmodel.radius);
+                    % d = truncated_cg_step(model.B, model.g, trmodel.radius);
+                    [s, fs, ind_eactive_b] = cauchy_step(model, ...
+                                                         trmodel.radius, ...
+                                                         N, mu, ...
+                                                         current_constraints, ...
+                                                         Ii, d, ...
+                                                         zeros(size(model.g)), ...
+                                                         ind_eactive, epsilon);
+                    Ns = N*s;
+                    pred_h = predict_descent(fmodel, current_constraints, Ns, mu, []);
+                else
+                    Ns = zeros(dimension, 1);
                 end
-                step_calculation_ok = true;
-                d = solve_tr_problem(model.B, model.g, trmodel.radius);
-                % d = truncated_cg_step(model.B, model.g, trmodel.radius);
-                [s, fs, ind_eactive_b] = cauchy_step(model, ...
-                                                     trmodel.radius, ...
-                                                     N, mu, ...
-                                                     current_constraints, ...
-                                                     Ii, d, ...
-                                                     zeros(size(model.g)), ...
-                                                     ind_eactive, epsilon);
-                pred_h = predict_descent(fmodel, current_constraints, N*s, mu, []);
                 v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                         mu, N*s, ind_eactive, ...
+                                         mu, Ns, ind_eactive, ...
                                          ind_eviolated, trmodel.radius);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 pred = predict_descent(fmodel, current_constraints, ...
-                                       N*s + v, mu, []);
+                                       Ns + v, mu, []);
 %                 if pred < delta*(norm(ppgrad)^2 + normphi)
 % %                     [Ns, pred] = line_search_full_domain(fmodel, current_constraints, mu, N*s, trmodel.radius);
 %                     v = tr_vertical_step_new(fmodel, current_constraints, ...
@@ -394,11 +417,11 @@ while ~finish
                 else
                     % Compute ared and all...
                     p2 = @(x) l1_function_2nd_order(f, phi, mu, x, [], multipliers, ind_qr);
-                    step = N*s + v;
+                    step = Ns + v;
                     trial_point = x + step;
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
-                    ared1 = p2(x) - p2(x + N*s + v);
+% %                     ared1 = p2(x) - p2(trial_point);
                     dpred = pred - 10*eps*max(1, abs(px));
                     dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
