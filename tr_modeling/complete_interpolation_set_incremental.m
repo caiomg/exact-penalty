@@ -5,7 +5,7 @@ function [model, new_values_added] = ...
 
 n_interpolating_functions = length(functions);
 
-tol_pivot = options.pivot_threshold;
+tol_pivot = sqrt(eps);
 % First discart points which are more than a radius away
 radius = model.radius;
 poised_radius_factor = 1;
