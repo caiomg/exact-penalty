@@ -43,13 +43,14 @@ end
 trmodel.points = initial_points;
 trmodel.fvalues = initial_fvalues;
 trmodel.radius = options.initial_radius;
+trmodel.scale_factor_x = options.initial_radius;
 trmodel.basis = basis;
 
 fphi = {f, phi{:}}';
 
 % Completing set of interpolation points and calculating polynomial
 % model
-trmodel = complete_interpolation_set(trmodel, fphi, options);
+trmodel = complete_interpolation_set_incremental(trmodel, fphi, options);
 
 fval_current = trmodel.fvalues(1, 1);
 

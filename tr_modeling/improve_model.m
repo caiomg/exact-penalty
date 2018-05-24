@@ -14,7 +14,7 @@ radius = model.radius;
 model = discart_points(model, radius);
 
 % Recomplete interpolation set and calculate new model
-[model, smallest_pivot] = complete_interpolation_set(model, functions, options);
+[model, smallest_pivot] = complete_interpolation_set_incremental(model, functions, options);
 
 % Check if pivot_threshold is already satisfied
 if smallest_pivot < tol_pivot

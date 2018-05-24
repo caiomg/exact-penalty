@@ -23,7 +23,7 @@ function model = move_trust_region(model, new_center, new_center_fvals, ...
     % The model will be updated with this new point. In our pivotal
     % approach, other points may end substituted.
     try
-        model = complete_interpolation_set(model, functions, options);
+        model = complete_interpolation_set_incremental(model, functions, options);
     catch exception
        rethrow(exception); 
     end
