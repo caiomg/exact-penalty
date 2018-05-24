@@ -48,14 +48,21 @@ log_fd = fopen(log_filename, 'w');
                     'MAKELA4' 'OPTPRLOC' };
 
 
-
 % Parameters
-mu = 8;
-epsilon = 2;
+mu = 500;
+epsilon = 0.85;
 delta = 1e-6;
-Lambda = 0.1;
+Lambda = 0.075;
 
-all_mu = [100, 500, 1000, 1500, 2000, 4000, 8000];
+
+all_mu = [20, 50, 100, 500, 2500]
+
+clear tries
+
+
+tries(1).epsilon = 0.85;
+tries(1).Lambda = 0.075; %best
+
 
 final_filenames = {};
 all_results = {};
@@ -102,7 +109,7 @@ for iter = 1:length(all_mu)
 
 
         counter.reset_count();
-        counter.set_max_count(5000);
+        counter.set_max_count(9000);
 
         solved = true;
         try
