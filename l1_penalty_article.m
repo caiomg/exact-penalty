@@ -98,17 +98,29 @@ while ~finish
                                                   Q, R, ind_eactive, false);
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_eviolated);
-
+    ppgrad = N*(N'*pseudo_gradient);
     Bv = zeros(dimension);
     for n = ind_eviolated'
         Bv = Bv + mu*(current_constraints(n).H);
     end
-    B = Bv + fmodel.H;
+    Ba = zeros(dimension);
+    for n = ind_qr'
+        if ppgrad'*current_constraints(n).H*ppgrad > 0
+            Ba = Ba + mu*current_constraints(n).H;
+        end
+    end
+    B = (Bv + fmodel.H);
     if (norm(N'*pseudo_gradient) > max(Lambda, tol_g))
         x_prev = x;
 
-        model.B = N'*B*N;
+        model.B = N'*(B + Ba)*N;
         model.g = N'*pseudo_gradient;
+        if ~isempty(ind_qr)
+            A2 = [current_constraints(ind_qr).g];
+            g2 = correct_direction(pseudo_gradient, A2);
+            model.g = N'*g2;
+        end
+
         Ii = zeros(0, 1);
         for constn = 1:n_constraints
             if isempty(find(ind_eactive == constn, 1))
@@ -124,6 +136,8 @@ while ~finish
             h1 = zeros(size(h1));
         end
         v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_eactive, ind_eviolated, trmodel.radius);
+        v1 = zeros(size(v1));
+%         h1 = zeros(size(h1));
         h1_fmodel = shift_model(fmodel, h1 + v1);
         for m = 1:n_constraints
             h1_constraints(m) = shift_model(current_constraints(m), h1 + v1);
@@ -138,6 +152,7 @@ while ~finish
                                             epsilon);
             h2 = N*s2;
             v2 = tr_vertical_step_new(fmodel, current_constraints, mu, h2, ind_eactive, ind_eviolated, trmodel.radius);
+%             v2 = zeros(size(v2));
             [hv, ~, status] = line_search_full_domain(h1_fmodel, h1_constraints, mu, (h2 + v2) - (h1 + v1), trmodel.radius - norm(h1 + v1));
             if status
                step = (h1 + v1) + hv;
@@ -145,10 +160,10 @@ while ~finish
         end
         pred = predict_descent(fmodel, current_constraints, step, mu, []);
 %%%%%%%%%%%%%
-        if pred < 0 || norm(step) < 0.1*trmodel.radius
+        if pred < 0 || norm(step) < 0.0625*trmodel.radius
             rho = -inf;
             if geometry_ok
-                trmodel.radius = 0.25*trmodel.radius;
+                trmodel.radius = 0.125*trmodel.radius;
             else
                 trmodel = improve_model(trmodel, fphi, options);
             end
