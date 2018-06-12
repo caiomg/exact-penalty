@@ -115,11 +115,11 @@ while ~finish
 
         model.B = N'*(B + Ba)*N;
         model.g = N'*pseudo_gradient;
-        if ~isempty(ind_qr)
-            A2 = [current_constraints(ind_qr).g];
-            g2 = correct_direction(pseudo_gradient, A2);
-            model.g = N'*g2;
-        end
+%         if ~isempty(ind_qr)
+%             A2 = [current_constraints(ind_qr).g];
+%             g2 = correct_direction(pseudo_gradient, A2);
+%             model.g = N'*g2;
+%         end
 
         Ii = zeros(0, 1);
         for constn = 1:n_constraints
@@ -239,6 +239,7 @@ while ~finish
                 pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
                                                      current_constraints, ...
                                                      ind_eviolated);
+                rows_qr = size(R, 1) - size(N, 2);
                 multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1: ...
                                                               rows_qr)'*pseudo_gradient), ut_option);
                 remain = -((Q*R)*multipliers_a + pseudo_gradient);
@@ -494,22 +495,25 @@ while ~finish
 %                 trmodel.radius = gamma_dec*trmodel.radius;
 %                 trmodel = improve_model(trmodel, fphi, options);
 %             end
+            if trmodel.radius < tol_radius
+                finish = true;
+                break
+            end
+            history_solution(end+1).x = x;
+            history_solution(end).rho = rho;
+            history_solution(end).radius = trmodel.radius;
+            history_solution(end).px = px;
+            history_solution(end).fx = trmodel.fvalues(1,1);
         end
-        if trmodel.radius < tol_radius
-            finish = true;
-            break
-        end
-        history_solution(end+1).x = x;
-        history_solution(end).rho = rho;
-        history_solution(end).radius = trmodel.radius;
-        history_solution(end).px = px;
-        history_solution(end).fx = trmodel.fvalues(1,1);
     end
     history_solution(end+1).x = x;
     history_solution(end).rho = rho;
     history_solution(end).radius = trmodel.radius;
     history_solution(end).px = px;
     history_solution(end).fx = trmodel.fvalues(1,1);
+    if trmodel.radius < 0.1
+        1;
+    end
 %     try
 %         interp_error = check_interpolation(trmodel); % TO BE REMOVED!
 %     catch erro
