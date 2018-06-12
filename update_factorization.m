@@ -23,21 +23,17 @@ if perturb
         ind_qr = P*ind_qr;
         ind_qr = ind_qr(1:n_variables, :);
         degenerate = true;
+        A = U'*L';
     end
-    su = sum(abs(U), 2);
-    for n = 1:size(U, 1)
-        if su(n) < tol
-            U(n, n) = rand()*10*tol;
+    [Q, R] = qr(A);
+    for n = 2:size(R, 2)
+        if abs(R(n, n)) < tol
+            R(n, n) = max(1, max(diag(R)))*tol*10*rand();
             degenerate = true;
         end
     end
-    if degenerate
-        A = U'*L';
-    end
+    A = Q*R;
 
-
-    % TODO: use information of previous QR decomposition
-    [Q, R] = qr(A);
     % TODO: use QR decomposition to calculate nullspace
     N = null(A');
 else
