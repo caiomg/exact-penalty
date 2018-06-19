@@ -4,14 +4,20 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-% problem_name = 'WOMFLET';
-problem_name = 'POLAK1';
+problem_name = 'WOMFLET';
+% problem_name = 'POLAK1';
 % problem_name = 'SNAKE';
-problem_name = 'POLAK3'; % Second derivative of cons. too much important
-% problem_name = 'QC';
-% problem_name = 'CB2';
-% problem_name = 'LOOTSMA';
-% problem_name = 'HS88';
+% problem_name = 'POLAK3'; % Second derivative of cons. too much important
+% % problem_name = 'QC';
+% % problem_name = 'CB2';
+% % problem_name = 'LOOTSMA';
+% % problem_name = 'HS88';
+% problem_name = 'HS18';
+% problem_name = 'HS19';
+% problem_name = 'HS21';
+% problem_name = 'HS34';
+% problem_name = 'HS101';
+
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
 % Objective
@@ -31,10 +37,8 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 100;
-if strcmp(problem_name, 'SNAKE')
-    mu = 10000;
-end
+mu = 1000;
+
 epsilon = 0.85;
 delta = 1e-6;
 Lambda = 0.075;

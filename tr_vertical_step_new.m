@@ -23,13 +23,18 @@ if ~isempty(ind_eactive) && r_radius > tol_r
     An = [cmodel(ind_eactive).g]; % Change to include perturbations
     Qa = orth(An);
     v = -Qa*((A2'*Qa)\uphi); % possibly outside TR
-
-    pred_hv = predict_descent(fmodel, cmodel, v, mu);
-    if pred_hv < 0.25*pred_h
+    if norm(v) > r_radius
+        v = (v/norm(v))*r_radius;
+    end
+    pred_hv = predict_descent(h_fmodel, h_constraints, v, mu);
+    if true %pred_hv < -0.75*pred_h
         [v, ~, status] = line_search_full_domain(h_fmodel, h_constraints, mu, v, r_radius);
         if ~status
             v = zeros(size(v));
         end
+    else
+        % Will use as it is
+        1;
     end
 
 else

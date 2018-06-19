@@ -1,4 +1,4 @@
-function [model, epsilon] = tr_criticality_step(model, f, epsilon, p_mu, ...
+function [model, epsilon] = tr_criticality_step(model, ff, epsilon, p_mu, ...
                                      options)
 % CRITICALITY_STEP -- ensures model is sufficiently poised and with
 % a radius comparable to the gradient
@@ -16,7 +16,21 @@ factor_epsilon = 0.5;
 epsilon0 = epsilon;
 
 initial_radius = model.radius;
-model = improve_model(model, f, options);
+    while true
+        try
+            model = improve_model(model, ff, options);
+            break
+        catch exception
+            if strcmp(exception.identifier, 'cmg:bad_fvalue')
+                model.radius = 0.5*model.radius;
+                if model.radius > options.tol_radius
+                    continue
+                end
+            else
+                rethrow(exception);
+            end
+        end
+    end
 [~, f_grad] = get_model_matrices(model, 0);
 cmodel = extract_constraints_from_tr_model(model);
 epsilon = factor_epsilon*epsilon;
@@ -34,7 +48,7 @@ while (model.radius > crit_mu*measure)
     model.radius = omega*model.radius;
     epsilon = factor_epsilon*epsilon;
     
-    model = improve_model(model, f, options);
+    model = improve_model(model, ff, options);
     [~, f_grad] = get_model_matrices(model, 0);
     cmodel = extract_constraints_from_tr_model(model);
     [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, ...

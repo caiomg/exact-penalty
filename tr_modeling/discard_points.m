@@ -1,4 +1,4 @@
-function model = discart_points(model, discart_radius)
+function model = discard_points(model, discart_radius)
 % DISCART_POINTS removes from set of interpolation points that are
 % far from center. Does not update polynomial model
 

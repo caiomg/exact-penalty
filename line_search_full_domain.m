@@ -12,7 +12,7 @@ if pred0 < 0
     active = [];
     for n = 1:n_constraints
         if cmodel(n).c > 0 || ...
-               (cmodel(n).c ==0 && ...
+               (cmodel(n).c == 0 && ...
                 ((cmodel(n).g'*s0) > 0) || ...
                 ((cmodel(n).g'*s0 == 0) && (s0'*cmodel(n).H*s0 > 0)))
             g = g + mu*cmodel(n).g;
@@ -37,19 +37,17 @@ if pred0 < 0
     end
     N = eye(max(size(s0)));
     for n = 1:n_constraints
-        if cmodel(n).c ~= 0
-            Hc = cmodel(n).H;
-            gc = cmodel(n).g;
-            cc = cmodel(n).c;
-            bpoint = roots([0.5*(s0'*(N'*Hc*N)*s0),  gc'*N*s0, cc]);
-            if size(bpoint, 1) >= 1 && bpoint(1) > 0 && isreal(bpoint(1)) && bpoint(1) < gamma_tr
-                gamma(end+1, 1) = bpoint(1);
-                IM(end+1, 1) = n;
-            end
-            if size(bpoint, 1) >= 2 && bpoint(2) > 0 && isreal(bpoint(2)) && bpoint(2) < gamma_tr
-                gamma(end+1, 1) = bpoint(2);
-                IM(end+1, 1) = n;
-            end
+        Hc = cmodel(n).H;
+        gc = cmodel(n).g;
+        cc = cmodel(n).c;
+        bpoint = roots([0.5*(s0'*(N'*Hc*N)*s0),  gc'*N*s0, cc]);
+        if size(bpoint, 1) >= 1 && bpoint(1) > 0 && isreal(bpoint(1)) && bpoint(1) < gamma_tr
+            gamma(end+1, 1) = bpoint(1);
+            IM(end+1, 1) = n;
+        end
+        if size(bpoint, 1) >= 2 && bpoint(2) > 0 && isreal(bpoint(2)) && bpoint(2) < gamma_tr
+            gamma(end+1, 1) = bpoint(2);
+            IM(end+1, 1) = n;
         end
     end
     [gamma, ind_temp] = sort(gamma);

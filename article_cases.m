@@ -46,6 +46,7 @@ log_fd = fopen(log_filename, 'w');
                     'MISTAKE' 'QC' 'QCNEW' 'HS113' 'POLAK2' 'POLAK3' ...
                     'HAIFAS' 'HS116' 'HS117' 'HS118' 'DEMBO7' 'MAKELA3' ...
                     'MAKELA4' 'OPTPRLOC' };
+                
 
 
 % Parameters
@@ -54,8 +55,9 @@ epsilon = 0.85;
 delta = 1e-6;
 Lambda = 0.075;
 
+list_of_problems
 
-all_mu = [20, 50, 100, 500, 2500]
+all_mu = [250, 1250, 6250]
 
 clear tries
 
@@ -63,6 +65,7 @@ clear tries
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
 
+warning('off', 'cmg:bad_fvalue');
 
 final_filenames = {};
 all_results = {};
@@ -77,9 +80,9 @@ for iter = 1:length(all_mu)
                      'Lambda = % 8g\n\n'], mu, epsilon, delta, Lambda);
 
 
-    n_problems = length(all_problems);
+    n_problems = length(selected_problems);
     for k = 1:n_problems
-        problem_name = all_problems{k};
+        problem_name = selected_problems(k).name;
         prob = setup_cutest_problem(problem_name, '../my_problems/');
 
         % Objective
@@ -99,17 +102,17 @@ for iter = 1:length(all_mu)
         x0 = prob.x;
 
         nlcon = @(x) constraints(all_con, {}, x, 1);
-        fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                                       'SpecifyObjectiveGradient', true);
-        x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
-        fcount_fmincon = counter.get_count();
-        fx_fmincon = f(x_fmincon);
-        nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
+%         fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+%                                        'SpecifyObjectiveGradient', true);
+%         x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
+%         fcount_fmincon = counter.get_count();
+%         fx_fmincon = f(x_fmincon);
+%         nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
         %%
 
 
         counter.reset_count();
-        counter.set_max_count(9000);
+        counter.set_max_count(15000);
 
         solved = true;
         try
@@ -121,9 +124,8 @@ for iter = 1:length(all_mu)
         if solved
             fcount = counter.get_count();
             fx = f(x);
-        nphi = norm(max(0, nlcon(x)));
-            error_obj = fx_fmincon - fx;
-            error_x = norm(x_fmincon - x);
+            nphi = norm(max(0, nlcon(x)));
+            error_obj = fx - selected_problems(k).solution;
         else
             x = [];
             hs2 = [];
@@ -139,11 +141,8 @@ for iter = 1:length(all_mu)
         results(k, 1).fx = fx;
         results(k, 1).history = hs2;
         results(k, 1).fcount = fcount;
-        results(k, 1).fcount_fmincon = fcount_fmincon;
         results(k, 1).error_obj = error_obj;
-        results(k, 1).error_x = error_x;
         results(k, 1).nphi = nphi;
-        results(k, 1).nphi_fmincon = nphi_fmincon;
 
         print_results(results(k, 1), log_fd);
         print_results(results(k, 1));

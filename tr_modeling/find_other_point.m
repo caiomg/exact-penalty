@@ -19,7 +19,6 @@ x1 = [];
 x2 = [];
 x3 = [];
 x4 = [];
-x5 = [];
 
 if max_coef <= dimension
     % In case biggest coefficient corresponds to linear monomial
@@ -28,9 +27,9 @@ if max_coef <= dimension
     x2 = -x1;
 else
     % In case biggest coefficient corresponds to quadratic monomial
-    [c, g, H] = coefficients_to_matrices(dimension, coefficients);
+    [~, ~, H] = coefficients_to_matrices(dimension, coefficients);
     [H1, pos_12] = max(H);
-    [H2, pos_2] = max(H1);
+    [~, pos_2] = max(H1);
     pos_1 = pos_12(pos_2);
     if pos_1 == pos_2
         x1 = x0;

@@ -7,7 +7,7 @@ function model = try_to_add_interpolation_point(model, new_point, ...
     n_functions = length(functions);
     n_values = length(new_point_fvals);
     if n_functions ~= n_values
-        error();
+        error('cmg:few_fvalues', 'Too few values');
     end
     n_points = size(model.points, 2);
     
@@ -21,14 +21,16 @@ function model = try_to_add_interpolation_point(model, new_point, ...
 
     % Model improvement algorithm will improve poisedness of model
     % new point may be added or not
-    maxk = 4;
-    for k = 1:maxk
+    while true
         try
             model = improve_model(model, functions, options);
             break
         catch exception
-            if k < maxk && strcmp(exception.identifier, 'cmg:bad_fvalue')
+            if strcmp(exception.identifier, 'cmg:bad_fvalue')
                 model.radius = 0.5*model.radius;
+                if model.radius > options.tol_radius
+                    continue
+                end
             else
                 rethrow(exception);
             end
