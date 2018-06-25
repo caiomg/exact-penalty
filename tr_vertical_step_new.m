@@ -1,6 +1,5 @@
 function v = tr_vertical_step_new(fmodel, cmodel, mu, h, ind_eactive, ind_eviolated, radius)
 
-
 opts_lt.LT = true;
 tol_r = 1e-8;
 

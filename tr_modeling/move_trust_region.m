@@ -1,5 +1,5 @@
 function model = move_trust_region(model, new_center, new_center_fvals, ...
-                                   functions, options)
+                                   ff, bl, bu, options)
 % MOVE_TRUST_REGION accepts a TR step. The new point is the
 % center of the new trust-region.
 
@@ -10,7 +10,7 @@ function model = move_trust_region(model, new_center, new_center_fvals, ...
 
     % Adding the corresponding known function value (not to be calculated
     % again)
-    n_functions = length(functions);
+    n_functions = length(ff);
     n_values = length(new_center_fvals);
     if n_functions ~= n_values
         error('cmg:few_fvalues', 'Too few fvalues');
@@ -23,18 +23,13 @@ function model = move_trust_region(model, new_center, new_center_fvals, ...
     % The model will be updated with this new point. In our pivotal
     % approach, other points may end substituted.
     while true
-        try
-            model = complete_interpolation_set(model, functions, options);
-        catch exception
-            if strcmp(exception.identifier, 'cmg:bad_fvalue')
-                model.radius = 0.5*model.radius;
-                if model.radius > options.tol_radius
-                    continue
-                end
-            else
-               rethrow(exception);
-            end
+        % Recomplete interpolation set and calculate new model
+        [model, exitflag] = complete_interpolation_set(model, ff, bl, ...
+                                                       bu, options);
+        if exitflag >= 0 || model.radius < options.tol_radius
+            break
+        else
+            model.radius = 0.5*model.radius;
         end
-        break
     end
 end

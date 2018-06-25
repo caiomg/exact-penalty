@@ -1,6 +1,6 @@
 function model = try_to_add_interpolation_point(model, new_point, ...
                                                 new_point_fvals, ...
-                                                functions, options)
+                                                functions, bl, bu, options)
 
     % Add new point and its value to list of known points
     % Important not to add at the begining (which is the center)
@@ -23,7 +23,7 @@ function model = try_to_add_interpolation_point(model, new_point, ...
     % new point may be added or not
     while true
         try
-            model = improve_model(model, functions, options);
+            model = improve_model(model, functions, bl, bu, options);
             break
         catch exception
             if strcmp(exception.identifier, 'cmg:bad_fvalue')

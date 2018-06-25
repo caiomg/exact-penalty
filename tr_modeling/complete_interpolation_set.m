@@ -1,6 +1,14 @@
-function [model, exitflag] = complete_interpolation_set(model, ff, options)
+function [model, exitflag] = complete_interpolation_set(model, ff, bl, bu, options)
 % COMPLETE_INTERPOLATION_SET -- ensures the model has points so
 % that interpolation is possible
+
+dim = size(model.points, 1);
+if isempty(bl)
+    bl = -inf(dim, 1);
+end
+if isempty(bu)
+    bu = inf(dim, 1);
+end
 
 tol_pivot = options.pivot_threshold/20;
 radius_factor = options.poised_radius_factor;
@@ -37,82 +45,98 @@ end
 for column = 1:p_ini
     points_scaled(:, column) = points_scaled(:, column)/scale_factor_x;
 end
+bl_scaled = (bl - center)/scale_factor_x;
+bl_scaled = min(bl_scaled, 0);
+bu_scaled = (bu - center)/scale_factor_x;
+bu_scaled = max(bu_scaled, 0);
+unshift_point = @(x) x*scale_factor_x + center;
 
 while true
     % Perform the actual completion of interpolation set
     [points_scaled, indices, pivot_absvalues, pivot_polynomials] = ...
             change_interpolation_set_lu(points_scaled, basis, tol_pivot, true);
-    choose_pivot = find(pivot_absvalues < tol_pivot, 1);
-    if ~isempty(choose_pivot)
-        chosen_poly = pivot_polynomials(choose_pivot);
+    pivot_index = find(pivot_absvalues < tol_pivot, 1);
+    smaller_radius = min(0.75, radius/scale_factor_x);
+    if ~isempty(pivot_index)
+        chosen_poly = pivot_polynomials(pivot_index);
         %%%%%%%%%%%%%%%%%%%%%%%%%%
-        smaller_radius = min(0.75, radius/scale_factor_x);
-        for attempt = 1:4
+        max_attempts = 3;
+        for attempt = 1:max_attempts
+            pivot_found = false;
             if attempt == 1
                 % Minimize inside TR
-                [new_point, new_value] = ...
-                    minimize_polynomial(chosen_poly, smaller_radius);
-                if abs(new_value) < tol_pivot
-                    % Not worth evaluating f
-                    continue
+                [new_point_a, new_value_a] = ...
+                    minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, smaller_radius);
+                % Maximize inside TR
+                [new_point_b, new_value_b] = ...
+                    minimize_polynomial_with_bounds(multiply_p(chosen_poly, ...
+                                                   -1), bl_scaled, bu_scaled, smaller_radius);
+                if abs(new_value_a) >= abs(new_value_b)
+                    new_point = new_point_a;
+                    new_value = new_value_a;
+                else
+                    new_point = new_point_b;
+                    new_value = new_value_b;
                 end
             elseif attempt == 2
+                % Minimize inside TR
+                [new_point_a, new_value_a] = ...
+                    minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, 1);
                 % Maximize inside TR
-                [new_point, new_value] = ...
-                    minimize_polynomial(multiply_p(chosen_poly, ...
-                                                   -1), smaller_radius);
-                if abs(new_value) < tol_pivot
-                    % Not worth evaluating f
-                    continue
+                [new_point_b, new_value_b] = ...
+                    minimize_polynomial_with_bounds(multiply_p(chosen_poly, ...
+                                                   -1), bl_scaled, bu_scaled, 1);
+                if abs(new_value_a) >= abs(new_value_b)
+                    new_point = new_point_a;
+                    new_value = new_value_a;
+                else
+                    new_point = new_point_b;
+                    new_value = new_value_b;
                 end
             elseif attempt == 3
-                % Minimize in larger region
-                [new_point, new_value] = minimize_polynomial(chosen_poly, 1);
-                if abs(new_value) < tol_pivot
-                    % Not worth evaluating f
-                    continue
-                end
-            else
-                % Maximize in larger region
-                [new_point, new_value] = ...
-                    minimize_polynomial(multiply_p(chosen_poly, -1), 1);
-                if abs(new_value) < tol_pivot
-                    error('cmg:pivot_not_found', 'Could not find pivot');
-                end
+                [new_point, new_value] = find_other_point_with_bounds(chosen_poly, bl, bu);
             end
-            % Good pivot value, worth evaluating df function
-            new_point_abs = scale_factor_x*new_point + center;
-            new_fvalues = zeros(n_interpolating_functions, 1);
-            choose_other_point = false;
-            for nf = 1:n_interpolating_functions
-                new_fvalues(nf, 1) = ff{nf}(new_point_abs);
-                if isinf(new_fvalues(nf, 1)) || isnan(new_fvalues(nf, 1))
-                    if attempt < 4
-                        choose_other_point = true;
-                        break
-                    else
-                        % Error
-                        exitflag = -1;
-                        warning('cmg:bad_fvalue', 'Bad f value');
-                        return
+            if abs(new_value) >= tol_pivot
+                pivot_found = true;
+                % Good pivot value, worth evaluating df function
+                new_point_abs = unshift_point(new_point);
+                new_fvalues = zeros(n_interpolating_functions, 1);
+                for nf = 1:n_interpolating_functions
+                    new_fvalues(nf, 1) = ff{nf}(new_point_abs);
+                    if isinf(new_fvalues(nf, 1)) || isnan(new_fvalues(nf, 1))
+                        pivot_found = false;
+                        if attempt < max_attempts
+                            break
+                        end
                     end
                 end
+                pivot_absvalues(pivot_index) = abs(new_value);
             end
-            if choose_other_point
-                continue
-            else
+            if pivot_found
                 points_scaled(:, end+1) = new_point;
                 points_abs(:, end+1) = new_point_abs;
                 fvalues(:, end+1) = new_fvalues;
                 break
             end
-        end        
+        end
+        if ~pivot_found
+            % Error
+            exitflag = -1;
+            warning('cmg:bad_fvalue', 'Bad f value');
+            break
+        end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     else
         break
     end
 end
 smallest_pivot = min(pivot_absvalues);
+if smallest_pivot > tol_pivot
+    exitflag = 0;
+else
+    exitflag = -1;
+    return
+end
 
 % Reordering information
 points_abs = points_abs(:, indices);
@@ -164,7 +188,7 @@ model.poised_center = center;
 model.poised_radius = scale_factor_x;
 model.pivot_absvalues = pivot_absvalues;
 model.pivot_polynomials = pivot_polynomials;
-exitflag = 0;
+
 
 
 end

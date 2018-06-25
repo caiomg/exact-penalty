@@ -12,11 +12,11 @@ problem_name = 'WOMFLET';
 % % problem_name = 'CB2';
 % % problem_name = 'LOOTSMA';
 % % problem_name = 'HS88';
-% problem_name = 'HS18';
+problem_name = 'HS101';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
-% problem_name = 'HS34';
 % problem_name = 'HS101';
+% problem_name = 'HS102';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -27,6 +27,18 @@ f = @(x) counter.evaluate(x);
 
 % Constraints
 n_constraints = get_cutest_total_number_of_constraints();
+
+bl = [];
+bu = [];
+% Bound constraints
+lower_bounds = prob.bl > -1e19;
+upper_bounds = prob.bu < 1e19;
+bl = prob.bl;
+bu = prob.bu;
+% Remove constraints that actually are bounds
+n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+
+% Other constraints
 all_con = cell(n_constraints, 1);
 for k = 1:n_constraints
     gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
@@ -37,7 +49,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 1000;
+mu = 5000;
 
 epsilon = 0.85;
 delta = 1e-6;
@@ -48,7 +60,7 @@ nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                'SpecifyObjectiveGradient', true);
 
-x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
+x_fmincon = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
 fx_fmincon = f(x_fmincon);
 
 counter.get_count()
@@ -57,7 +69,7 @@ counter.reset_count()
 %%
 p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
-[x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda)
+[x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, [])
 fx = f(x)
 nphi = norm(max(0, nlcon(x)))
 
@@ -67,7 +79,7 @@ counter.get_count()
 counter.reset_count()
 
 
-tl1 = @() l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
+tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
 % tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
 % time_exact_penalty = timeit(tl1)
 % time_fmincon = timeit(tmlab)

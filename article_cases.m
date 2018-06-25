@@ -116,9 +116,9 @@ for iter = 1:length(all_mu)
 
         solved = true;
         try
-            [x, hs2] = l1_penalty_article(f, all_con, x0, mu, epsilon, delta, Lambda);
-        catch error
-            results(k, 1).except = error;
+            [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
+        catch thiserror
+            results(k, 1).except = thiserror;
             solved = false;
         end
         if solved

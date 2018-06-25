@@ -1,9 +1,12 @@
 function [model, epsilon] = tr_criticality_step(model, ff, epsilon, p_mu, ...
-                                     options)
+                                                bl, bu, options, one_pass)
 % CRITICALITY_STEP -- ensures model is sufficiently poised and with
 % a radius comparable to the gradient
 %
 
+if nargin < 8 || isempty(one_pass)
+    one_pass = false;
+end
 
 crit_mu = options.criticality_mu; % factor between radius and
                              % criticality measure
@@ -15,40 +18,27 @@ tol_f = options.tol_f;
 factor_epsilon = 0.5;
 epsilon0 = epsilon;
 
+x = model.points(:, 1);
 initial_radius = model.radius;
-    while true
-        try
-            model = improve_model(model, ff, options);
-            break
-        catch exception
-            if strcmp(exception.identifier, 'cmg:bad_fvalue')
-                model.radius = 0.5*model.radius;
-                if model.radius > options.tol_radius
-                    continue
-                end
-            else
-                rethrow(exception);
-            end
-        end
-    end
+% I should be testing if it is not already FL
+if ~is_lambda_poised(model, options)
+    model = improve_model(model, ff, bl, bu, options);
+end
 [~, f_grad] = get_model_matrices(model, 0);
 cmodel = extract_constraints_from_tr_model(model);
-epsilon = factor_epsilon*epsilon;
 [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, epsilon, []);
 [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
-
 pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
-q1 = N'*pseudo_gradient;
-q2 = [cmodel(ind_qr).c]';
 
-measure = sqrt(q1'*q1 + q2'*q2);
+% Criticality measure
+measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
 
 
 while (model.radius > crit_mu*measure)
     model.radius = omega*model.radius;
     epsilon = factor_epsilon*epsilon;
     
-    model = improve_model(model, ff, options);
+    model = improve_model(model, ff, bl, bu, options);
     [~, f_grad] = get_model_matrices(model, 0);
     cmodel = extract_constraints_from_tr_model(model);
     [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, ...
@@ -56,26 +46,17 @@ while (model.radius > crit_mu*measure)
     [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
                                              ind_eactive, true);
     pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
-    q1 = N'*pseudo_gradient;
-    if isempty(q1)
-        q1 = 0;
-    end
-    q2 = [cmodel(ind_qr).c]';
-    if isempty(q2)
-        q2 = 0;
-    end
 
-    measure = sqrt(q1'*q1 + q2'*q2);
-    try
+    measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
     if (model.radius < tol_radius || ...
         (beta*measure < tol_f && model.radius < 100*tol_radius))
         % Better break.
         % Not the end of this algorithm, but satisfies stopping
         % condition for outer algorithm anyway...
-        break;
+        break
     end
-    catch erro
-        rethrow(erro)
+    if one_pass
+        break
     end
 end
 

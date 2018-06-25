@@ -27,7 +27,7 @@ if max_coef <= dimension
     x2 = -x1;
 else
     % In case biggest coefficient corresponds to quadratic monomial
-    [~, ~, H] = coefficients_to_matrices(dimension, coefficients);
+    [~, g, H] = coefficients_to_matrices(dimension, coefficients);
     [H1, pos_12] = max(H);
     [~, pos_2] = max(H1);
     pos_1 = pos_12(pos_2);
@@ -35,6 +35,9 @@ else
         x1 = x0;
         x1(pos_1) = 1;
         x2 = -x1;
+        x3 = x0;
+        x3(pos_1) = -g(pos_1);
+        x4 = -x3;
     else
         % If two variables are involved in the offending term
         x1 = x0;
@@ -53,9 +56,9 @@ value = 0;
 for k = 1:size(X, 2)
     x = project_to_bounds(X(:, k), bl, bu);
     v = evaluate_polynomial(polynomial, x);
-    if abs(v) > abs(value)
+    if abs(v) >= abs(value)
        value = v;
-       point = X(:, k);
+       point = x;
     end
 end
 
