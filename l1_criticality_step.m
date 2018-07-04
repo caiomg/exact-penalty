@@ -14,7 +14,7 @@ while true
     [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                              Q, R, ind_eactive, true);
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
-                                         ind_eviolated);
+                                         ind_qr, true);
     if norm(N'*pseudo_gradient) > tol_g
         break
     elseif epsilon < tol_con && Lambda < tol_g

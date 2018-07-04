@@ -20,6 +20,7 @@ x2 = [];
 x3 = [];
 x4 = [];
 
+[~, g, H] = coefficients_to_matrices(dimension, coefficients);
 if max_coef <= dimension
     % In case biggest coefficient corresponds to linear monomial
     x1 = x0;
@@ -27,7 +28,6 @@ if max_coef <= dimension
     x2 = -x1;
 else
     % In case biggest coefficient corresponds to quadratic monomial
-    [~, g, H] = coefficients_to_matrices(dimension, coefficients);
     [H1, pos_12] = max(H);
     [~, pos_2] = max(H1);
     pos_1 = pos_12(pos_2);
@@ -54,7 +54,21 @@ X = [x0, x1, x2, x3, x4];
 % Find point that produces largest absolute value for polynomial
 value = 0;
 for k = 1:size(X, 2)
-    x = project_to_bounds(X(:, k), bl, bu);
+    x0 = project_to_bounds(X(:, k), bl, bu);
+    v = evaluate_polynomial(polynomial, x0);
+    if v > 0
+        Hn = -H;
+        gn = -(g + H*x0);
+    else
+        Hn = H;
+        gn = (g + H*x0);
+    end
+    s0 = ms_step(Hn, gn, 0.5);
+    s = pg_path_bounds(Hn, gn, x0, s0, bl, bu, 1);
+    if norm(s) - 1 > 0
+        1;
+    end
+    x = x0 + s;
     v = evaluate_polynomial(polynomial, x);
     if abs(v) >= abs(value)
        value = v;

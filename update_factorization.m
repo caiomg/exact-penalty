@@ -34,8 +34,6 @@ if perturb
     end
     A = Q*R;
 
-    % TODO: use QR decomposition to calculate nullspace
-    N = null(A');
 else
     Q = eye(n_variables);
     R = zeros(n_variables, 0);
@@ -54,19 +52,11 @@ else
             end
         end
     end
-    N = null(A');
 end
 
-ind_null = sum(abs(R'), 1) < 1e-10;
-N1 = Q(:, ind_null);
+r_columns = size(R, 2);
+N = Q(:, r_columns+1:end);
 
-rank_n = size(N, 2);
-if rank_n ~= size(N1, 2) || rank([N, N1], 1e-8) ~= rank_n
-    1;
-%     error('cmg:badnullspacerank', 'Error calculating nullspace');
-else
-    N = N1;
-end
 
 if size(ind_qr, 1) ~= size(R, 2)
     error('cmg:runtime_error', 'ERROR');

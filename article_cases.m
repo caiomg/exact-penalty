@@ -92,6 +92,18 @@ for iter = 1:length(all_mu)
 
         % Constraints
         n_constraints = get_cutest_total_number_of_constraints();
+
+        bl = [];
+        bu = [];
+        % Bound constraints
+        lower_bounds = prob.bl > -1e19;
+        upper_bounds = prob.bu < 1e19;
+        bl = prob.bl;
+        bu = prob.bu;
+        % Remove constraints that actually are bounds
+        n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+
+        % NL constraints
         all_con = cell(n_constraints, 1);
         for n = 1:n_constraints
             gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
@@ -116,7 +128,7 @@ for iter = 1:length(all_mu)
 
         solved = true;
         try
-            [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
+            [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, []);
         catch thiserror
             results(k, 1).except = thiserror;
             solved = false;

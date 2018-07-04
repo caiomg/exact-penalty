@@ -24,11 +24,21 @@ initial_radius = model.radius;
 if ~is_lambda_poised(model, options)
     model = improve_model(model, ff, bl, bu, options);
 end
-[~, f_grad] = get_model_matrices(model, 0);
+[~, fmodel.g] = get_model_matrices(model, 0);
 cmodel = extract_constraints_from_tr_model(model);
-[ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, epsilon, []);
+[ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
 [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
-pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
+while true
+    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, N, x, bl, bu);
+    if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
+        [Q, R, N, ind_qr] = ...
+                l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...
+                                   multipliers, tol_multipliers);
+    else
+        break
+    end
+end
+pseudo_gradient = l1_pseudo_gradient(fmodel.g, p_mu, cmodel, ind_qr, true);
 
 % Criticality measure
 measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
@@ -39,13 +49,23 @@ while (model.radius > crit_mu*measure)
     epsilon = factor_epsilon*epsilon;
     
     model = improve_model(model, ff, bl, bu, options);
-    [~, f_grad] = get_model_matrices(model, 0);
+    [~, fmodel.g] = get_model_matrices(model, 0);
     cmodel = extract_constraints_from_tr_model(model);
-    [ind_eactive, ind_eviolated] = identify_new_constraints(cmodel, ...
+    [ind_eactive, ~] = identify_new_constraints(cmodel, ...
                                                       epsilon, []);
     [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
                                              ind_eactive, true);
-    pseudo_gradient = l1_pseudo_gradient(f_grad, p_mu, cmodel, ind_eviolated);
+    while true
+        [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, N, x, bl, bu);
+        if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
+            [Q, R, N, ind_qr] = ...
+                    l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...
+                                       multipliers, tol_multipliers);
+        else
+            break
+        end
+    end
+    pseudo_gradient = l1_pseudo_gradient(fmodel.g, p_mu, cmodel, ind_qr, true);
 
     measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
     if (model.radius < tol_radius || ...

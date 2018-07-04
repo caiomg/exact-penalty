@@ -48,13 +48,13 @@ else
            lambda = lambda*1.05;
        end
    end
-   lambda_l = -va;
+   lambda_l = abs(va);
 end
 
 y = linsolve(R', -g, linopts_l);
 s = linsolve(R, y, linopts_u);
 
-if lambda > 0 && norm(s) < radius
+if lambda_l > 0 && norm(s) < radius
     alphas = roots([u'*u, 2*s'*u, s'*s - radius^2]);
     s1 = s + alphas(1)*u;
     s2 = s + alphas(2)*u;

@@ -10,7 +10,7 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'initial_radius', 0.5, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
-                        'pivot_threshold', 0.2, 'poised_radius_factor', 2);
+                        'pivot_threshold', 0.1, 'poised_radius_factor', 2);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -34,6 +34,7 @@ initial_fvalues = zeros(n_functions, n_initial_points);
 % Calculating function values for other points of the set
 for nf = 1:n_functions
     for k = 1:n_initial_points
+        initial_points(:, k) = project_to_bounds(initial_points(:, k), bl, bu);
         initial_fvalues(nf, k) = all_f{nf}(initial_points(:, k));
     end
 end
@@ -106,51 +107,33 @@ while ~finish
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
     current_constraints = extract_constraints_from_tr_model(trmodel);
 
-    [ind_eactive, ind_eviolated] = ...
-        identify_new_constraints(current_constraints, epsilon, ...
-                                 []);
+    [ind_eactive, ~] = ...
+        identify_new_constraints(current_constraints, epsilon, []);
     [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
-                                                  Q, R, ind_eactive, false);
+                                             Q, R, ind_eactive, false);
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
-                                         ind_eviolated);
-    ppgrad = N*(N'*pseudo_gradient);
-    Bv = zeros(dimension);
-    for n = ind_eviolated'
-        Bv = Bv + mu*(current_constraints(n).H);
-    end
-    Ba = zeros(dimension);
-%     for n = ind_qr'
-%         if ppgrad'*current_constraints(n).H*ppgrad > 0
-%             Ba = Ba + mu*current_constraints(n).H;
-%         end
-%     end
-    B = (Bv + fmodel.H);
-    if (norm(N'*pseudo_gradient) > max(Lambda, tol_g))
+                                         ind_qr, true);
+
+    [~, q1] = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [current_constraints(ind_qr).c]');
+    if (norm(q1) > max(Lambda, tol_g))
         x_prev = x;
 
-        model.B = N'*(B + Ba)*N;
-        model.g = N'*pseudo_gradient;
 
         geometry_ok = is_lambda_poised(trmodel, options);
         
-        h0 = l1_horizontal_step(B, pseudo_gradient, N, x, trmodel.radius, bl, bu);
-
-        [h1, pred, status] = line_search_full_domain(fmodel, ...
-                                                     current_constraints, ...
-                                                     mu, h0, trmodel.radius);
-        if ~status
-            h1 = zeros(size(h1));
-        else
-            h1 = project_to_bounds(x + h1, bl, bu) - x;
+        try
+        h1 = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu);
+        catch err1
+            rethrow(err1);
         end
         v1 = tr_vertical_step_new(fmodel, current_constraints, mu, ...
-                                  h1, ind_qr, ind_eviolated, trmodel.radius);
+                                  h1, ind_qr, trmodel.radius, x, bl, bu);
 
-        step = project_to_bounds(x + h1 + v1, bl, bu) - x;
+        s = project_to_bounds(x + h1 + v1, bl, bu) - x;
         
 
-        pred = predict_descent(fmodel, current_constraints, step, mu, []);
-        if pred < 0 || (norm(step) < 0.0625*trmodel.radius && ~geometry_ok)
+        pred = predict_descent(fmodel, current_constraints, s, mu, []);
+        if pred <= 0 || (norm(s) < 0.0625*trmodel.radius && ~geometry_ok)
             rho = -inf;
             if geometry_ok
                 trmodel.radius = 0.5*trmodel.radius;
@@ -158,7 +141,7 @@ while ~finish
                 trmodel = improve_model(trmodel, fphi, bl, bu, options);
             end
         else
-            trial_point = x + step;
+            trial_point = x + s;
             [p_trial, trial_fvalues] = p(trial_point);
             ared = px - p_trial;
             if ared < 0
@@ -173,6 +156,7 @@ while ~finish
             else
                 rho = dared/dpred;
             end
+            rho = ared/pred;
 
             if rho > eta_2 || (rho > eta_1 && geometry_ok)
                 x = trial_point;
@@ -191,7 +175,7 @@ while ~finish
                 trmodel.radius = gamma_dec*trmodel.radius;
             else
                 if rho > eta_2
-                    radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                    radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
                     trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
                 end
             end
@@ -201,29 +185,13 @@ while ~finish
           	x_prev = x;
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = extract_constraints_from_tr_model(trmodel);
-            pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
-                                                 ind_eviolated);
+            pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
+                                                 current_constraints, ...
+                                                 ind_qr, true);
 
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive, true);
 
-%             q = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [current_constraints(ind_qr).c]');
-%             if (q < 100*tol_g)
-%                 [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
-%                                               mu, bl, bu, options, true);
-%                 [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-%                 current_constraints = ...
-%                     extract_constraints_from_tr_model(trmodel);
-%                 [ind_eactive, ind_eviolated] = ...
-%                     identify_new_constraints(current_constraints, epsilon, []);
-%                 [N, Q, R, ind_qr] = update_factorization(current_constraints, [], ...
-%                                                          [], ...
-%                                                          ind_eactive, true);
-%                 pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
-%                                                      current_constraints, ...
-%                                                      ind_eviolated);                    
-%             end
-%%%%%%%%%%%%%
                 q = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [current_constraints(ind_qr).c]');
                 if (q < 100*tol_g)
                     [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
@@ -231,23 +199,16 @@ while ~finish
                     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
                     current_constraints = ...
                         extract_constraints_from_tr_model(trmodel);
-                    [ind_eactive, ind_eviolated] = ...
+                    [ind_eactive, ~] = ...
                         identify_new_constraints(current_constraints, epsilon, []);
                     [N, Q, R, ind_qr] = update_factorization(current_constraints, [], ...
                                                              [], ...
                                                              ind_eactive, true);
                     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
                                                          current_constraints, ...
-                                                         ind_eviolated);
-                    rows_qr = size(R, 1) - size(N, 2);
-                    multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1: ...
-                                                                  rows_qr)'*pseudo_gradient), ut_option);
-                    remain = -((Q*R)*multipliers_a + pseudo_gradient);
-                    correction = linsolve(R(1:rows_qr, :), Q(:, 1: ...
-                                                             rows_qr)'*remain, ...
-                                          ut_option);
-                    multipliers = multipliers_a + correction;
-                    tol_multipliers = 10*max(norm(correction), eps);
+                                                         ind_qr, true);
+
+                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
 
                     if ~sum(multipliers < -tol_multipliers |...
                             mu < multipliers - tol_multipliers) 
@@ -264,89 +225,39 @@ while ~finish
                         end
                     end
                 end
-%%%%%%%%%%%%%
             % calculate multipliers
-            rows_qr = size(R, 1) - size(N, 2);
-            lastwarn('');
-            multipliers_a = -linsolve(R(1:rows_qr, :), (Q(:, 1:rows_qr)'*pseudo_gradient), ut_option);
-            [~, warnid] = lastwarn();
-            if strcmp('MATLAB:nearlySingularMatrix', warnid)
-                1;
-            end
-            remain = -((Q*R)*multipliers_a + pseudo_gradient);
-            correction = linsolve(R(1:rows_qr, :), Q(:, 1:rows_qr)'*remain, ut_option);
-            multipliers = multipliers_a + correction;
-            tol_multipliers = 10*max(norm(correction), eps);
+            [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
 
-
-            
-            Bv = zeros(dimension);
-            for n = ind_eviolated'
-                Bv = Bv + mu*(current_constraints(n).H);
-            end
-            Bm = zeros(dimension);
-            for n = 1:length(ind_qr)
-                Bm = Bm + multipliers(n)*(current_constraints(ind_qr(n)).H);
-            end
-            B = Bv + Bm + fmodel.H;
-
-                
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
             if sum(multipliers < -tol_multipliers | mu < multipliers - tol_multipliers)
-                multipliers_dropping = multipliers;
-                ind_qr_dropping = ind_qr;
-                ind_eactive_dropping = ind_eactive;
-                Q1 = Q;
-                R1 = R;
-                while sum(multipliers_dropping < -tol_multipliers | mu < multipliers_dropping - tol_multipliers)
-                    %%%
-                    dropping_constraint = true;
-                    [h, sigma, grad_phi_j, Q1, R1, ind_j] = ...
-                                        l1_drop_constraint(Q1, R1, multipliers_dropping, mu, tol_multipliers);
-                    ind_null = sum(abs(R1'), 1) < 1e-10;
-                    N1 = Q1(:, ind_null);
-                    n_drop = ind_qr_dropping(ind_j);
-                    ind_eactive_dropping = ind_eactive_dropping(ind_eactive_dropping ~= n_drop);
-                    ind_qr_dropping = ind_qr_dropping(ind_qr_dropping ~= n_drop);
-                    %%%%
-                    rows_qr = size(R1, 1) - size(N1, 2);
-                    multipliers_dropping = -linsolve(R1(1:rows_qr, :), (Q1(:, 1:rows_qr)'*pseudo_gradient), ut_option);
-                    remain = -((Q1*R1)*multipliers_dropping + pseudo_gradient);
-                    correction = linsolve(R1(1:rows_qr, :), Q1(:, 1:rows_qr)'*remain, ut_option);
-                    multipliers_dropping = multipliers_dropping + correction;
-                    tol_multipliers = 10*max(norm(correction), eps);
-                    %%%%
-                    B = B - multipliers(ind_j)*(current_constraints(n_drop).H);
-                    if current_constraints(n_drop).c > 0
-                        pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, [ind_eviolated; n_drop]);
-                        B = B + mu*(current_constraints(n_drop).H);
-                    end
+                dropping_constraint = true;
+                while sum(multipliers < -tol_multipliers | mu < multipliers - tol_multipliers)
+                    [Q, R, N, ind_qr] = ...
+                            l1_drop_constraint(Q, R, N, ind_qr, mu, ...
+                                               multipliers, tol_multipliers);
+                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
+                    % break
                 end
-                model.B = N1'*B*N1;
-                model.g = N1'*pseudo_gradient;
 
                 geometry_ok = is_lambda_poised(trmodel, options);
-%                 d = solve_tr_problem(model.B, model.g, trmodel.radius);
-                h0 = l1_horizontal_step(B, pseudo_gradient, N1, x, trmodel.radius, bl, bu);
+                h = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
 
-
-                [h, pred, status] = line_search_full_domain(fmodel, ...
-                                                             current_constraints, mu, h0, trmodel.radius);
-                step = project_to_bounds(x + h, bl, bu) - x;
-                pred = predict_descent(fmodel, current_constraints, step, mu, []);
+                s = project_to_bounds(x + h, bl, bu) - x;
+                pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 if pred > delta
                     dropping_succeeded = true;
-                    trial_point = x + step;
+                    trial_point = x + s;
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
-                    dpred = pred - 10*eps*max(1, abs(px));
+                    dpred = pred  - 10*eps*max(1, abs(px));
                     dared = ared - 10*eps*max(1, abs(px));
                     if abs(dared) < 10*eps && abs(dpred) < 10*eps
                         rho = 1;
                     else
                         rho = dared/dpred;
                     end
+                    rho = ared/pred;
                     
                     if rho > eta_2 || (rho > eta_1 && geometry_ok)
                         x = trial_point;
@@ -365,14 +276,10 @@ while ~finish
                         trmodel.radius = gamma_dec*trmodel.radius;
                     else
                         if rho > eta_2
-                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
                             trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
                         end
                     end
-                    Q = Q1;
-                    R = R1;
-                    ind_qr = ind_qr(ind_qr ~= n_drop);
-                    ind_eactive = ind_eactive(ind_eactive ~= n_drop);
                 else % min decrease not satisfied
                     dropping_succeeded = false;
                     step_accepted = false;
@@ -387,23 +294,21 @@ while ~finish
 
                 geometry_ok = is_lambda_poised(trmodel, options);
                 if norm(N'*pseudo_gradient) >= tol_g
-                    model.B = N'*B*N;
-                    model.g = N'*pseudo_gradient;
 %                     d1 = -model.g*(trmodel.radius/norm(model.g));
-                    h0 = l1_horizontal_step(B, pseudo_gradient, N, x, trmodel.radius, bl, bu);
-                    [h1, pred, status] = line_search_full_domain(fmodel, current_constraints, mu, h0, trmodel.radius);
-                    if ~status
-                        h1 = zeros(size(h1));
+                    try
+                        h1 = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                    catch err1
+                        rethrow(err1);
                     end
-                    v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_eactive, ind_qr, trmodel.radius);
-                    step = project_to_bounds(x + h1 + v1, bl, bu) - x;
+                    v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_qr, trmodel.radius, x, bl, bu);
+                    s = project_to_bounds(x + h1 + v1, bl, bu) - x;
                 else
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
                                              mu, zeros(dimension,1), ind_qr, ...
-                                             ind_eviolated, trmodel.radius);
-                    step = project_to_bounds(x + v, bl, bu) - x;
+                                             trmodel.radius, x, bl, bu);
+                    s = project_to_bounds(x + v, bl, bu) - x;
                 end
-                pred = predict_descent(fmodel, current_constraints, step, mu, []);
+                pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
                 ppgrad = N'*pseudo_gradient;
                 if pred < delta*(norm(ppgrad)^2 + normphi)
@@ -418,7 +323,7 @@ while ~finish
                     end
                 else
                     % Compute ared and all...
-                    trial_point = x + step;
+                    trial_point = x + s;
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
                     dpred = pred - 10*eps*max(1, abs(px));
@@ -428,6 +333,7 @@ while ~finish
                     else
                         rho = dared/dpred;
                     end
+                    rho = ared/pred;
                     
                     
                     if rho > eta_2 || (rho > eta_1 && geometry_ok)
@@ -447,14 +353,14 @@ while ~finish
                         trmodel.radius = gamma_dec*trmodel.radius;
                     else
                         if rho > eta_2
-                            radius_inc = max(1, gamma_2*(norm(step)/trmodel.radius));
+                            radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
                             trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
                         end
                     end
                 end
             end
             if ~step_accepted || (dropping_constraint && ~dropping_succeeded)
-                [epsilon, Lambda, N, Q, R, ind_eactive, ind_eviolated, ...
+                [epsilon, Lambda, N, Q, R, ind_eactive, ~, ...
                  ind_qr] = l1_criticality_step(epsilon, Lambda, ....
                                                current_constraints, ...
                                                fmodel.g, mu, Q, R, ...
@@ -486,6 +392,9 @@ while ~finish
 
     if trmodel.radius < tol_radius
         finish = true;
+    end
+    if length(history_solution) > 55
+        1;
     end
 end
 

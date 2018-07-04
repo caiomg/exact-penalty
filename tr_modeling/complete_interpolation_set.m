@@ -94,7 +94,7 @@ while true
                     new_value = new_value_b;
                 end
             elseif attempt == 3
-                [new_point, new_value] = find_other_point_with_bounds(chosen_poly, bl, bu);
+                [new_point, new_value] = find_other_point_with_bounds(chosen_poly, bl_scaled, bu_scaled);
             end
             if abs(new_value) >= tol_pivot
                 pivot_found = true;
