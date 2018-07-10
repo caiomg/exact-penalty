@@ -1,16 +1,17 @@
 function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, cmodel, mu, ind_eactive, Q, R, N, x, bl, bu)
 
     if isempty(bl)
-        bl = -inf(size(x0));
+        bl = -inf(size(x));
     end
     if isempty(bu)
-        bu = inf(size(x0));
+        bu = inf(size(x));
     end
     ut_option.UT = true;
     dimension = size(fmodel.g, 1);
     
     tol_rem = 1e-4;
     tol_mult = 1e-4;
+    tol_ort = 1e-5;
     
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, cmodel, ...
                                          ind_eactive, true);
@@ -21,13 +22,43 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     n_lower_active = sum(l_active);
     n_upper_active = sum(u_active);
     I = eye(dimension);
-    A1 = [I(:, l_active), -I(:, u_active)];
-    A = [A1, Q*R];
-    [Q, R] = qr(A);
-    N = null(A');
+    Al = I(:, l_active);
+    Au = -I(:, u_active);
+    A1 = [Al, Au];
+    bounds_included = 0;
+    lower_included = 0;
+    upper_included = 0;
+    for k = 1:n_lower_active
+        this_grad = Al(:, k);
+        norm_n = norm((Q*R)*(R\(Q'*this_grad)) - this_grad, 1);
+        if norm_n > tol_ort
+            lower_included = lower_included + 1;
+            bounds_included = bounds_included + 1;
+            [Q, R] = qrinsert(Q, R, bounds_included, this_grad);
+        else
+            l_active(this_grad ~= 0) = false;
+        end
+    end
+    for k = 1:n_upper_active
+        this_grad = Au(:, k);
+        norm_n = norm((Q*R)*(R\(Q'*this_grad)) - this_grad, 1);
+        if norm_n > tol_ort
+            upper_included = upper_included + 1;
+            bounds_included = bounds_included + 1;
+            [Q, R] = qrinsert(Q, R, bounds_included, this_grad);
+        else
+            u_active(this_grad ~= 0) = false;
+        end
+    end
+    if lower_included ~= sum(l_active)
+        error()
+    end
+    if upper_included ~= sum(u_active)
+        error()
+    end
     
     % Estimate multipliers
-    rows_qr = size(R, 1) - size(N, 2);
+    rows_qr = size(R, 1) - size(R, 2);
     
     lastwarn(''); % Reseting warnings
     % First estimate
@@ -48,13 +79,13 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     bl_mult = zeros(size(bl));
     bu_mult = zeros(size(bu));
 
-    if n_lower_active > 0
-        bl_mult(l_active) = multipliers(1:n_lower_active);
+    if lower_included > 0
+        bl_mult(l_active) = multipliers(1:lower_included);
     end
-    if n_upper_active > 0
-        bu_mult(u_active) = multipliers(n_lower_active + 1:n_lower_active + n_upper_active);
+    if upper_included > 0
+        bu_mult(u_active) = multipliers(lower_included + 1:lower_included + upper_included);
     end
-    multipliers = multipliers(n_lower_active + n_upper_active + 1:end);
+    multipliers = multipliers(lower_included + upper_included + 1:end);
     
 
 end
