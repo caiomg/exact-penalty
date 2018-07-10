@@ -1,9 +1,12 @@
 function [points, indices, pivot_absvalues, pivot_polynomials] = ...
                     change_interpolation_set_lu(points, basis, tol_pivot, ...
-                    reorder)
+                    reorder, start_i)
 % COMPLETE_INTERPOLATION_SET - completes set of interpolation points
 % through LU factorization
 
+if nargin < 5 || isempty(start_i)
+    start_i = 1;
+end
 
 polynomials = basis;
 n_polynomials = length(polynomials);
@@ -11,7 +14,12 @@ n_polynomials = length(polynomials);
 pivot_absvalues = zeros(n_polynomials, 1);
 % indices variable keeps track  of the order in the set of points
 indices = 1:n_points;
-for pol = 1:min(n_polynomials, n_points)
+for pol = 1:start_i-1
+    pol_current = polynomials(pol);
+    value = evaluate_polynomial(pol_current, points(:, indices(pol)));
+    pivot_absvalues(pol) = abs(value);
+end
+for pol = start_i:min(n_polynomials, n_points)
     pol_current = polynomials(pol);
     % Iterate through known points looking for a good pivot
     max_abs = 0;
