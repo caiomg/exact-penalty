@@ -45,8 +45,8 @@ while true
         break
     end
     
-    min_lower = min(lower_breakpoints(lower_breakpoints >= 0)); % Not exactly like this
-    min_upper = min(upper_breakpoints(upper_breakpoints >= 0));
+    min_lower = min(lower_breakpoints(lower_breakpoints > 0 | (lower_breakpoints == 0 & d_phony < 0))); % Not exactly like this
+    min_upper = min(upper_breakpoints(upper_breakpoints > 0 | (upper_breakpoints == 0 & d_phony > 0)));
     tr_breakpoint = min(tr_breakpoint(tr_breakpoint > 0));
     
     t = min([t, min_lower, min_upper, tr_breakpoint]);
@@ -58,9 +58,9 @@ while true
         % Local minimum
         break
     else
-        new_l_hits = (t == lower_breakpoints);
+        new_l_hits = (t == lower_breakpoints & d_phony < 0);
         x(new_l_hits) = bl(new_l_hits); % small correction
-        new_u_hits = (t == upper_breakpoints);
+        new_u_hits = (t == upper_breakpoints & d_phony > 0);
         x(new_u_hits) = bu(new_u_hits); % small correction
         lower_hits = (x == bl); % Not exactly like this
         upper_hits = (x == bu);
