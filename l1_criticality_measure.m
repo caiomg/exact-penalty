@@ -8,6 +8,7 @@ if isempty(activities_values)
 else
     q2 = activities_values;
 end
+ q2 = 0; %test
 q = sqrt(q1'*q1 + q2'*q2);
 
 end
