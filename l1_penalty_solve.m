@@ -10,7 +10,8 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'initial_radius', 0.5, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'full quadratic', ...
-                        'pivot_threshold', 0.1, 'poised_radius_factor', 2);
+                        'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
+                        'pivot_imp', 1.1);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -129,7 +130,7 @@ while ~finish
         v1 = tr_vertical_step_new(fmodel, current_constraints, mu, ...
                                   h1, ind_qr, trmodel.radius, x, bl, bu);
 
-        s = project_to_bounds(x + h1 + v1, bl, bu) - x;
+        s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
         
 
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
@@ -141,7 +142,7 @@ while ~finish
                 trmodel = improve_model(trmodel, fphi, bl, bu, options);
             end
         else
-            trial_point = x + s;
+            trial_point = project_to_bounds(x + s, bl, bu);
             [p_trial, trial_fvalues] = p(trial_point);
             ared = px - p_trial;
             if ared < 0
@@ -301,7 +302,7 @@ while ~finish
                         rethrow(err1);
                     end
                     v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_qr, trmodel.radius, x, bl, bu);
-                    s = project_to_bounds(x + h1 + v1, bl, bu) - x;
+                    s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
                 else
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
                                              mu, zeros(dimension,1), ind_qr, ...
