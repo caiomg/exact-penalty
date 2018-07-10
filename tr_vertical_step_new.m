@@ -56,15 +56,14 @@ if ~isempty(ind_eactive) && r_radius > tol_r
             break % while
         end
     end
-    pred_hv = predict_descent(h_fmodel, h_constraints, v, mu);
-    if true %pred_hv < -0.75*pred_h
-        [v, ~, status] = line_search_full_domain(h_fmodel, h_constraints, mu, v, r_radius);
-        if ~status
-            v = zeros(size(v));
+
+    while true
+        pred_hv = predict_descent(h_fmodel, h_constraints, v, mu);
+        if pred_hv < -0.5*abs(pred_h)
+            v = v/2;
+        else
+            break
         end
-    else
-        % Will use as it is
-        1;
     end
 
 else
