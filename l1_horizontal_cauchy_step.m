@@ -1,4 +1,4 @@
-function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, R, radius, bl, bu, multipliers)
+function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eactive, Q, R, radius, bl, bu, multipliers)
 
     if nargin < 11 || isempty(multipliers)
         multipliers = zeros(size(ind_eactive));
@@ -12,11 +12,6 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
     if find(x0 > bu | x0 < bl, 1)
         error()
     end
-
-    [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, ...
-                                              x0, ind_eactive, Q, ...
-                                              R, radius, bl, bu, multipliers);
-
     tol_radius = 1e-6;
     
     dimension = size(x0, 1);
@@ -52,9 +47,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
            % Evaluating matrices on reduced space
            Br = N'*B*N;
            gr = N'*g;
-           % One shot of More-Sorensen algorithm
-           s0 = ms_step(Br, gr, radius);
-           d = N*s0;
+           d = -N*gr;
            l_newly_active = (x == bl & d < 0);
            u_newly_active = (x == bu & d > 0);
            for k = 1:dimension
@@ -68,7 +61,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                    b(k) = bu(k);
                    [Q, R] = qrinsert(Q, R, 1, b);
                    break
-               end
+               end                    
             end
             if sum(l_newly_active | u_newly_active) > 0
                 r_columns = size(R, 2);
@@ -79,7 +72,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
         end
         if isempty(N) || norm(d) == 0
             break
-        end
+        end        
         lower_breakpoints = (bl - x)./d;
         upper_breakpoints = (bu - x)./d;
         tr_breakpoint = roots([d'*d, 2*s'*d, s'*s - radius^2]);
@@ -101,8 +94,9 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 
         s = x - x0;
         
-        if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius ...
-                || norm(s) - norm(s0) >= tol_radius
+        if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius
+            break
+        else
             break
         end
     end
@@ -128,10 +122,6 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
             h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
             h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
         end
-    end
-
-    if pred_hc > pred
-        h = hc;
     end
 
 end
