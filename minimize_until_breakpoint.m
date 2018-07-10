@@ -5,6 +5,8 @@ function t = minimize_until_breakpoint(H, g, d, bp)
     
     if gd > 0
         t = 0;
+    elseif gd == 0 && dHd == 0
+        t = 0;
     elseif (gd <= 0 && dHd < 0) || (gd < 0 && dHd == 0)
         t = bp;
     else
