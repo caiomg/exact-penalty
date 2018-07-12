@@ -10,7 +10,7 @@ if isempty(bu)
     bu = inf(dim, 1);
 end
 
-tol_pivot = options.pivot_threshold/20;
+tol_pivot = options.pivot_threshold/30;
 radius_factor = options.poised_radius_factor;
 
 radius = model.radius;

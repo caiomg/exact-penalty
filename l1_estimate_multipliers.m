@@ -17,14 +17,13 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
                                          ind_eactive, true);
 
 	% Test bounds
-    l_active = x <= bl;
-    u_active = x >= bu;
+    l_active = x <= bl & pseudo_gradient > 0;
+    u_active = x >= bu & pseudo_gradient < 0;
     n_lower_active = sum(l_active);
     n_upper_active = sum(u_active);
     I = eye(dimension);
     Al = I(:, l_active);
     Au = -I(:, u_active);
-    A1 = [Al, Au];
     bounds_included = 0;
     lower_included = 0;
     upper_included = 0;
@@ -58,11 +57,11 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     end
     
     % Estimate multipliers
-    rows_qr = size(R, 1) - size(R, 2);
+    cols_r = size(R, 2);
     
     lastwarn(''); % Reseting warnings
     % First estimate
-    multipliers = -linsolve(R(1:rows_qr, :), (Q(:, 1:rows_qr)'*pseudo_gradient), ut_option);
+    multipliers = -linsolve(R(1:cols_r, :), (Q(:, 1:cols_r)'*pseudo_gradient), ut_option);
     [~, warnid] = lastwarn();
     if strcmp('MATLAB:nearlySingularMatrix', warnid)
         1; % Breakpoint for debugging
@@ -70,7 +69,7 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     remainder = -((Q*R)*multipliers + pseudo_gradient);
 
     % Correction
-    correction = linsolve(R(1:rows_qr, :), Q(:, 1:rows_qr)'*remainder, ut_option);
+    correction = linsolve(R(1:cols_r, :), Q(:, 1:cols_r)'*remainder, ut_option);
     % Final calculation
     multipliers = multipliers + correction;
     % Tolerance

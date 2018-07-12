@@ -41,7 +41,7 @@ end
 pseudo_gradient = l1_pseudo_gradient(fmodel.g, p_mu, cmodel, ind_qr, true);
 
 % Criticality measure
-measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
+measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [cmodel(ind_qr).c]');
 
 
 while (model.radius > crit_mu*measure)
@@ -67,7 +67,8 @@ while (model.radius > crit_mu*measure)
     end
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, p_mu, cmodel, ind_qr, true);
 
-    measure = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [cmodel(ind_qr).c]');
+    measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, ...
+                                     bu, [cmodel(ind_qr).c]');
     if (model.radius < tol_radius || ...
         (beta*measure < tol_f && model.radius < 100*tol_radius))
         % Better break.

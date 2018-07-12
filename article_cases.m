@@ -48,7 +48,6 @@ log_fd = fopen(log_filename, 'w');
                     'MAKELA4' 'OPTPRLOC' };
                 
 
-
 % Parameters
 mu = 500;
 epsilon = 0.85;
@@ -57,10 +56,12 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [250, 1250, 6250]
+all_mu = [250, 50, 100, 500, 1250, 10000]
 
 clear tries
 
+all_epsilon = [0.85, 1, 0.75]
+all_lambda = [0.075, 0.01, 0.1]
 
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
@@ -69,103 +70,115 @@ warning('off', 'cmg:bad_fvalue');
 
 final_filenames = {};
 all_results = {};
-for iter = 1:length(all_mu)
-    clear results;
+iter = 1;
+for la_i = 1:length(all_lambda)
+    lambda = all_lambda(la_i);
+    for ep_i = 1:length(all_epsilon)
+        epsilon = all_epsilon(ep_i);
+        for mu_i = 1:length(all_mu)
+            clear results;
+            iter = iter + 1;
+            mu = all_mu(mu_i);
 
-    mu = all_mu(iter);
-
-    fprintf(log_fd, ['mu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
-                     'Lambda = % 8g\n\n'], mu, epsilon, delta, Lambda);
-    fprintf(1, ['mu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
-                     'Lambda = % 8g\n\n'], mu, epsilon, delta, Lambda);
+            fprintf(log_fd, ['\nmu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
+                             'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
+            fprintf(1, ['\nmu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
+                             'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
 
 
-    n_problems = length(selected_problems);
-    for k = 1:n_problems
-        problem_name = selected_problems(k).name;
-        prob = setup_cutest_problem(problem_name, '../my_problems/');
+            n_problems = length(selected_problems);
+            for k = 1:n_problems
+                problem_name = selected_problems(k).name;
+                prob = setup_cutest_problem(problem_name, '../my_problems/');
 
-        % Objective
-        f_obj = @(x) get_cutest_objective(x);
-        counter = evaluation_counter(f_obj);
-        f = @(x) counter.evaluate(x);
+                % Objective
+                f_obj = @(x) get_cutest_objective(x);
+                counter = evaluation_counter(f_obj);
+                f = @(x) counter.evaluate(x);
 
-        % Constraints
-        n_constraints = get_cutest_total_number_of_constraints();
+                % Constraints
+                n_constraints = get_cutest_total_number_of_constraints();
 
-        bl = [];
-        bu = [];
-        % Bound constraints
-        lower_bounds = prob.bl > -1e19;
-        upper_bounds = prob.bu < 1e19;
-        bl = prob.bl;
-        bu = prob.bu;
-        % Remove constraints that actually are bounds
-        n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+                bl = [];
+                bu = [];
+                % Bound constraints
+                lower_bounds = prob.bl > -1e19;
+                upper_bounds = prob.bu < 1e19;
+                bl = prob.bl;
+                bu = prob.bu;
+                % Remove constraints that actually are bounds
+                n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
 
-        % NL constraints
-        all_con = cell(n_constraints, 1);
-        for n = 1:n_constraints
-            gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
-            all_con{n} = gk;
+                % NL constraints
+                all_con = cell(n_constraints, 1);
+                for n = 1:n_constraints
+                    gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
+                    all_con{n} = gk;
+                end
+
+                % Initial point
+                x0 = prob.x;
+
+                nlcon = @(x) constraints(all_con, {}, x, 1);
+        %         fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+        %                                        'SpecifyObjectiveGradient', true);
+        %         x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
+        %         fcount_fmincon = counter.get_count();
+        %         fx_fmincon = f(x_fmincon);
+        %         nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
+                %%
+
+
+                counter.reset_count();
+                counter.set_max_count(30000);
+
+                solved = true;
+                try
+                    p_seed = rng('default');
+                    [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, []);
+                catch thiserror
+                    results(k, 1).except = thiserror;
+                    solved = false;
+                end
+                rng(p_seed);
+                if solved
+                    fcount = counter.get_count();
+                    fx = f(x);
+                    nphi = norm(max(0, nlcon(x)));
+                    error_obj = fx - selected_problems(k).solution;
+                else
+                    x = [];
+                    hs2 = [];
+                    fx = [];
+                    nphi = [];
+                    error_obj = [];
+                    error_x = [];
+                    fcount = nan;
+                end
+
+                results(k, 1).name = problem_name;
+                results(k, 1).x = x;
+                results(k, 1).fx = fx;
+                results(k, 1).history = hs2;
+                results(k, 1).fcount = fcount;
+                results(k, 1).error_obj = error_obj;
+                results(k, 1).nphi = nphi;
+                results(k, 1).mu = mu;
+                results(k, 1).epsilon = epsilon;
+                results(k, 1).lambda = lambda;
+
+                print_results(results(k, 1), log_fd);
+                print_results(results(k, 1));
+
+                all_results{iter} = results;
+
+                filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
+                save(filename, 'all_results', 'results', 'mu', 'epsilon', ...
+                     'delta', 'Lambda', 'final_filenames');
+
+                terminate_cutest_problem();
+            end
+            final_filenames{iter, 1} = filename;
         end
-
-        % Initial point
-        x0 = prob.x;
-
-        nlcon = @(x) constraints(all_con, {}, x, 1);
-%         fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-%                                        'SpecifyObjectiveGradient', true);
-%         x_fmincon = fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
-%         fcount_fmincon = counter.get_count();
-%         fx_fmincon = f(x_fmincon);
-%         nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
-        %%
-
-
-        counter.reset_count();
-        counter.set_max_count(15000);
-
-        solved = true;
-        try
-            [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, []);
-        catch thiserror
-            results(k, 1).except = thiserror;
-            solved = false;
-        end
-        if solved
-            fcount = counter.get_count();
-            fx = f(x);
-            nphi = norm(max(0, nlcon(x)));
-            error_obj = fx - selected_problems(k).solution;
-        else
-            x = [];
-            hs2 = [];
-            fx = [];
-        nphi = [];
-            error_obj = [];
-            error_x = [];
-            fcount = [];
-        end
-
-        results(k, 1).name = problem_name;
-        results(k, 1).x = x;
-        results(k, 1).fx = fx;
-        results(k, 1).history = hs2;
-        results(k, 1).fcount = fcount;
-        results(k, 1).error_obj = error_obj;
-        results(k, 1).nphi = nphi;
-
-        print_results(results(k, 1), log_fd);
-        print_results(results(k, 1));
-
-        all_results{iter} = results;
-
-        filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
-        save(filename, 'all_results', 'results', 'mu', 'epsilon', ...
-             'delta', 'Lambda', 'final_filenames');
-
-        terminate_cutest_problem();
     end
-    final_filenames{iter, 1} = filename;
 end

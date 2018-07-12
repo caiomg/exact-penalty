@@ -18,6 +18,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                                               R, radius, bl, bu, multipliers);
 
     tol_radius = 1e-6;
+    tol_ort = 1e-5;
     
     dimension = size(x0, 1);
     n_constraints = length(cmodel);
@@ -57,26 +58,36 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
            d = N*s0;
            l_newly_active = (x == bl & d < 0);
            u_newly_active = (x == bu & d > 0);
+           inserted = false;
            for k = 1:dimension
                if l_newly_active(k)
                    b = zeros(dimension, 1);
-                   b(k) = bl(k);
-                   [Q, R] = qrinsert(Q, R, 1, b);
-                   break
+                   b(k) = 1;
+                   norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
+                   if norm_b > tol_ort
+                       [Q, R] = qrinsert(Q, R, 1, b);
+                       inserted = true;
+                       break
+                   end
                elseif u_newly_active(k)
                    b = zeros(dimension, 1);
-                   b(k) = bu(k);
-                   [Q, R] = qrinsert(Q, R, 1, b);
-                   break
-               end
+                   b(k) = -1;
+                   norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
+                   if norm_b > tol_ort
+                       [Q, R] = qrinsert(Q, R, 1, b);
+                       inserted = true;
+                       break
+                   end
+               end                    
             end
-            if sum(l_newly_active | u_newly_active) > 0
+            if inserted
                 r_columns = size(R, 2);
                 N = Q(:, r_columns+1:end);    
             else
                 break
             end
         end
+
         if isempty(N) || norm(d) == 0
             break
         end
@@ -93,19 +104,27 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
         bp = min([lower_breakpoints(l_breakpoints); upper_breakpoints(u_breakpoints); tr_breakpoint]);
         t = minimize_until_breakpoint(B, g, d, bp);
 
-        x = x + t*d;
         l_newly_active = (t == lower_breakpoints & d < 0);
         u_newly_active = (t == upper_breakpoints & d > 0);
-        x(l_newly_active) = bl(l_newly_active);
-        x(u_newly_active) = bu(u_newly_active);
+        s1 = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
+        if sum(l_newly_active | u_newly_active)
+            x = x + t*d;
+            x(l_newly_active) = bl(l_newly_active);
+            x(u_newly_active) = bu(u_newly_active);
+            s = x - x0;
+        else
+           s = s + t*d; 
+        end
+        if norm (s - s1) > 1e-9
+            1;
+        end
 
-        s = x - x0;
-        
         if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius ...
                 || norm(s) - norm(s0) >= tol_radius
             break
         end
     end
+    
     s2 = remove_increasing_components(s, cmodel, ind_eactive);
     if norm(s - s2) > 0
         1;

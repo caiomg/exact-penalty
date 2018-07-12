@@ -16,7 +16,7 @@ problem_name = 'HS100';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS102';
+problem_name = 'HS116';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -49,7 +49,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 1000000;
+mu = 500000;
 
 epsilon = 0.85;
 delta = 1e-6;
@@ -62,6 +62,7 @@ fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
 
 x_fmincon = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
 fx_fmincon = f(x_fmincon);
+nlcon_fmincon = max(0, nlcon(x_fmincon));
 
 counter.get_count()
 counter.reset_count()

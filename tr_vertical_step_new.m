@@ -8,6 +8,7 @@ function v = tr_vertical_step_new(fmodel, cmodel, mu, h, ind_eactive, radius, x0
     end
 opts_lt.LT = true;
 tol_r = 1e-8;
+tol_s = 1e-10;
 
 dimension = size(h, 1);
 n_cons = length(cmodel);
@@ -24,18 +25,19 @@ end
 pred_h = predict_descent(fmodel, cmodel, h, mu);
 
 if ~isempty(ind_eactive) && r_radius > tol_r
-    [uphi, A2] = update_constraint_information(cmodel, ind_eactive, h);
+    hv = h;
     
     An = [cmodel(ind_eactive).g]; % Change to include perturbations
     bounds_included = false(dimension, 1);
     Z = zeros(dimension, 1);
     while true
+        [uphi, A2] = update_constraint_information(cmodel, ind_eactive, hv);
         Qa = orth(An);
         v = -Qa*((A2'*Qa)\uphi); % possibly outside TR
         if norm(v) > r_radius
             v = (v/norm(v))*r_radius;
         end
-        xn = x0 + h;
+        xn = x0 + hv;
         bl_active = xn <= bl & v < 0;
         bu_active = xn >= bu & v > 0;
         included = 0;
@@ -53,7 +55,15 @@ if ~isempty(ind_eactive) && r_radius > tol_r
         if included ~= 0
             bounds_included(included) = true;
         else
-            break % while
+            lower_breakpoints = (bl - xn)./v;
+            upper_breakpoints = (bu - xn)./v;
+            bp = min([lower_breakpoints(lower_breakpoints > 0); ...
+                      upper_breakpoints(upper_breakpoints > 0)]);
+            if isempty(bp) || bp >= 1 || norm(bp*v) < tol_s
+                break % while
+            else
+                hv = hv + bp*v;
+            end
         end
     end
 

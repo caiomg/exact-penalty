@@ -115,7 +115,7 @@ while ~finish
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_qr, true);
 
-    [~, q1] = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [current_constraints(ind_qr).c]');
+    [~, q1] = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [current_constraints(ind_qr).c]');
     if (norm(q1) > max(Lambda, tol_g))
         x_prev = x;
 
@@ -130,7 +130,7 @@ while ~finish
         v1 = tr_vertical_step_new(fmodel, current_constraints, mu, ...
                                   h1, ind_qr, trmodel.radius, x, bl, bu);
 
-        s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
+        s = (h1 + v1);
         
 
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
@@ -193,7 +193,7 @@ while ~finish
             [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
                                                   Q, R, ind_eactive, true);
 
-                q = l1_criticality_measure(x, pseudo_gradient, N, bl, bu, [current_constraints(ind_qr).c]');
+                q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [current_constraints(ind_qr).c]');
                 if (q < 100*tol_g)
                     [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
                                                   mu, bl, bu, options);
@@ -394,7 +394,7 @@ while ~finish
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if length(history_solution) > 55
+    if length(history_solution) > 9045
         1;
     end
 end
