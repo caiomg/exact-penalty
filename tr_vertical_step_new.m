@@ -33,6 +33,7 @@ if ~isempty(ind_eactive) && r_radius > tol_r
     while true
         [uphi, A2] = update_constraint_information(cmodel, ind_eactive, hv);
         Qa = orth(An);
+        Qa(bounds_included, :) = zeros(sum(bounds_included), size(Qa, 2));
         v = -Qa*((A2'*Qa)\uphi); % possibly outside TR
         if norm(v) > r_radius
             v = (v/norm(v))*r_radius;
