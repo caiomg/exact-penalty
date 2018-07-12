@@ -130,7 +130,7 @@ for la_i = 1:length(all_lambda)
 
 
                 counter.reset_count();
-                counter.set_max_count(30000);
+                counter.set_max_count(15000);
 
                 solved = true;
                 try
