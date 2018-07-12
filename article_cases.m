@@ -70,13 +70,13 @@ warning('off', 'cmg:bad_fvalue');
 
 final_filenames = {};
 all_results = {};
-iter = 1;
+iter = 0;
 for mu_i = 1:length(all_mu)
     for la_i = 1:length(all_lambda)
         for ep_i = 1:length(all_epsilon)
             iter = iter + 1;
             epsilon = all_epsilon(ep_i);
-            lambda = all_lambda(la_i);
+            Lambda = all_lambda(la_i);
             mu = all_mu(mu_i);
 
             clear results;
@@ -166,7 +166,7 @@ for mu_i = 1:length(all_mu)
                 results(k, 1).nphi = nphi;
                 results(k, 1).mu = mu;
                 results(k, 1).epsilon = epsilon;
-                results(k, 1).lambda = lambda;
+                results(k, 1).lambda = Lambda;
 
                 print_results(results(k, 1), log_fd);
                 print_results(results(k, 1));
