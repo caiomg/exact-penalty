@@ -56,12 +56,12 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [250, 50, 100, 500, 1250, 10000]
+all_mu = [250, 50, 10000]
 
 clear tries
 
 all_epsilon = [0.85, 1, 0.75]
-all_lambda = [0.075, 0.01, 0.1]
+all_lambda = [0.075, 0.1, 0.01]
 
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
@@ -71,14 +71,15 @@ warning('off', 'cmg:bad_fvalue');
 final_filenames = {};
 all_results = {};
 iter = 1;
-for la_i = 1:length(all_lambda)
-    lambda = all_lambda(la_i);
-    for ep_i = 1:length(all_epsilon)
-        epsilon = all_epsilon(ep_i);
-        for mu_i = 1:length(all_mu)
-            clear results;
+for mu_i = 1:length(all_mu)
+    for la_i = 1:length(all_lambda)
+        for ep_i = 1:length(all_epsilon)
             iter = iter + 1;
+            epsilon = all_epsilon(ep_i);
+            lambda = all_lambda(la_i);
             mu = all_mu(mu_i);
+
+            clear results;
 
             fprintf(log_fd, ['\nmu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
                              'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
@@ -159,7 +160,7 @@ for la_i = 1:length(all_lambda)
                 results(k, 1).name = problem_name;
                 results(k, 1).x = x;
                 results(k, 1).fx = fx;
-                results(k, 1).history = hs2;
+                results(k, 1).history = []; % hs2
                 results(k, 1).fcount = fcount;
                 results(k, 1).error_obj = error_obj;
                 results(k, 1).nphi = nphi;
@@ -172,13 +173,11 @@ for la_i = 1:length(all_lambda)
 
                 all_results{iter} = results;
 
-                filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
-                save(filename, 'all_results', 'results', 'mu', 'epsilon', ...
-                     'delta', 'Lambda', 'final_filenames');
-
                 terminate_cutest_problem();
             end
-            final_filenames{iter, 1} = filename;
+                filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
+                save(filename, 'all_results', 'mu', 'epsilon', ...
+                     'delta', 'Lambda', 'final_filenames');
         end
     end
 end
