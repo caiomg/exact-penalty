@@ -44,6 +44,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
     x = x0;
 
     s = zeros(size(x0));
+    bounds_included = false(dimension, 1);
     while true
        while true
            if isempty(N)
@@ -67,6 +68,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
+                       bounds_included(k) = true;
                        break
                    end
                elseif u_newly_active(k)
@@ -76,13 +78,15 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
+                       bounds_included(k) = true;
                        break
                    end
                end                    
             end
             if inserted
                 r_columns = size(R, 2);
-                N = Q(:, r_columns+1:end);    
+                N = Q(:, r_columns+1:end);
+                N(bounds_included, :) = zeros(sum(bounds_included), size(N, 2));
             else
                 break
             end
@@ -151,6 +155,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 
     if pred_hc > pred
         h = hc;
+        pred = pred_hc;
     end
 
 end

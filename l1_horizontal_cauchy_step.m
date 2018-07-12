@@ -14,6 +14,7 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
     end
     tol_radius = 1e-6;
     tol_ort = 1e-5;
+    tol_con = 1e-10;
     
     dimension = size(x0, 1);
     n_constraints = length(cmodel);
@@ -39,6 +40,7 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
     x = x0;
 
     s = zeros(size(x0));
+    bounds_included = false(dimension, 1);
     while true
        while true
            if isempty(N)
@@ -49,8 +51,8 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
            Br = N'*B*N;
            gr = N'*g;
            d = -N*gr;
-           l_newly_active = (x == bl & d < 0);
-           u_newly_active = (x == bu & d > 0);
+           l_newly_active = (x - bl <= tol_con & d < 0);
+           u_newly_active = (x - bu >= -tol_con & d > 0);
            inserted = false;
            for k = 1:dimension
                if l_newly_active(k)
@@ -60,6 +62,7 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
+                       bounds_included(k) = true;
                        break
                    end
                elseif u_newly_active(k)
@@ -69,13 +72,15 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
+                       bounds_included(k) = true;
                        break
                    end
                end                    
             end
             if inserted
                 r_columns = size(R, 2);
-                N = Q(:, r_columns+1:end);    
+                N = Q(:, r_columns+1:end);
+                N(bounds_included, :) = zeros(sum(bounds_included), size(N, 2));
             else
                 break
             end

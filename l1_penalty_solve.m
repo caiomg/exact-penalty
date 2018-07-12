@@ -208,13 +208,13 @@ while ~finish
                     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
                                                          current_constraints, ...
                                                          ind_qr, true);
-
+                    q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [current_constraints(ind_qr).c]');
                     [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
 
                     if ~sum(multipliers < -tol_multipliers |...
                             mu < multipliers - tol_multipliers) 
                         phih = [current_constraints(ind_qr).c]';
-                        if norm(N'*pseudo_gradient) < tol_g
+                        if q < tol_g
                             if norm(phih) < tol_con
                                 if false %max([current_constraints.c]) > tol_g
                                     mu = mu*10
@@ -394,7 +394,7 @@ while ~finish
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if length(history_solution) > 9045
+    if length(history_solution) > 25
         1;
     end
 end

@@ -4,8 +4,8 @@ n_cons = length(ind_eactive);
 s = s0;
 if n_cons ~= 0
     B = [cmodel(ind_eactive).g]';
-    r_sum = zeros(n_cons, 1);
     r = max(0, B*s);
+    r_sum = r;
     while norm(r, inf) ~= 0
         lastwarn('');
         correction = - (B\r_sum);

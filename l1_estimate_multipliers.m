@@ -12,18 +12,19 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     tol_rem = 1e-4;
     tol_mult = 1e-4;
     tol_ort = 1e-5;
+    tol_con = 1e-10;
     
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, cmodel, ...
                                          ind_eactive, true);
 
 	% Test bounds
-    l_active = x <= bl & pseudo_gradient > 0;
-    u_active = x >= bu & pseudo_gradient < 0;
+    l_active = x - bl <= tol_con & pseudo_gradient > 0;
+    u_active = x - bu >= -tol_con & pseudo_gradient < 0;
     n_lower_active = sum(l_active);
     n_upper_active = sum(u_active);
     I = eye(dimension);
-    Al = I(:, l_active);
-    Au = -I(:, u_active);
+    Al = -I(:, l_active);
+    Au = I(:, u_active);
     bounds_included = 0;
     lower_included = 0;
     upper_included = 0;

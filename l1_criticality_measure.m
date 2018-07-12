@@ -2,12 +2,13 @@ function [q, q1, q2] = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, 
 
 dimension = size(x, 1);
 tol_ort = 1e-5;
+tol_con = 1e-10;
 while true
     cols_r = size(R, 2);
     N = Q(:, cols_r+1:end);
 	% Test bounds
-    l_active = x <= bl & N*(N'*pseudo_gradient) > 0;
-    u_active = x >= bu & N*(N'*pseudo_gradient) < 0;
+    l_active = x - bl <= tol_con & N*(N'*pseudo_gradient) > 0;
+    u_active = x - bu >= -tol_con & N*(N'*pseudo_gradient) < 0;
     n_lower_active = sum(l_active);
     n_upper_active = sum(u_active);
     I = eye(dimension);

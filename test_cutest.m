@@ -16,7 +16,7 @@ problem_name = 'HS100';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS116';
+problem_name = 'HS98';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -49,7 +49,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 500000;
+mu = 750;
 
 epsilon = 0.85;
 delta = 1e-6;
@@ -66,7 +66,7 @@ nlcon_fmincon = max(0, nlcon(x_fmincon));
 
 counter.get_count()
 counter.reset_count()
-
+counter.set_max_count(15000);
 %%
 p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
