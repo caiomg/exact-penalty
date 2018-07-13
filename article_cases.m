@@ -56,7 +56,7 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [250, 50, 10000]
+all_mu = [50, 250, 10000]
 
 clear tries
 
