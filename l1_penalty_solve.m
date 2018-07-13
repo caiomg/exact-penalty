@@ -127,7 +127,7 @@ while ~finish
         catch err1
             rethrow(err1);
         end
-        v1 = tr_vertical_step_new(fmodel, current_constraints, mu, ...
+        v1 = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
                                   h1, ind_qr, trmodel.radius, x, bl, bu);
 
         s = (h1 + v1);
@@ -302,12 +302,12 @@ while ~finish
                     catch err1
                         rethrow(err1);
                     end
-                    v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_qr, trmodel.radius, x, bl, bu);
+                    v1 = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, h1, ind_qr, trmodel.radius, x, bl, bu);
                     % s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
                     s = correct_step_to_bounds(x, h1 + v1, bl, bu);
                 else
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                             mu, zeros(dimension,1), ind_qr, ...
+                                             Q, R, mu, zeros(dimension,1), ind_qr, ...
                                              trmodel.radius, x, bl, bu);
                     %s = project_to_bounds(x + v, bl, bu) - x;
                     s = correct_step_to_bounds(x, v, bl, bu);

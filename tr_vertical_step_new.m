@@ -1,19 +1,24 @@
-function v = tr_vertical_step_new(fmodel, cmodel, mu, h, ind_eactive, radius, x0, bl, bu)
+function v = tr_vertical_step_new(fmodel, cmodel, Q, R, mu, h, ind_eactive, radius, x0, bl, bu)
 
-    if isempty(bl)
-        bl = -inf(size(x0));
-    end
-    if isempty(bu)
-        bu = inf(size(x0));
-    end
+if isempty(bl)
+    bl = -inf(size(x0));
+end
+if isempty(bu)
+    bu = inf(size(x0));
+end
 opts_lt.LT = true;
 tol_r = 1e-8;
 tol_s = 1e-10;
+
 
 dimension = size(h, 1);
 n_cons = length(cmodel);
 ls_steps = 10;
 ls_factor = 0.75;
+
+r_columns = size(R, 2);
+N = Q(:, r_columns+1:end);
+
 pv = @(s) -predict_descent(fmodel, cmodel, s, mu);
 r_radius = sqrt(max(0, radius^2 - h'*h));
 n_constraints = length(cmodel);
@@ -32,9 +37,9 @@ if ~isempty(ind_eactive) && r_radius > tol_r
     Z = zeros(dimension, 1);
     while true
         [uphi, A2] = update_constraint_information(cmodel, ind_eactive, hv);
-        Qa = orth(An);
-        Qa(bounds_included, :) = zeros(sum(bounds_included), size(Qa, 2));
-        v = -Qa*((A2'*Qa)\uphi); % possibly outside TR
+        A_ext = [A2, N];
+        uphi_ext = [uphi; zeros(size(N, 2), 1)];
+        v = -(A_ext'\uphi_ext); % possibly outside TR
         if norm(v) > r_radius
             v = (v/norm(v))*r_radius;
         end
@@ -66,6 +71,7 @@ if ~isempty(ind_eactive) && r_radius > tol_r
                 hv = hv + bp*v;
             end
         end
+        break
     end
 
     while true
