@@ -44,7 +44,8 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
     x = x0;
 
     s = zeros(size(x0));
-    bounds_included = false(dimension, 1);
+    l_bounds_included = false(dimension, 1);
+    u_bounds_included = false(dimension, 1);
     while true
        while true
            if isempty(N)
@@ -68,7 +69,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
-                       bounds_included(k) = true;
+                       l_bounds_included(k) = true;
                        break
                    end
                elseif u_newly_active(k)
@@ -78,7 +79,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                    if norm_b > tol_ort
                        [Q, R] = qrinsert(Q, R, 1, b);
                        inserted = true;
-                       bounds_included(k) = true;
+                       u_bounds_included(k) = true;
                        break
                    end
                end                    
@@ -86,7 +87,8 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
             if inserted
                 r_columns = size(R, 2);
                 N = Q(:, r_columns+1:end);
-                N(bounds_included, :) = zeros(sum(bounds_included), size(N, 2));
+                N(l_bounds_included, :) = zeros(sum(l_bounds_included), size(N, 2));
+                N(u_bounds_included, :) = zeros(sum(u_bounds_included), size(N, 2));
             else
                 break
             end
@@ -110,18 +112,20 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 
         l_newly_active = (t == lower_breakpoints & d < 0);
         u_newly_active = (t == upper_breakpoints & d > 0);
-        s1 = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
-        if sum(l_newly_active | u_newly_active)
-            x = x + t*d;
-            x(l_newly_active) = bl(l_newly_active);
-            x(u_newly_active) = bu(u_newly_active);
-            s = x - x0;
-        else
-           s = s + t*d; 
-        end
-        if norm (s - s1) > 1e-9
-            1;
-        end
+        s = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
+%         if sum(l_newly_active | u_newly_active)
+%             x = x + t*d;
+%             x(l_newly_active) = bl(l_newly_active);
+%             x(u_newly_active) = bu(u_newly_active);
+%             s = x - x0;
+%         else
+%            s = s + t*d; 
+%         end
+        x = x0 + s;
+        x(l_bounds_included) = bl(l_bounds_included);
+        x(l_newly_active) = bl(l_newly_active);
+        x(u_bounds_included) = bu(u_bounds_included);
+        x(u_newly_active) = bu(u_newly_active);
 
         if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius ...
                 || norm(s) - norm(s0) >= tol_radius

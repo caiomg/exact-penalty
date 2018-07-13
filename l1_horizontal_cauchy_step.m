@@ -103,14 +103,7 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
 
         l_newly_active = (t == lower_breakpoints & d < 0);
         u_newly_active = (t == upper_breakpoints & d > 0);
-        if sum(l_newly_active | u_newly_active)
-            x = x + t*d;
-            x(l_newly_active) = bl(l_newly_active);
-            x(u_newly_active) = bu(u_newly_active);
-            s = x - x0;
-        else
-           s = s + t*d; 
-        end
+        s = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
         
         if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius
             break

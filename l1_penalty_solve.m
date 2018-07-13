@@ -244,7 +244,8 @@ while ~finish
                 geometry_ok = is_lambda_poised(trmodel, options);
                 h = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
 
-                s = project_to_bounds(x + h, bl, bu) - x;
+                % s = project_to_bounds(x + h, bl, bu) - x;
+                s = correct_step_to_bounds(x, h, bl, bu);
                 pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 if pred > delta
                     dropping_succeeded = true;
@@ -302,12 +303,14 @@ while ~finish
                         rethrow(err1);
                     end
                     v1 = tr_vertical_step_new(fmodel, current_constraints, mu, h1, ind_qr, trmodel.radius, x, bl, bu);
-                    s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
+                    % s = project_to_bounds(x + (h1 + v1), bl, bu) - x;
+                    s = correct_step_to_bounds(x, h1 + v1, bl, bu);
                 else
                     v = tr_vertical_step_new(fmodel, current_constraints, ...
                                              mu, zeros(dimension,1), ind_qr, ...
                                              trmodel.radius, x, bl, bu);
-                    s = project_to_bounds(x + v, bl, bu) - x;
+                    %s = project_to_bounds(x + v, bl, bu) - x;
+                    s = correct_step_to_bounds(x, v, bl, bu);
                 end
                 pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 normphi = norm([current_constraints(ind_eactive).c], 1);
@@ -360,7 +363,9 @@ while ~finish
                     end
                 end
             end
-            if ~step_accepted || (dropping_constraint && ~dropping_succeeded)
+            if geometry_ok && ...
+                    (~step_accepted || ...
+                     (dropping_constraint && ~dropping_succeeded))
                 [epsilon, Lambda, N, Q, R, ind_eactive, ~, ...
                  ind_qr] = l1_criticality_step(epsilon, Lambda, ....
                                                current_constraints, ...
