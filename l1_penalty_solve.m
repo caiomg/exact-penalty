@@ -132,6 +132,7 @@ while ~finish
 
         s = (h1 + v1);
         
+%         s = line_search_full_domain(fmodel, current_constraints, mu, s, trmodel.radius);
 
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
         if pred <= 0 || (norm(s) < 0.0625*trmodel.radius && ~geometry_ok)
@@ -243,13 +244,14 @@ while ~finish
 
                 geometry_ok = is_lambda_poised(trmodel, options);
                 h = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                % h = line_search_full_domain(fmodel, current_constraints, mu, h, trmodel.radius);
 
                 % s = project_to_bounds(x + h, bl, bu) - x;
                 s = correct_step_to_bounds(x, h, bl, bu);
                 pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 if pred > delta
                     dropping_succeeded = true;
-                    trial_point = x + s;
+                    trial_point = project_to_bounds(x + s, bl, bu);
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
                     dpred = pred  - 10*eps*max(1, abs(px));
@@ -327,7 +329,7 @@ while ~finish
                     end
                 else
                     % Compute ared and all...
-                    trial_point = x + s;
+                    trial_point = project_to_bounds(x + s, bl, bu);
                     [p_trial, trial_fvalues] = p(trial_point);
                     ared = px - p_trial;
                     dpred = pred - 10*eps*max(1, abs(px));
@@ -399,7 +401,7 @@ while ~finish
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if length(history_solution) > 25
+    if length(history_solution) > 1000
         1;
     end
 end
