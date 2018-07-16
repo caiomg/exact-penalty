@@ -43,7 +43,7 @@ if ~isempty(ind_eactive) && r_radius > tol_r
         if norm(v) > r_radius
             v = (v/norm(v))*r_radius;
         end
-        xn = x0 + hv;
+        xn = x0 + hv + v;
         bl_active = xn <= bl & v < 0;
         bu_active = xn >= bu & v > 0;
         included = 0;
@@ -65,8 +65,11 @@ if ~isempty(ind_eactive) && r_radius > tol_r
             upper_breakpoints = (bu - xn)./v;
             bp = min([lower_breakpoints(lower_breakpoints > 0); ...
                       upper_breakpoints(upper_breakpoints > 0)]);
-            if isempty(bp) || bp >= 1 || norm(bp*v) < tol_s
+            if isempty(bp) ||norm(bp*v) < tol_s
                 break % while
+            elseif bp >= 1
+                hv = hv + v;
+                break
             else
                 hv = hv + bp*v;
             end
@@ -74,9 +77,11 @@ if ~isempty(ind_eactive) && r_radius > tol_r
         break
     end
 
+    v = hv - h;
     while true
         pred_hv = predict_descent(h_fmodel, h_constraints, v, mu);
-        if pred_hv < -0.5*abs(pred_h)
+        if pred_hv < -0.5*abs(pred_h)%(pred_h > 0 && pred_hv < -0.5*pred_h) || ...
+                %(pred_h <= 0 && pred_hv < 0)
             v = v/2;
         else
             break
