@@ -9,11 +9,13 @@ function print_results(results, fd)
         fprintf(fd, ' evals: % 6d |', results.fcount);
         fprintf(fd, ' f err: % +9.3g |', results.error_obj);
         fprintf(fd, ' viol.: % 9.3g |', results.nphi);
+        fprintf(fd, ' %1d |', results.kkt);
     else
         fprintf(fd, ' f(x):           |');
         fprintf(fd, ' evals:        |');
         fprintf(fd, ' f err:           |');
         fprintf(fd, ' viol.:           |');
+        fprintf(fd, ' 0 |');
     end
     fprintf(fd, '\n');
 end
