@@ -1,5 +1,12 @@
 function [q, q1, q2] = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, activities_values)
 
+if isempty(bl)
+    bl = -inf(size(x));
+end
+if isempty(bu)
+    bu = inf(size(x));
+end
+
 dimension = size(x, 1);
 tol_ort = 1e-5;
 tol_con = 1e-10;

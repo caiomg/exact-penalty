@@ -1,5 +1,11 @@
 function s = correct_step_to_bounds(x, s0, bl, bu, bl_active, bu_active)
 
+    if isempty(bl)
+        bl = -inf(size(x));
+    end
+    if isempty(bu)
+        bu = inf(size(x));
+    end
     if nargin < 5 || isempty(bl_active)
        bl_active = false(size(x)); 
     end
