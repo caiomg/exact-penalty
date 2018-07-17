@@ -1,6 +1,9 @@
 if exist('terminate_cutest_problem', 'file') ~= 2
   addpath('my_cutest_functions');
 end
+if exist('check_kkt', 'file') ~= 2
+  addpath('process');
+end
 if exist('evaluate_polynomial', 'file') ~= 2
   addpath('tr_modeling');
   addpath('tr_modeling/polynomials');

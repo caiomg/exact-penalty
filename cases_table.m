@@ -1,6 +1,9 @@
 if exist('terminate_cutest_problem', 'file') ~= 2
   addpath('my_cutest_functions');
 end
+if exist('check_kkt', 'file') ~= 2
+  addpath('process');
+end
 if exist('evaluate_polynomial', 'file') ~= 2
   addpath('tr_modeling');
   addpath('tr_modeling/polynomials');
@@ -71,6 +74,7 @@ warning('off', 'cmg:bad_fvalue');
 final_filenames = {};
 all_results = {};
 good_results = {};
+all_solved = [];
 iter = 0;
 n_problems = length(selected_problems);
 solved_problems = false(n_problems, 1);
@@ -108,12 +112,12 @@ for mu_i = 1:length(all_mu)
                 bl = [];
                 bu = [];
                 % Bound constraints
-                lower_bounds = prob.bl > -1e19;
-                upper_bounds = prob.bu < 1e19;
-                bl = prob.bl;
-                bu = prob.bu;
-%                 % Remove constraints that actually are bounds
-%                 n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+                % bl = prob.bl;
+                % bu = prob.bu;
+                lower_bounds = bl > -1e19;
+                upper_bounds = bu < 1e19;
+                % Remove constraints that actually are bounds
+                n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
 
                 % NL constraints
                 all_con = cell(n_constraints, 1);
@@ -186,7 +190,8 @@ for mu_i = 1:length(all_mu)
                 all_results{iter} = results;
                 if kkt
                     solved_problems(k) = true;
-                    good_results{sum(solved_problems)} = results;
+		    good_results{sum(solved_problems)} = results(k, 1);
+		    all_solved(end+1) = k;
                 end
                 terminate_cutest_problem();
             end
