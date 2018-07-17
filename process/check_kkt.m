@@ -53,10 +53,12 @@ function [status, lgrad] = check_kkt(f, c, x, bl, bu, tol_c, tol_g)
                             zeros(k, 1), [], [], fmincon_options);
 
         lgrad = G(:, active_constraints)*multipliers + fg;
-        if norm(lgrad_diff(multipliers)) < tol_g && max_cvals < tol_c
-            status = true;
+        if norm(lgrad) < tol_g && max_cvals < tol_c
             break
         end
+    end
+    if norm(lgrad) < tol_g && max_cvals < tol_c
+        status = true;
     end
 
 end
