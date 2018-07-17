@@ -56,12 +56,12 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [1000, 50,10000]
+all_mu = [10, 50, 100, 1000, 10000, 100000, 1000000]
 
 clear tries
 
-all_epsilon = [1, 0.85, 0.75]
-all_lambda = [0.075, 0.1, 0.01]
+all_epsilon = [1]
+all_lambda = [0.075]
 
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
@@ -70,7 +70,10 @@ warning('off', 'cmg:bad_fvalue');
 
 final_filenames = {};
 all_results = {};
+good_results = {};
 iter = 0;
+n_problems = length(selected_problems);
+solved_problems = false(n_problems, 1);
 for mu_i = 1:length(all_mu)
     for la_i = 1:length(all_lambda)
         for ep_i = 1:length(all_epsilon)
@@ -87,8 +90,10 @@ for mu_i = 1:length(all_mu)
                              'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
 
 
-            n_problems = length(selected_problems);
             for k = 1:n_problems
+                if solved_problems(k)
+                    continue
+                end
                 problem_name = selected_problems(k).name;
                 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -131,10 +136,9 @@ for mu_i = 1:length(all_mu)
 %                 fx_fmincon = f(x_fmincon);
 %                 nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
                 %%
-if true
 
                 counter.reset_count();
-                counter.set_max_count(15000);
+                counter.set_max_count(30000);
 
                 try
                     p_seed = rng('default');
@@ -150,7 +154,7 @@ if true
                     fx = f(x);
                     nphi = norm(max(0, nlcon(x)));
                     error_obj = fx - selected_problems(k).solution;
-                    [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-5);
+                    [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-4);
                 else
                     x = [];
                     hs2 = [];
@@ -159,6 +163,8 @@ if true
                     error_obj = [];
                     error_x = [];
                     fcount = nan;
+                    kkt = false;
+                    lgrad = nan;
                 end
 
                 results(k, 1).name = problem_name;
@@ -178,7 +184,10 @@ if true
                 print_results(results(k, 1));
 
                 all_results{iter} = results;
-end
+                if kkt
+                    solved_problems(k) = true;
+                    good_results{sum(solved_problems)} = results;
+                end
                 terminate_cutest_problem();
             end
                 filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
