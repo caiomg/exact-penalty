@@ -18,6 +18,9 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
     
     dimension = size(x0, 1);
     n_constraints = length(cmodel);
+    ind_csv = (1:n_constraints);
+    ind_csv(ind_eactive) = [];
+
     r_columns = size(R, 2);
     N = Q(:, r_columns+1:end);    
 
@@ -119,20 +122,23 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
         end
     end
     
-    [h2, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
-                                                 radius);
-    % I should also compare with cauchy step
-    if ~status
-        h = zeros(size(h2));
-    else
-        h = h2;
-        x = x0 + h;
-        err_bl = x - bl;
-        err_bu = x - bu;
-        if sum(err_bl < 0 | err_bu > 0)
-            h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
-            h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
+    if true %norm(multipliers, 'inf') == 0
+        [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
+                                                     radius);
+        if ~status
+            h = zeros(size(h));
         end
+    else
+        h = s2;
+        pred = predict_descent(fmodel, cmodel, h, mu, []);
+    end
+
+    x = x0 + h;
+    err_bl = x - bl;
+    err_bu = x - bu;
+    if sum(err_bl < 0 | err_bu > 0)
+        h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
+        h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
     end
 
 end

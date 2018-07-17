@@ -22,8 +22,13 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
     
     dimension = size(x0, 1);
     n_constraints = length(cmodel);
+    ind_csv = (1:n_constraints);
+    ind_csv(ind_eactive) = [];
+
     r_columns = size(R, 2);
     N = Q(:, r_columns+1:end);    
+    g0 = l1_pseudo_gradient(fmodel.g, mu, cmodel, ind_eactive, true);
+    d0 = -(N*(N'*g0));
 
     Bv = zeros(dimension);
     Bm = zeros(dimension);
@@ -37,9 +42,15 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
         end
     end
     Ba = zeros(dimension);
+%     if norm(multipliers, 'inf') == 0 && ~isempty(ind_eactive)
+%         for n = ind_eactive'
+%             if cmodel(n).c >= 0 && d0'*cmodel(n).H*d0 > 0
+%                 Ba = Ba + (cmodel(n).H);
+%             end
+%         end
+%     end
 
-    B = (Bv + fmodel.H) + Bm;
-    g0 = l1_pseudo_gradient(fmodel.g, mu, cmodel, ind_eactive, true);
+    B = (fmodel.H + Bv) + Bm + mu*Ba;
     g = g0;
     x = x0;
 
@@ -141,20 +152,23 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
         end
     end
     
-    [h2, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
-                                                 radius);
-    % I should also compare with cauchy step
-    if ~status
-        h = zeros(size(h2));
-    else
-        h = h2;
-        x = x0 + h;
-        err_bl = x - bl;
-        err_bu = x - bu;
-        if sum(err_bl < 0 | err_bu > 0)
-            h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
-            h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
+    if norm(multipliers, 'inf') == 0
+        [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
+                                                     radius);
+        if ~status
+            h = zeros(size(h));
         end
+    else
+        h = s2;
+        pred = predict_descent(fmodel, cmodel, h, mu, []);
+    end
+
+    x = x0 + h;
+    err_bl = x - bl;
+    err_bu = x - bu;
+    if sum(err_bl < 0 | err_bu > 0)
+        h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
+        h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
     end
 
     if pred_hc > pred
