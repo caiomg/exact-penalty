@@ -209,7 +209,7 @@ while ~finish
                                                          current_constraints, ...
                                                          ind_qr, true);
                     q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [current_constraints(ind_qr).c]');
-                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
+                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, x, bl, bu);
 
                     if ~sum(multipliers < -tol_multipliers |...
                             mu < multipliers - tol_multipliers) 
@@ -228,7 +228,7 @@ while ~finish
                     end
                 end
             % calculate multipliers
-            [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
+            [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, x, bl, bu);
 
             dropping_constraint = false;
             % Are there conditions for dropping one constraint?
@@ -238,7 +238,7 @@ while ~finish
                     [Q, R, N, ind_qr] = ...
                             l1_drop_constraint(Q, R, N, ind_qr, mu, ...
                                                multipliers, tol_multipliers);
-                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, N, x, bl, bu);
+                    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, Q, R, x, bl, bu);
                     % break
                 end
 
