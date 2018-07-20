@@ -72,7 +72,6 @@ while true
     end
 end
 
-global x_prev
 linsolve_opts.UT = true;
 
 x0 = initial_points(:, 1);
@@ -118,9 +117,6 @@ while ~finish
 
     [~, q1] = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [current_constraints(ind_qr).c]');
     if (norm(q1) > max(Lambda, tol_g))
-        x_prev = x;
-
-
         geometry_ok = is_lambda_poised(trmodel, options);
         
         try
@@ -183,7 +179,6 @@ while ~finish
         end
     else
         while true
-          	x_prev = x;
             [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
             current_constraints = extract_constraints_from_tr_model(trmodel);
             pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
