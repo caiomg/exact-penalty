@@ -29,7 +29,7 @@ cmodel = extract_constraints_from_tr_model(model);
 [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
 [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
 while true
-    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, N, x, bl, bu);
+    [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
     if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
         [Q, R, N, ind_qr] = ...
                 l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...
@@ -56,7 +56,7 @@ while (model.radius > crit_mu*measure)
     [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
                                              ind_eactive, true);
     while true
-        [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, N, x, bl, bu);
+        [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
         if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
             [Q, R, N, ind_qr] = ...
                     l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...

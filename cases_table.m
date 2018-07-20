@@ -121,7 +121,7 @@ for mu_i = 1:length(all_mu)
                 bl = [];
                 bu = [];
                 % Bound constraints
-                bl = prob.bl;
+%                 bl = prob.bl;
                 % bu = prob.bu;
                 lower_bounds = prob.bl > -1e19;
                 upper_bounds = prob.bu < 1e19;
@@ -197,7 +197,7 @@ for mu_i = 1:length(all_mu)
                     fcount = counter.get_count();
                     fx = f(x);
                     nphi = norm(max(0, nlcon(x)));
-                    error_obj = fx - selected_problems(k).solution;
+                    error_obj = selected_problems(k).solution - fx;
                     [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-4);
                 else
                     x = [];
@@ -228,10 +228,11 @@ for mu_i = 1:length(all_mu)
                 print_results(results(k, 1));
 
                 all_results{iter} = results;
-                if kkt
+                if kkt || ...
+                        (~isempty(nphi) && nphi < 1e-6 && abs(error_obj) < 5e-6)
                     solved_problems(k) = true;
-		    good_results{sum(solved_problems)} = results(k, 1);
-		    all_solved(end+1) = k;
+                    good_results{sum(solved_problems)} = results(k, 1);
+                    all_solved(end+1) = k;
                 end
                 terminate_cutest_problem();
             end

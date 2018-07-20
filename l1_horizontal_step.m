@@ -144,7 +144,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 
 
         pred_h = predict_descent(fmodel, cmodel, s, mu, ind_eactive);
-        if ~multipliers_provided
+        if ~multipliers_provided || radius - norm(s) < tol_radius
             [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s, ...
                                                          radius);
             if ~status
