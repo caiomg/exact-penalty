@@ -10,13 +10,13 @@ problem_name = 'HS100';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
 % % problem_name = 'QC';
 % % problem_name = 'CB2';
-% % problem_name = 'LOOTSMA';
+% problem_name = 'LOOTSMA';
 % % problem_name = 'HS88';
 % problem_name = 'HS18';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS98';
+problem_name = 'HS34';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -28,30 +28,56 @@ f = @(x) counter.evaluate(x);
 % Constraints
 n_constraints = get_cutest_total_number_of_constraints();
 
+% Bound constraints
 bl = [];
 bu = [];
-% Bound constraints
-lower_bounds = prob.bl > -1e19;
-upper_bounds = prob.bu < 1e19;
-bl = prob.bl;
-bu = prob.bu;
-% Remove constraints that actually are bounds
-n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+% bl = prob.bl;
+% bu = prob.bu;
+cutest_lower_bounds = prob.bl > -1e19;
+cutest_upper_bounds = prob.bu < 1e19;
+lower_bounds = bl > -1e19;
+upper_bounds = bu < 1e19;
 
 % Other constraints
-all_con = cell(n_constraints, 1);
-for k = 1:n_constraints
+all_con = cell(prob.m, 1);
+
+for k = 1:(n_constraints - sum(cutest_lower_bounds) - sum(cutest_upper_bounds))
     gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
     all_con{k} = gk;
+end
+    % Lower bounds
+    c_ind = k;
+for k = 1:prob.n
+    if cutest_lower_bounds(k)
+        c_ind = c_ind + 1;
+        if isempty(lower_bounds) || ~lower_bounds(k)
+            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+            all_con{end+1} = gk;
+        end
+    end
+end
+% Upper bounds
+c_ind = length(all_con);
+for k = 1:prob.n
+    if cutest_upper_bounds(k)
+        c_ind = c_ind + 1;
+        if isempty(upper_bounds) || ~upper_bounds(k)
+            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+            all_con{end+1} = gk;
+        end
+    end
+end
+if length (all_con) ~= n_constraints - sum(lower_bounds) - sum(upper_bounds)
+    error();
 end
 
 % Initial point
 x0 = prob.x;
 
 % Parameters
-mu = 750;
+mu = 10;
 
-epsilon = 0.85;
+epsilon = 1;
 delta = 1e-6;
 Lambda = 0.075;
 
@@ -60,17 +86,28 @@ nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                'SpecifyObjectiveGradient', true);
 
-x_fmincon = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
-fx_fmincon = f(x_fmincon);
+[x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
 nlcon_fmincon = max(0, nlcon(x_fmincon));
 
 counter.get_count()
 counter.reset_count()
-counter.set_max_count(15000);
+% counter.set_max_count(15000);
+
+
+
+l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
+                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
+                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
+                        'initial_radius', 0.5, 'radius_max', 1e3, ...
+                        'criticality_mu', 50, 'criticality_beta', 10, ...
+                        'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
+                        'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
+                        'pivot_imp', 1.1)
+
 %%
 p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
-[x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, [])
+[x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, l1_options)
 fx = f(x)
 nphi = norm(max(0, nlcon(x)))
 
@@ -84,6 +121,8 @@ tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], [
 % tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
 % time_exact_penalty = timeit(tl1)
 % time_fmincon = timeit(tmlab)
+
+[kkt_ok, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-4, 1e-5)
 
 terminate_cutest_problem()
 
