@@ -3,23 +3,26 @@ function [s, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s0, rad
 if nargin < 5 || isempty(radius)
     radius = norm(s);
 end
+dim = size(fmodel.g, 1);
 
 pred0 = predict_descent(fmodel, cmodel, s0, mu, []);
 if pred0 < 0
-    B = fmodel.H;
-    g = fmodel.g;
     n_constraints = length(cmodel);
     active = [];
+    gv = zeros(dim, 1);
+    Bv = zeros(dim);
     for n = 1:n_constraints
         if cmodel(n).c > 0 || ...
                (cmodel(n).c == 0 && ...
                 (cmodel(n).g'*s0 > 0 || ...
                  (cmodel(n).g'*s0 == 0 && s0'*cmodel(n).H*s0 > 0)))
-            g = g + mu*cmodel(n).g;
-            B = B + mu*cmodel(n).H;
+            gv = gv + cmodel(n).g;
+            Bv = Bv + cmodel(n).H;
             active(end+1) = n;
         end
     end
+    g = fmodel.g + mu*gv;
+    B = fmodel.H + mu*Bv;
     alpha_s = 0;
     gamma = [];
     total_descent = 0;
@@ -35,12 +38,11 @@ if pred0 < 0
             error;
         end
     end
-    N = eye(max(size(s0)));
     for n = 1:n_constraints
         Hc = cmodel(n).H;
         gc = cmodel(n).g;
         cc = cmodel(n).c;
-        bpoint = roots([0.5*(s0'*(N'*Hc*N)*s0),  gc'*N*s0, cc]);
+        bpoint = roots([0.5*(s0'*Hc*s0),  gc'*s0, cc]);
         if size(bpoint, 1) >= 1 && bpoint(1) > 0 && isreal(bpoint(1)) && bpoint(1) < gamma_tr
             gamma(end+1, 1) = bpoint(1);
             IM(end+1, 1) = n;
@@ -80,13 +82,13 @@ if pred0 < 0
                 success = true;
             end
         end
-        if sign(tu*((s0'*N')*cmodel(n).H*(N*s0)) + cmodel(n).g'*N*s0) > 0
-            B = B + mu*N'*cmodel(n).H*N;
-            g = g + mu*N'*cmodel(n).g;
+        if sign(tu*(s0'*cmodel(n).H*s0) + cmodel(n).g'*s0) > 0
+            B = B + mu*cmodel(n).H;
+            g = g + mu*cmodel(n).g;
             constraint_changed = n;
         else
-            B = B - mu*N'*cmodel(n).H*N;
-            g = g - mu*N'*cmodel(n).g;
+            B = B - mu*cmodel(n).H;
+            g = g - mu*cmodel(n).g;
             constraint_changed = -n;
         end
         tl = tu;

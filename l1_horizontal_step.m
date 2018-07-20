@@ -2,6 +2,9 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 
     if nargin < 11 || isempty(multipliers)
         multipliers = zeros(size(ind_eactive));
+        multipliers_provided = false;
+    else
+        multipliers_provided = true;
     end
     if isempty(bl)
         bl = -inf(size(x0));
@@ -13,9 +16,7 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
         error()
     end
 
-    [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, ...
-                                              x0, ind_eactive, Q, ...
-                                              R, radius, bl, bu, multipliers);
+
 
     tol_radius = 1e-6;
     tol_ort = 1e-5;
@@ -38,10 +39,11 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
             Bm = Bm + multipliers(im)*cmodel(n).H;
             im = im + 1;
         elseif cmodel(n).c > 0
-            Bv = Bv + mu*(cmodel(n).H);
+            Bv = Bv + (cmodel(n).H);
         end
     end
     Ba = zeros(dimension);
+    ba_included = false(size(ind_eactive, 1), 1);
 %     if norm(multipliers, 'inf') == 0 && ~isempty(ind_eactive)
 %         for n = ind_eactive'
 %             if cmodel(n).c >= 0 && d0'*cmodel(n).H*d0 > 0
@@ -50,131 +52,139 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
 %         end
 %     end
 
-    B = (fmodel.H + Bv) + Bm + mu*Ba;
-    g = g0;
-    x = x0;
-
-    s = zeros(size(x0));
-    l_bounds_included = false(dimension, 1);
-    u_bounds_included = false(dimension, 1);
     while true
-       while true
-           if isempty(N)
-               break
-           end
-           g = g0 + B*s;
-           % Evaluating matrices on reduced space
-           Br = N'*B*N;
-           gr = N'*g;
-           % One shot of More-Sorensen algorithm
-           s0 = ms_step(Br, gr, radius);
-           d = N*s0;
-           l_newly_active = (x == bl & d < 0);
-           u_newly_active = (x == bu & d > 0);
-           inserted = false;
-           for k = 1:dimension
-               if l_newly_active(k)
-                   b = zeros(dimension, 1);
-                   b(k) = 1;
-                   norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
-                   if norm_b > tol_ort
-                       [Q, R] = qrinsert(Q, R, 1, b);
-                       inserted = true;
-                       l_bounds_included(k) = true;
-                       break
-                   end
-               elseif u_newly_active(k)
-                   b = zeros(dimension, 1);
-                   b(k) = -1;
-                   norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
-                   if norm_b > tol_ort
-                       [Q, R] = qrinsert(Q, R, 1, b);
-                       inserted = true;
-                       u_bounds_included(k) = true;
-                       break
-                   end
-               end                    
+        B = (fmodel.H + mu*Bv) + Bm + mu*Ba;
+        g = g0;
+        x = x0;
+
+        s = zeros(size(x0));
+        l_bounds_included = false(dimension, 1);
+        u_bounds_included = false(dimension, 1);
+        while true
+           while true
+               if isempty(N)
+                   break
+               end
+               g = g0 + B*s;
+               % Evaluating matrices on reduced space
+               Br = N'*B*N;
+               gr = N'*g;
+               % One shot of More-Sorensen algorithm
+               s0 = ms_step(Br, gr, radius);
+               d = N*s0;
+               l_newly_active = (x == bl & d < 0);
+               u_newly_active = (x == bu & d > 0);
+               inserted = false;
+               for k = 1:dimension
+                   if l_newly_active(k)
+                       b = zeros(dimension, 1);
+                       b(k) = 1;
+                       norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
+                       if norm_b > tol_ort
+                           [Q, R] = qrinsert(Q, R, 1, b);
+                           inserted = true;
+                           l_bounds_included(k) = true;
+                           break
+                       end
+                   elseif u_newly_active(k)
+                       b = zeros(dimension, 1);
+                       b(k) = -1;
+                       norm_b = norm((Q*R)*(R\(Q'*b)) - b, 1);
+                       if norm_b > tol_ort
+                           [Q, R] = qrinsert(Q, R, 1, b);
+                           inserted = true;
+                           u_bounds_included(k) = true;
+                           break
+                       end
+                   end                    
+                end
+                if inserted
+                    r_columns = size(R, 2);
+                    N = Q(:, r_columns+1:end);
+                    N(l_bounds_included, :) = zeros(sum(l_bounds_included), size(N, 2));
+                    N(u_bounds_included, :) = zeros(sum(u_bounds_included), size(N, 2));
+                else
+                    break
+                end
             end
-            if inserted
-                r_columns = size(R, 2);
-                N = Q(:, r_columns+1:end);
-                N(l_bounds_included, :) = zeros(sum(l_bounds_included), size(N, 2));
-                N(u_bounds_included, :) = zeros(sum(u_bounds_included), size(N, 2));
-            else
+
+            if isempty(N) || norm(d) == 0
+                break
+            end
+            lower_breakpoints = (bl - x)./d;
+            upper_breakpoints = (bu - x)./d;
+            tr_breakpoint = roots([d'*d, 2*s'*d, s'*s - radius^2]);
+            tr_breakpoint = min(tr_breakpoint(tr_breakpoint > 0));
+            if isempty(tr_breakpoint) || ~isreal(tr_breakpoint)
+                tr_breakpoint = inf;
+            end
+
+            l_breakpoints = (lower_breakpoints > 0);
+            u_breakpoints = (upper_breakpoints > 0);
+            bp = min([lower_breakpoints(l_breakpoints); upper_breakpoints(u_breakpoints); tr_breakpoint]);
+            t = minimize_until_breakpoint(B, g, d, bp);
+
+            l_newly_active = (t == lower_breakpoints & d < 0);
+            u_newly_active = (t == upper_breakpoints & d > 0);
+            s = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
+
+            x = x0 + s;
+            x(l_bounds_included) = bl(l_bounds_included);
+            x(l_newly_active) = bl(l_newly_active);
+            x(u_bounds_included) = bu(u_bounds_included);
+            x(u_newly_active) = bu(u_newly_active);
+
+            if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius ...
+                    || norm(s) - norm(s0) >= tol_radius
                 break
             end
         end
 
-        if isempty(N) || norm(d) == 0
+%         s2 = remove_increasing_components(s, cmodel, ind_eactive);
+
+
+        pred_h = predict_descent(fmodel, cmodel, s, mu, ind_eactive);
+        if ~multipliers_provided
+            [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s, ...
+                                                         radius);
+            if ~status
+                h = zeros(size(h));
+            end
+            break
+            if norm(h) < 0.5*norm(s) && pred < 0.5*pred_h
+                % Recalculate
+                no = [cmodel(ind_eactive).c]';
+                nc = update_constraint_information(cmodel, ind_eactive, s);
+                diff_v = max(0, no) - max(0, nc);
+                increased_v = (diff_v < 0) & ~ba_included;
+                if sum(diff_v(increased_v)) < -0.1*pred_h
+                    [~, mcon] = min(diff_v(increased_v));
+                    ind_violating = ind_eactive;
+                    ind_violating = ind_violating(increased_v);
+                    ind_violating = ind_violating(mcon);
+                    Ba = Ba + cmodel(ind_violating).H;
+                    ba_included(ind_violating) = true;
+                else
+                    break
+                end
+            else
+                break
+            end
+        else
+            h = s;
+            pred = predict_descent(fmodel, cmodel, h, mu, []);
             break
         end
-        lower_breakpoints = (bl - x)./d;
-        upper_breakpoints = (bu - x)./d;
-        tr_breakpoint = roots([d'*d, 2*s'*d, s'*s - radius^2]);
-        tr_breakpoint = min(tr_breakpoint(tr_breakpoint > 0));
-        if isempty(tr_breakpoint) || ~isreal(tr_breakpoint)
-            tr_breakpoint = inf;
-        end
-        
-        l_breakpoints = (lower_breakpoints > 0);
-        u_breakpoints = (upper_breakpoints > 0);
-        bp = min([lower_breakpoints(l_breakpoints); upper_breakpoints(u_breakpoints); tr_breakpoint]);
-        t = minimize_until_breakpoint(B, g, d, bp);
 
-        l_newly_active = (t == lower_breakpoints & d < 0);
-        u_newly_active = (t == upper_breakpoints & d > 0);
-        s = correct_step_to_bounds(x0, s + t*d, bl, bu, l_newly_active, u_newly_active);
-%         if sum(l_newly_active | u_newly_active)
-%             x = x + t*d;
-%             x(l_newly_active) = bl(l_newly_active);
-%             x(u_newly_active) = bu(u_newly_active);
-%             s = x - x0;
-%         else
-%            s = s + t*d; 
-%         end
-        x = x0 + s;
-        x(l_bounds_included) = bl(l_bounds_included);
-        x(l_newly_active) = bl(l_newly_active);
-        x(u_bounds_included) = bu(u_bounds_included);
-        x(u_newly_active) = bu(u_newly_active);
+    end
 
-        if t < bp || t == tr_breakpoint || norm(s) - radius >= tol_radius ...
-                || norm(s) - norm(s0) >= tol_radius
-            break
-        end
+    if ~find(x < bl | x > bu, 1)
+        % If x inside bounds we can try adjusting the step
+        h = correct_step_to_bounds(x0, h, bl, bu);
     end
     
-    s2 = remove_increasing_components(s, cmodel, ind_eactive);
-    if norm(s - s2) > 0
-        1;
-        if norm(s - s2) > 1e-5
-            1;
-        end
-    end
-    
-    if norm(multipliers, 'inf') == 0
-        [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
-                                                     radius);
-        if ~status
-            h = zeros(size(h));
-        end
-    else
-        h = s2;
-        pred = predict_descent(fmodel, cmodel, h, mu, []);
-    end
 
-    x = x0 + h;
-    err_bl = x - bl;
-    err_bu = x - bu;
-    if sum(err_bl < 0 | err_bu > 0)
-        h(err_bl < 0) = h(err_bl < 0) - err_bl(err_bl < 0);
-        h(err_bu > 0) = h(err_bu > 0) - err_bu(err_bu > 0);
-    end
 
-    if pred_hc > pred
-        h = hc;
-        pred = pred_hc;
-    end
 
 end
 

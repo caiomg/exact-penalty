@@ -51,6 +51,15 @@ log_fd = fopen(log_filename, 'w');
                     'MAKELA4' 'OPTPRLOC' };
                 
 
+l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
+                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
+                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
+                        'initial_radius', 0.5, 'radius_max', 1e3, ...
+                        'criticality_mu', 50, 'criticality_beta', 10, ...
+                        'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
+                        'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
+                        'pivot_imp', 1.1)
+
 % Parameters
 mu = 500;
 epsilon = 0.85;
@@ -112,19 +121,50 @@ for mu_i = 1:length(all_mu)
                 bl = [];
                 bu = [];
                 % Bound constraints
-                % bl = prob.bl;
+                bl = prob.bl;
                 % bu = prob.bu;
+                lower_bounds = prob.bl > -1e19;
+                upper_bounds = prob.bu < 1e19;
+                cutest_lower_bounds = prob.bl > -1e19;
+                cutest_upper_bounds = prob.bu < 1e19;
                 lower_bounds = bl > -1e19;
                 upper_bounds = bu < 1e19;
-                % Remove constraints that actually are bounds
-                n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
 
-                % NL constraints
-                all_con = cell(n_constraints, 1);
-                for n = 1:n_constraints
-                    gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
-                    all_con{n} = gk;
+                % Other constraints
+                all_con = cell(prob.m, 1);
+
+                for p = 1:(n_constraints - sum(cutest_lower_bounds) - ...
+                           sum(cutest_upper_bounds))
+                    gk = @(x) evaluate_my_cutest_constraint(x, p, 1);
+                    all_con{p} = gk;
                 end
+                % Lower bounds
+                c_ind = p;
+                for p = 1:prob.n
+                    if cutest_lower_bounds(p)
+                        c_ind = c_ind + 1;
+                        if isempty(lower_bounds) || ~lower_bounds(p)
+                            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+                            all_con{end+1} = gk;
+                        end
+                    end
+                end
+                % Upper bounds
+                c_ind = length(all_con);
+                for p = 1:prob.n
+                    if cutest_upper_bounds(p)
+                        c_ind = c_ind + 1;
+                        if isempty(upper_bounds) || ~upper_bounds(p)
+                            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+                            all_con{end+1} = gk;
+                        end
+                    end
+                end
+                if length (all_con) ~= n_constraints - sum(lower_bounds) ...
+                        - sum(upper_bounds)
+                    error();
+                end
+
 
                 % Initial point
                 x0 = prob.x;
@@ -146,7 +186,7 @@ for mu_i = 1:length(all_mu)
 
                 try
                     p_seed = rng('default');
-                    [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, []);
+                    [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
                     solved = true;
                 catch thiserror
                     results(k, 1).except = thiserror;
@@ -197,7 +237,7 @@ for mu_i = 1:length(all_mu)
             end
                 filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
                 save(filename, 'all_results', 'mu', 'epsilon', ...
-                     'delta', 'Lambda', 'final_filenames');
+                     'delta', 'Lambda', 'final_filenames', 'good_results', 'all_solved');
         end
     end
 end

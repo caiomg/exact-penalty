@@ -1,8 +1,8 @@
-function print_my_table(all_results)
+function print_my_table(results)
 
-    n_results = length(all_results);
+    n_results = length(results);
     for k = 1:n_results
-        this_result = all_results{k}(end);
+        this_result = results{k};
         print_my_table_row(this_result);
     end
     

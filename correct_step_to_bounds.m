@@ -12,6 +12,10 @@ function s = correct_step_to_bounds(x, s0, bl, bu, bl_active, bu_active)
     if nargin < 6 || isempty(bu_active)
        bu_active = false(size(x)); 
     end
+    if find(x < bl | x > bu, 1)
+        error('cmg:x_out_of_bounds', 'X out of bounds');
+    end
+
     slack_u = bu - x;
     slack_l = bl - x;
     
