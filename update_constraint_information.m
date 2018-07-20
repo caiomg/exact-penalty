@@ -1,5 +1,8 @@
 function [nphi, nA] = update_constraint_information(cmodel, ind, s)
 
+    if isempty(ind)
+        ind = 1:length(cmodel);
+    end
     n_vars = size(s, 1);
     n_considered = length(ind);
     nphi = zeros(n_considered, 1);
