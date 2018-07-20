@@ -114,16 +114,11 @@ function [h, pred] = l1_horizontal_cauchy_step(fmodel, cmodel, mu, x0, ind_eacti
             break
         end
     end
-    s2 = remove_increasing_components(s, cmodel, ind_eactive);
-    if norm(s - s2) > 0
-        1;
-        if norm(s - s2) > 1e-5
-            1;
-        end
-    end
+%     s2 = remove_increasing_components(s, cmodel, ind_eactive);
+
     
     if true %norm(multipliers, 'inf') == 0
-        [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s2, ...
+        [h, pred, status] = line_search_full_domain(fmodel, cmodel, mu, s, ...
                                                      radius);
         if ~status
             h = zeros(size(h));

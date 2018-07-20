@@ -40,15 +40,16 @@ for nf = 1:n_functions
     end
 end
 
-options.basis = 'diagonal hessian';
 % Calculating basis of polynomials
 switch options.basis
-    case 'linear'
-        basis = natural_basis(dimension, dimension+1);
-    case 'full quadratic'
-        basis = natural_basis(dimension);
-    case 'diagonal hessian'
-        basis = diagonal_basis(dimension);
+  case 'linear'
+    basis = natural_basis(dimension, dimension+1);
+  case 'full quadratic'
+    basis = natural_basis(dimension);
+  case 'diagonal hessian'
+    basis = diagonal_basis(dimension);
+  case 'dummy'
+    basis = [];
 end
 
 % Initializing model structure
@@ -123,7 +124,13 @@ while ~finish
         geometry_ok = is_lambda_poised(trmodel, options);
         
         try
-        h1 = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu);
+        [h1, pred_h1] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu);
+        [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, current_constraints, mu, ...
+                                                  x0, ind_eactive, Q, ...
+                                                  R, trmodel.radius, bl, bu);
+            if pred_h1 < pred_hc
+                h1 = hc;
+            end
         catch err1
             rethrow(err1);
         end
@@ -145,20 +152,12 @@ while ~finish
         else
             trial_point = project_to_bounds(x + s, bl, bu);
             [p_trial, trial_fvalues] = p(trial_point);
-            ared = px - p_trial;
-            if ared < 0
-                dpred = pred - 10*eps*max(1, abs(px));
-                dared = ared - 10*eps*max(1, abs(px));
+            if find(isnan(trial_fvalues), 1)
+                rho = -inf;
             else
-                dpred = pred;
-                dared = ared;
+                ared = px - p_trial; % There are better ways
+                rho = ared/pred;
             end
-            if abs(dared) < 10*eps && abs(dpred) < 10*eps
-                rho = 1;
-            else
-                rho = dared/dpred;
-            end
-            rho = ared/pred;
 
             if rho > eta_2 || (rho > eta_1 && geometry_ok)
                 x = trial_point;
@@ -219,6 +218,7 @@ while ~finish
                             if norm(phih) < tol_con
                                 if false %max([current_constraints.c]) > tol_g
                                     mu = mu*10
+                                    % should recalculate px
                                 else
                                     finish = true;
                                     break
@@ -243,25 +243,27 @@ while ~finish
                 end
 
                 geometry_ok = is_lambda_poised(trmodel, options);
-                h = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                [h, pred_h] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                if pred_h < pred_hc
+                    h = hc;
+                end
+                v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, h, ind_qr, trmodel.radius, x, bl, bu);
                 % h = line_search_full_domain(fmodel, current_constraints, mu, h, trmodel.radius);
 
                 % s = project_to_bounds(x + h, bl, bu) - x;
-                s = correct_step_to_bounds(x, h, bl, bu);
+                s = correct_step_to_bounds(x, h + v, bl, bu);
                 pred = predict_descent(fmodel, current_constraints, s, mu, []);
                 if pred > delta
                     dropping_succeeded = true;
                     trial_point = project_to_bounds(x + s, bl, bu);
                     [p_trial, trial_fvalues] = p(trial_point);
-                    ared = px - p_trial;
-                    dpred = pred  - 10*eps*max(1, abs(px));
-                    dared = ared - 10*eps*max(1, abs(px));
-                    if abs(dared) < 10*eps && abs(dpred) < 10*eps
-                        rho = 1;
+                    if find(isnan(trial_fvalues), 1)
+                        rho = -inf;
                     else
-                        rho = dared/dpred;
+                        ared = px - p_trial; % There are better ways
+                        rho = ared/pred;
                     end
-                    rho = ared/pred;
                     
                     if rho > eta_2 || (rho > eta_1 && geometry_ok)
                         x = trial_point;
@@ -300,7 +302,11 @@ while ~finish
                 if norm(N'*pseudo_gradient) >= tol_g
 %                     d1 = -model.g*(trmodel.radius/norm(model.g));
                     try
-                        h1 = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                        [h1, pred_h] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                        [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+                        if pred_h < pred_hc
+                            h1 = hc;
+                        end
                     catch err1
                         rethrow(err1);
                     end
@@ -331,15 +337,13 @@ while ~finish
                     % Compute ared and all...
                     trial_point = project_to_bounds(x + s, bl, bu);
                     [p_trial, trial_fvalues] = p(trial_point);
-                    ared = px - p_trial;
-                    dpred = pred - 10*eps*max(1, abs(px));
-                    dared = ared - 10*eps*max(1, abs(px));
-                    if abs(dared) < 10*eps && abs(dpred) < 10*eps
-                        rho = 1;
+                    if find(isnan(trial_fvalues), 1)
+                        rho = -inf;
                     else
-                        rho = dared/dpred;
+                        ared = px - p_trial; % There are better ways
+                        rho = ared/pred;
                     end
-                    rho = ared/pred;
+                    
                     
                     
                     if rho > eta_2 || (rho > eta_1 && geometry_ok)
