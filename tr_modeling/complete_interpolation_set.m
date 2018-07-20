@@ -10,6 +10,23 @@ if isempty(bu)
     bu = inf(dim, 1);
 end
 
+n_interpolating_functions = length(ff);
+
+if strcmp(options.basis, 'dummy')
+    model.scale_factor_x = 1;
+    center = model.points(:, 1);
+    [c, g, H] = ff{1}(center);
+    model.model_polynomial = matrices_to_polynomial(c, g, H);
+
+    for nf = n_interpolating_functions:-1:2
+        [c, g, H] = ff{nf}(center);
+        model.other_polynomials{nf-1} = matrices_to_polynomial(c, g, H);
+    end
+    exitflag = 0;
+    return
+end
+
+    
 tol_pivot = options.pivot_threshold/30;
 radius_factor = options.poised_radius_factor;
 
@@ -27,7 +44,6 @@ basis_size = length(basis);
 
 [dimension, p_ini] = size(points_abs);
 
-n_interpolating_functions = length(ff);
 
 % Scaling points to be in a ball of radius 1 around origin
 points_scaled = points_abs;

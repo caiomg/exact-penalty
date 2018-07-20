@@ -10,6 +10,10 @@ if isempty(bu)
     bu = inf(dim, 1);
 end
 
+if strcmp(options.basis, 'dummy')
+    return;
+end
+
 
 % pivot_threshold is constant through the algorithm. Ensures we can
 % obtain lambda-poised models when needed
