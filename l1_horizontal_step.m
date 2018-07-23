@@ -151,31 +151,11 @@ function [h, pred] = l1_horizontal_step(fmodel, cmodel, mu, x0, ind_eactive, Q, 
                 h = zeros(size(h));
             end
             break
-            if norm(h) < 0.5*norm(s) && pred < 0.5*pred_h
-                % Recalculate
-                no = [cmodel(ind_eactive).c]';
-                nc = update_constraint_information(cmodel, ind_eactive, s);
-                diff_v = max(0, no) - max(0, nc);
-                increased_v = (diff_v < 0) & ~ba_included;
-                if sum(diff_v(increased_v)) < -0.1*pred_h
-                    [~, mcon] = min(diff_v(increased_v));
-                    ind_violating = ind_eactive;
-                    ind_violating = ind_violating(increased_v);
-                    ind_violating = ind_violating(mcon);
-                    Ba = Ba + cmodel(ind_violating).H;
-                    ba_included(ind_violating) = true;
-                else
-                    break
-                end
-            else
-                break
-            end
         else
             h = s;
             pred = predict_descent(fmodel, cmodel, h, mu, []);
             break
         end
-
     end
 
     if ~find(x < bl | x > bu, 1)
