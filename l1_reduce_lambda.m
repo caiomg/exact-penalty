@@ -4,7 +4,7 @@ function [epsilon, Lambda] = ...
 
 n_variables = size(gfx, 1);
 while true
-    epsilon = epsilon/2;
+%     epsilon = epsilon/2;
     Lambda = Lambda/2;
     Q = zeros(n_variables);
     R = zeros(n_variables, 0);
@@ -17,7 +17,7 @@ while true
                                          ind_qr, true);
     if norm(N'*pseudo_gradient) > tol_g
         break
-    elseif epsilon < tol_con && Lambda < tol_g
+    elseif Lambda < tol_g
         break
     end
 end
