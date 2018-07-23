@@ -104,6 +104,8 @@ history_solution.rho = rho;
 history_solution.radius = trmodel.radius;
 history_solution.px = px;
 history_solution.fx = fx;
+history_solution.q = nan;
+history_solution.ns = 0;
 while ~finish
 
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
@@ -137,38 +139,8 @@ while ~finish
                                    [current_constraints(ind_qr).c]');
     end
 
-    geometry_ok = is_lambda_poised(trmodel, options);
-    if (norm(q) > max(Lambda, tol_g))
-        
-        try
-        [h, pred_h] = l1_horizontal_step(fmodel, current_constraints, ...
-                                         mu, x, ind_qr, Q, R, ...
-                                         trmodel.radius, bl, bu);
-        [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
-                                                  current_constraints, ...
-                                                  mu, x0, ind_eactive, ...
-                                                  Q, R, trmodel.radius, ...
-                                                  bl, bu);
-            if pred_h < pred_hc
-                h = hc;
-            end
-        catch err1
-            rethrow(err1);
-        end
-        v = tr_vertical_step_new(fmodel, current_constraints, Q, R, ...
-                                 mu, h, ind_qr, trmodel.radius, x, bl, bu);
-
-        s = (h + v);
-        
-        pred = predict_descent(fmodel, current_constraints, s, mu, []);
-        if pred <= 0 || (norm(s) < 0.05*trmodel.radius && ~geometry_ok)
-            evaluate_step = false;
-        else
-            evaluate_step = true;
-        end
-    else
-        
-        [multipliers, tol_multipliers] = ...
+    if (norm(q) <= max(Lambda, tol_g))
+            [multipliers, tol_multipliers] = ...
             l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, ...
                                     Q, R, x, bl, bu);
 
@@ -193,15 +165,53 @@ while ~finish
                tol_multipliers)
             while sum(multipliers < -tol_multipliers | mu < multipliers ...
                       - tol_multipliers)
-                [Q, R, N, ind_qr] = ...
-                        l1_drop_constraint(Q, R, N, ind_qr, mu, ...
+                [Q, R, N, ind_qr, ind_eactive] = ...
+                        l1_drop_constraint(current_constraints, Q, R, ind_qr, ind_eactive, mu, ...
                                            multipliers, tol_multipliers);
                 [multipliers, tol_multipliers] = ...
                     l1_estimate_multipliers(fmodel, current_constraints, ...
                                             mu, ind_qr, Q, R, x, bl, bu);
                 % break
             end
+%             pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
+%                                                  current_constraints, ...
+%                                                  ind_qr, true);
+            q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
+                                       [current_constraints(ind_qr).c]');
         end
+    end
+
+    geometry_ok = is_lambda_poised(trmodel, options);
+    if norm(q) > Lambda
+        % First-order step
+        try
+        [h, pred_h] = l1_horizontal_step(fmodel, current_constraints, ...
+                                         mu, x, ind_qr, Q, R, ...
+                                         trmodel.radius, bl, bu);
+        [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
+                                                  current_constraints, ...
+                                                  mu, x0, ind_qr, ...
+                                                  Q, R, trmodel.radius, ...
+                                                  bl, bu);
+            if pred_h < pred_hc
+                h = hc;
+                pred_h = pred_hc;
+            end
+        catch err1
+            rethrow(err1);
+        end
+        v = tr_vertical_step_new(fmodel, current_constraints, Q, R, ...
+                                 mu, h, ind_qr, trmodel.radius, x, bl, bu);
+
+        s = (h + v);
+        pred = predict_descent(fmodel, current_constraints, s, mu, []);
+
+        if pred < pred_h
+            s = h;
+            pred = pred_h;
+        end
+    else
+        % Step including multipliers
         if norm(N'*pseudo_gradient) >= tol_g
             try
                 [h, pred_h] = l1_horizontal_step(fmodel, ...
@@ -230,13 +240,19 @@ while ~finish
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
         normphi = norm([current_constraints(ind_eactive).c], 1);
         ppgrad = N'*pseudo_gradient;
+    end
+    if q < Lambda
         if pred < delta*(norm(ppgrad)^2 + normphi)
             evaluate_step = false;
         else
             evaluate_step = true;
         end
-
-
+    else
+        if pred <= 0 % || (norm(s) < 0.05*trmodel.radius && ~geometry_ok)
+            evaluate_step = false;
+        else
+            evaluate_step = true;
+        end
     end
     if evaluate_step
         trial_point = project_to_bounds(x + s, bl, bu);
@@ -259,9 +275,10 @@ while ~finish
         end
     else
         rho = -inf;
-        trmodel = improve_model(trmodel, fphi, bl, bu, options);
-        if geometry_ok && q < max(Lambda, tol_g) && ...
-                trmodel.radius < 100*tol_radius
+        if ~geometry_ok
+            trmodel = improve_model(trmodel, fphi, bl, bu, options);
+        end
+        if geometry_ok && (q < Lambda || pred <= 0)
             [epsilon, Lambda] = l1_reduce_lambda(epsilon, Lambda, ...
                                                  current_constraints, ...
                                                  fmodel.g, mu, Q, ...
@@ -284,12 +301,14 @@ while ~finish
     history_solution(iter).radius = trmodel.radius;
     history_solution(iter).px = px;
     history_solution(iter).fx = trmodel.fvalues(1,1);
+    history_solution(iter).q = q;
+    history_solution(iter).ns = norm(s);
 
 
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if length(history_solution) > 1000
+    if length(history_solution) > 55
         1;
     end
 end
