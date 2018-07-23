@@ -31,8 +31,8 @@ cmodel = extract_constraints_from_tr_model(model);
 while true
     [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
     if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
-        [Q, R, N, ind_qr] = ...
-                l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...
+        [Q, R, N, ind_qr, ind_eactive] = ...
+                l1_drop_constraint(cmodel, Q, R, ind_qr, ind_eactive, p_mu, ...
                                    multipliers, tol_multipliers);
     else
         break
@@ -49,6 +49,9 @@ while (model.radius > crit_mu*measure)
     epsilon = factor_epsilon*epsilon;
     
     model = improve_model(model, ff, bl, bu, options);
+    while ~is_lambda_poised(model, options)
+        model = improve_model(model, ff, bl, bu, options);
+    end
     [~, fmodel.g] = get_model_matrices(model, 0);
     cmodel = extract_constraints_from_tr_model(model);
     [ind_eactive, ~] = identify_new_constraints(cmodel, ...
@@ -58,8 +61,8 @@ while (model.radius > crit_mu*measure)
     while true
         [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
         if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
-            [Q, R, N, ind_qr] = ...
-                    l1_drop_constraint(Q, R, N, ind_qr, p_mu, ...
+            [Q, R, N, ind_qr, ind_eactive] = ...
+                    l1_drop_constraint(cmodel, Q, R, ind_qr, ind_eactive, p_mu, ...
                                        multipliers, tol_multipliers);
         else
             break
