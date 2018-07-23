@@ -68,12 +68,12 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [10, 50, 100, 1000, 10000, 100000, 1000000]
+all_mu = [10, 100, 1000, 10000, 100000, 1000000]
 
 clear tries
 
 all_epsilon = [1]
-all_lambda = [0.075]
+all_lambda = [0.1]
 
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
@@ -114,57 +114,63 @@ for mu_i = 1:length(all_mu)
                 f_obj = @(x) get_cutest_objective(x);
                 counter = evaluation_counter(f_obj);
                 f = @(x) counter.evaluate(x);
-
-                % Constraints
-                n_constraints = get_cutest_total_number_of_constraints();
-
                 bl = [];
                 bu = [];
-                % Bound constraints
-%                 bl = prob.bl;
+                % bl = prob.bl;
                 % bu = prob.bu;
-                lower_bounds = prob.bl > -1e19;
-                upper_bounds = prob.bu < 1e19;
-                cutest_lower_bounds = prob.bl > -1e19;
-                cutest_upper_bounds = prob.bu < 1e19;
-                lower_bounds = bl > -1e19;
-                upper_bounds = bu < 1e19;
-
-                % Other constraints
+%%
+                % 'Nonlinear' constraints
                 all_con = cell(prob.m, 1);
 
-                for p = 1:(n_constraints - sum(cutest_lower_bounds) - ...
-                           sum(cutest_upper_bounds))
-                    gk = @(x) evaluate_my_cutest_constraint(x, p, 1);
-                    all_con{p} = gk;
+                for k = 1:n_constraints
+                    gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
+                    all_con{k} = gk;
                 end
-                % Lower bounds
-                c_ind = p;
-                for p = 1:prob.n
-                    if cutest_lower_bounds(p)
-                        c_ind = c_ind + 1;
-                        if isempty(lower_bounds) || ~lower_bounds(p)
-                            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+
+                for q = 1:dim
+                    if prob.bl(q) > -1e19
+                        % Lower bound to consider
+                        if (isempty(bl) || bl(q) < -1e19)
+                            % Include constraint as black-box function
+                            H = zeros(dim);
+                            g = zeros(dim, 1);
+                            g(q) = -1;
+                            c = prob.bl(q);
+                            gk = @(x) quadratic(H, g, c, x);
                             all_con{end+1} = gk;
+                        else
+                            % Considered explicitly
+                            % pass
+                            1;
+                        end
+                    end
+                    if prob.bu(q) < 1e19
+                        % Upper bound to consider
+                        if (isempty(bu) || bu(q) < -1e19)
+                            % Include constraint as black-box function
+                            H = zeros(dim);
+                            g = zeros(dim, 1);
+                            g(q) = 1;
+                            c = -prob.bu(q);
+                            gk = @(x) quadratic(H, g, c, x);
+                            all_con{end+1} = gk;
+                        else
+                            % Considered explicitly
+                            % pass
+                            1;
                         end
                     end
                 end
-                % Upper bounds
-                c_ind = length(all_con);
-                for p = 1:prob.n
-                    if cutest_upper_bounds(p)
-                        c_ind = c_ind + 1;
-                        if isempty(upper_bounds) || ~upper_bounds(p)
-                            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
-                            all_con{end+1} = gk;
-                        end
-                    end
-                end
-                if length (all_con) ~= n_constraints - sum(lower_bounds) ...
-                        - sum(upper_bounds)
+
+                if length (all_con) ~= n_constraints + sum(cutest_lower_bounds) + ...
+                        sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds)
                     error();
                 end
 
+                % bl = prob.bl;
+                % bu = prob.bu;
+
+%%
 
                 % Initial point
                 x0 = prob.x;

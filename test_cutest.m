@@ -16,7 +16,7 @@ problem_name = 'HS100';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS34';
+problem_name = 'HS72';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -26,7 +26,8 @@ counter = evaluation_counter(f_obj);
 f = @(x) counter.evaluate(x);
 
 % Constraints
-n_constraints = get_cutest_total_number_of_constraints();
+n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
+dim = prob.n;
 
 % Bound constraints
 bl = [];
@@ -38,54 +39,73 @@ cutest_upper_bounds = prob.bu < 1e19;
 lower_bounds = bl > -1e19;
 upper_bounds = bu < 1e19;
 
-% Other constraints
+% 'Nonlinear' constraints
 all_con = cell(prob.m, 1);
 
-for k = 1:(n_constraints - sum(cutest_lower_bounds) - sum(cutest_upper_bounds))
-    gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
-    all_con{k} = gk;
+for q = 1:n_constraints
+    gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
+    all_con{q} = gk;
 end
-    % Lower bounds
-    c_ind = k;
-for k = 1:prob.n
-    if cutest_lower_bounds(k)
-        c_ind = c_ind + 1;
-        if isempty(lower_bounds) || ~lower_bounds(k)
-            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
+
+for q = 1:dim
+    if prob.bl(q) > -1e19
+        % Lower bound to consider
+        if (isempty(bl) || bl(q) < -1e19)
+            % Include constraint as black-box function
+            H = zeros(dim);
+            g = zeros(dim, 1);
+            g(q) = -1;
+            c = prob.bl(q);
+            gk = @(x) quadratic(H, g, c, x);
             all_con{end+1} = gk;
+        else
+            % Considered explicitly
+            % pass
+            1;
+        end
+    end
+    if prob.bu(q) < 1e19
+        % Upper bound to consider
+        if (isempty(bu) || bu(q) < -1e19)
+            % Include constraint as black-box function
+            H = zeros(dim);
+            g = zeros(dim, 1);
+            g(q) = 1;
+            c = -prob.bu(q);
+            gk = @(x) quadratic(H, g, c, x);
+            all_con{end+1} = gk;
+        else
+            % Considered explicitly
+            % pass
+            1;
         end
     end
 end
-% Upper bounds
-c_ind = length(all_con);
-for k = 1:prob.n
-    if cutest_upper_bounds(k)
-        c_ind = c_ind + 1;
-        if isempty(upper_bounds) || ~upper_bounds(k)
-            gk = @(x) evaluate_my_cutest_constraint(x, c_ind, 1);
-            all_con{end+1} = gk;
-        end
-    end
-end
-if length (all_con) ~= n_constraints - sum(lower_bounds) - sum(upper_bounds)
+
+if length (all_con) ~= n_constraints + sum(cutest_lower_bounds) + ...
+        sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds)
     error();
 end
+
+% bl = prob.bl;
+% bu = prob.bu;
 
 % Initial point
 x0 = prob.x;
 
 % Parameters
-mu = 10;
+mu = 1000000;
 
 epsilon = 1;
 delta = 1e-6;
-Lambda = 0.075;
+Lambda = 0.1;
 
 
 nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                'SpecifyObjectiveGradient', true);
 
+global x_fmincon
 [x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
 nlcon_fmincon = max(0, nlcon(x_fmincon));
 
