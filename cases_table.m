@@ -68,15 +68,14 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [10, 100, 1000, 10000, 100000, 1000000]
+all_mu = [250, 500, 1000]
 
 clear tries
 
 all_epsilon = [1]
 all_lambda = [0.1]
 
-tries(1).epsilon = 0.85;
-tries(1).Lambda = 0.075; %best
+
 
 warning('off', 'cmg:bad_fvalue');
 
@@ -109,7 +108,7 @@ for mu_i = 1:length(all_mu)
                 end
                 problem_name = selected_problems(k).name;
                 prob = setup_cutest_problem(problem_name, '../my_problems/');
-
+                dim = prob.n;
                 % Objective
                 f_obj = @(x) get_cutest_objective(x);
                 counter = evaluation_counter(f_obj);
@@ -118,13 +117,18 @@ for mu_i = 1:length(all_mu)
                 bu = [];
                 % bl = prob.bl;
                 % bu = prob.bu;
+                n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
+                cutest_lower_bounds = prob.bl > -1e19;
+                cutest_upper_bounds = prob.bu < 1e19;
+                lower_bounds = bl > -1e19;
+                upper_bounds = bu < 1e19;
 %%
                 % 'Nonlinear' constraints
-                all_con = cell(prob.m, 1);
+                all_con = cell(n_constraints, 1);
 
-                for k = 1:n_constraints
-                    gk = @(x) evaluate_my_cutest_constraint(x, k, 1);
-                    all_con{k} = gk;
+                for q = 1:n_constraints
+                    gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
+                    all_con{q} = gk;
                 end
 
                 for q = 1:dim
