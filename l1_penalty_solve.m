@@ -150,9 +150,10 @@ while ~finish
             if q < tol_g
                 phih = [current_constraints(ind_qr).c]';
                 if norm(phih) < tol_con
-                    if false %max([current_constraints.c]) > tol_g
-                        mu = mu*10
-                        % should recalculate px
+                    if max([current_constraints.c]) > tol_con && false
+                        mu = mu*10;
+                        p = @(x) l1_function(f, phi, mu, x);
+                        px = trmodel.fvalues(1, 1) + mu*sum(max(0, trmodel.fvalues(2:end, 1)));
                     else
                         break
                     end
@@ -173,9 +174,9 @@ while ~finish
                                             mu, ind_qr, Q, R, x, bl, bu);
                 % break
             end
-%             pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
-%                                                  current_constraints, ...
-%                                                  ind_qr, true);
+            pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
+                                                 current_constraints, ...
+                                                 ind_qr, true);
             q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
                                        [current_constraints(ind_qr).c]');
         end
