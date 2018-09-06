@@ -55,13 +55,9 @@ n_problems = length(selected_problems);
 solved_problems = false(n_problems, 1);
 clear results;
 
-fprintf(log_fd, ['\nmu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
-                 'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
-fprintf(1, ['\nmu = % 6d,    epsilon = % 8g,    delta = % 8g,    ' ...
-                 'Lambda = % 8g\n'], mu, epsilon, delta, Lambda);
 
 
-for k = 15;%1:n_problems
+for k = 1:n_problems
     iter = iter + 1;
 %     if solved_problems(k)
 %         continue
@@ -77,7 +73,6 @@ for k = 15;%1:n_problems
     % Objective
     f_obj = @(x) get_cutest_objective(x);
     counter = evaluation_counter(f_obj);
-    f = @(x) counter.evaluate(x);
     bl = [];
     bu = [];
     % bl = prob.bl;
@@ -132,16 +127,31 @@ for k = 15;%1:n_problems
             sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds)
         error();
     end
-
-    % bl = prob.bl;
-    % bu = prob.bu;
-
-%%
-
+    nlcon = @(x) constraints(all_con, {}, x, 1);
+    
     % Initial point
     x0 = prob.x;
 
-    nlcon = @(x) constraints(all_con, {}, x, 1);
+    % bl = prob.bl;
+    % bu = prob.bu;
+    fixed_scale = (prob.bu - prob.bl)/2;
+    no_scale = isinf(fixed_scale);
+    fixed_scale(no_scale) = no_scale(no_scale);
+    O = (prob.bu + prob.bl)/2;
+    O(no_scale) = x0(no_scale);
+    s0 = (x0 - O)./fixed_scale;
+    Sc = diag(fixed_scale);
+    
+    for q = 1:length(all_con)
+       all_con{1} = @(w) scale_function(@(x) all_con{q}(x), O, Sc, w);
+    end
+    % f = @(x) counter.evaluate(x);
+    f = @(w) scale_function(@(x) counter.evaluate(x), O, Sc, w);
+
+    
+%%
+
+
 %                 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
 %                                                'SpecifyObjectiveGradient', true);
 %                 [x_fmincon, fx_fmincon, exitflag, output, mult_fmincon] = fmincon(f, x0,[],[],[],[],bl,bu, nlcon, fmincon_options);
@@ -158,7 +168,8 @@ for k = 15;%1:n_problems
 
     try
         p_seed = rng('default');
-        [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+        [sf, hs2] = l1_penalty_solve(f, all_con, s0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+        x = O + Sc*sf;
         solved = true;
     catch thiserror
         results(k, 1).except = thiserror;
@@ -170,7 +181,7 @@ for k = 15;%1:n_problems
         fx = f(x);
         nphi = norm(max(0, nlcon(x)));
         error_obj = selected_problems(k).solution - fx;
-        [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-4);
+        [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-5, 5e-5);
     else
         x = [];
         hs2 = [];

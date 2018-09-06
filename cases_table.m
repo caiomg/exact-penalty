@@ -62,13 +62,13 @@ l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
 
 % Parameters
 mu = 500;
-epsilon = 0.85;
+epsilon = 1;
 delta = 1e-6;
-Lambda = 0.075;
+Lambda = 0.1;
 
 list_of_problems
 
-all_mu = [250, 500, 1000]
+all_mu = [75, 150]
 
 clear tries
 
@@ -103,7 +103,10 @@ for mu_i = 1:length(all_mu)
 
 
             for k = 1:n_problems
-                if solved_problems(k)
+%                 if solved_problems(k)
+%                     continue
+%                 end
+                if find(k == [23, 24, 25, 28, 29])
                     continue
                 end
                 problem_name = selected_problems(k).name;
@@ -208,7 +211,7 @@ for mu_i = 1:length(all_mu)
                     fx = f(x);
                     nphi = norm(max(0, nlcon(x)));
                     error_obj = selected_problems(k).solution - fx;
-                    [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-4);
+                    [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-5, 5e-5);
                 else
                     x = [];
                     hs2 = [];

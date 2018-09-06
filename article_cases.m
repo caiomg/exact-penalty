@@ -8,6 +8,7 @@ if exist('evaluate_polynomial', 'file') ~= 2
   addpath('tr_modeling');
   addpath('tr_modeling/polynomials');
 end
+warning('OFF', 'cmg:bad_fvalue')
 
 
 
@@ -59,12 +60,12 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [1000, 50,10000]
+all_mu = [50, 100, 500, 1000, 10000]
 
 clear tries
 
-all_epsilon = [1, 0.85, 0.75]
-all_lambda = [0.075, 0.1, 0.01]
+all_epsilon = [1]
+all_lambda = [0.075]
 
 tries(1).epsilon = 0.85;
 tries(1).Lambda = 0.075; %best
@@ -92,56 +93,107 @@ for mu_i = 1:length(all_mu)
 
             n_problems = length(selected_problems);
             for k = 1:n_problems
+                %%
                 problem_name = selected_problems(k).name;
+                mu = selected_problems(k).mu;
                 prob = setup_cutest_problem(problem_name, '../my_problems/');
+                dim = prob.n;
+                n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
+                cutest_lower_bounds = prob.bl > -1e19;
+                cutest_upper_bounds = prob.bu < 1e19;
 
                 % Objective
                 f_obj = @(x) get_cutest_objective(x);
                 counter = evaluation_counter(f_obj);
-                f = @(x) counter.evaluate(x);
-
-                % Constraints
-                n_constraints = get_cutest_total_number_of_constraints();
-
                 bl = [];
                 bu = [];
-                % Bound constraints
-                lower_bounds = prob.bl > -1e19;
-                upper_bounds = prob.bu < 1e19;
-                bl = prob.bl;
-                bu = prob.bu;
-%                 % Remove constraints that actually are bounds
-%                 n_constraints = n_constraints - sum(lower_bounds) - sum(upper_bounds);
+                % bl = prob.bl;
+                % bu = prob.bu;
 
-                % NL constraints
+                lower_bounds = bl > -1e19;
+                upper_bounds = bu < 1e19;
+                % 'Nonlinear' constraints
                 all_con = cell(n_constraints, 1);
-                for n = 1:n_constraints
-                    gk = @(x) evaluate_my_cutest_constraint(x, n, 1);
-                    all_con{n} = gk;
+
+                for q = 1:n_constraints
+                    gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
+                    all_con{q} = gk;
                 end
 
-                % Initial point
+                for q = 1:dim
+                    if prob.bl(q) > -1e19
+                        % Lower bound to consider
+                        if (isempty(bl) || bl(q) < -1e19)
+                            % Include constraint as black-box function
+                            H = zeros(dim);
+                            g = zeros(dim, 1);
+                            g(q) = -1;
+                            c = prob.bl(q);
+                            gk = @(x) quadratic(H, g, c, x);
+                            all_con{end+1} = gk;
+                        else
+                            % Considered explicitly
+                            % pass
+                            1;
+                        end
+                    end
+                    if prob.bu(q) < 1e19
+                        % Upper bound to consider
+                        if (isempty(bu) || bu(q) < -1e19)
+                            % Include constraint as black-box function
+                            H = zeros(dim);
+                            g = zeros(dim, 1);
+                            g(q) = 1;
+                            c = -prob.bu(q);
+                            gk = @(x) quadratic(H, g, c, x);
+                            all_con{end+1} = gk;
+                        else
+                            % Considered explicitly
+                            % pass
+                            1;
+                        end
+                    end
+                end
+
+                if length (all_con) ~= n_constraints + sum(cutest_lower_bounds) + ...
+                        sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds)
+                    error();
+                end
+                nlcon = @(x) constraints(all_con, {}, x, 1);
+
+                % Initial poiXSnt
                 x0 = prob.x;
 
-                nlcon = @(x) constraints(all_con, {}, x, 1);
-%                 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-%                                                'SpecifyObjectiveGradient', true);
-%                 [x_fmincon, fx_fmincon, exitflag, output, mult_fmincon] = fmincon(f, x0,[],[],[],[],bl,bu, nlcon, fmincon_options);
-%                 fprintf(1, '| %8s |', problem_name);
-%                 fprintf(1, '  % +9.3g |\n', sum(abs([mult_fmincon.lower; mult_fmincon.upper; mult_fmincon.ineqnonlin])));
-
-%                 fcount_fmincon = counter.get_count();
-%                 fx_fmincon = f(x_fmincon);
-%                 nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
+                % bl = prob.bl;
+                % bu = prob.bu;
+                fixed_scale = (prob.bu - prob.bl)/2;
+                no_scale = isinf(fixed_scale);
+                fixed_scale(no_scale) = no_scale(no_scale);
+                O = (prob.bu + prob.bl)/2;
+                O(no_scale) = x0(no_scale);
+                s0 = (x0 - O)./fixed_scale;
+                Sc = diag(fixed_scale);
+                mean_scale = mean(fixed_scale);
+                l1_options = struct('tol_radius', 1e-6/mean_scale, ...
+                        'initial_radius', 0.5/mean_scale, ...
+                        'radius_max', 1);
+                all_con_scaled = all_con;
+                for q = 1:length(all_con)
+                   all_con_scaled{q} = @(w) scale_function(@(x) all_con{q}(x), O, Sc, w);
+                end
+                f = @(x) counter.evaluate(x);
+                fs = @(w) scale_function(@(x) f(x), O, Sc, w);
+                
                 %%
 if true
 
                 counter.reset_count();
-                counter.set_max_count(15000);
+                counter.set_max_count(10000);
 
                 try
                     p_seed = rng('default');
-                    [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, []);
+                    [sf, hs2] = l1_penalty_solve(fs, all_con_scaled, s0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+                    x = O + Sc*sf;
                     solved = true;
                 catch thiserror
                     results(k, 1).except = thiserror;
@@ -154,6 +206,9 @@ if true
                     nphi = norm(max(0, nlcon(x)));
                     error_obj = fx - selected_problems(k).solution;
                     [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-5);
+                    if kkt || (norm(nphi) < 5e-6 && abs(error_obj) < 5e-6)
+                        kkt = true;
+                    end
                 else
                     x = [];
                     hs2 = [];
