@@ -62,7 +62,7 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [10]
+all_mu = [10, 100, 1000, 10000, 100000]
 
 clear tries
 
@@ -74,6 +74,7 @@ tries(1).Lambda = 0.075; %best
 
 warning('off', 'cmg:bad_fvalue');
 
+solved_problems = false(length(selected_problems), 1);
 final_filenames = {};
 all_results = {};
 iter = 0;
@@ -95,6 +96,9 @@ for mu_i = 1:length(all_mu)
 
             n_problems = length(selected_problems);
             for k = 1:n_problems
+                if solved_problems(k)
+                    continue
+                end
                 %%
                 problem_name = selected_problems(k).name;
 %                 mu = selected_problems(k).mu;
@@ -209,10 +213,11 @@ if true
                     fcount = counter.get_count();
                     fx = f(x);
                     nphi = norm(max(0, nlcon(x)));
-                    error_obj = fx - selected_problems(k).solution;
+                    error_obj = selected_problems(k).solution - fx;
                     [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-5);
-                    if kkt || (norm(nphi) < 5e-6 && abs(error_obj) < 5e-6)
+                    if kkt || (norm(nphi) < 5e-6 && error_obj < 5e-6)
                         kkt = true;
+                        solved_problems(k) = true;
                     end
                 else
                     x = [];
