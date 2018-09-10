@@ -215,7 +215,7 @@ if true
                     nphi = norm(max(0, nlcon(x)));
                     error_obj = selected_problems(k).solution - fx;
                     [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-6, 1e-5);
-                    if kkt || (norm(nphi) < 5e-6 && error_obj < 5e-6)
+                    if kkt || (norm(nphi) < 5e-6 && -error_obj < 5e-6)
                         kkt = true;
                         solved_problems(k) = true;
                     end
