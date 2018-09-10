@@ -60,7 +60,7 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [50, 100, 500, 1000, 10000]
+all_mu = [10, 100, 1000]
 
 clear tries
 
@@ -95,7 +95,7 @@ for mu_i = 1:length(all_mu)
             for k = 1:n_problems
                 %%
                 problem_name = selected_problems(k).name;
-                mu = selected_problems(k).mu;
+%                 mu = selected_problems(k).mu;
                 prob = setup_cutest_problem(problem_name, '../my_problems/');
                 dim = prob.n;
                 n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
@@ -173,7 +173,7 @@ for mu_i = 1:length(all_mu)
                 O(no_scale) = x0(no_scale);
                 s0 = (x0 - O)./fixed_scale;
                 Sc = diag(fixed_scale);
-                mean_scale = mean(fixed_scale);
+                mean_scale = norm(fixed_scale);
                 l1_options = struct('tol_radius', 1e-6/mean_scale, ...
                         'initial_radius', 0.5/mean_scale, ...
                         'radius_max', 1);
