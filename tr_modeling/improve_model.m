@@ -79,7 +79,7 @@ while true
                 max_attempts = 3;
                 for attempt = 1:max_attempts
                     pivot_found = false;
-                    if attempt == 1
+                    if attempt == 2
                         % Minimize inside TR
                         [new_point_a, new_value_a] = ...
                             minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, smaller_radius);
@@ -94,7 +94,7 @@ while true
                             new_point = new_point_b;
                             new_value = new_value_b;
                         end
-                    elseif attempt == 2
+                    elseif attempt == 1
                         % Minimize inside TR
                         [new_point_a, new_value_a] = ...
                             minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, 1);

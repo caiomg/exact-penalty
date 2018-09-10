@@ -16,7 +16,7 @@ problem_name = 'POLAK1';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS106';
+problem_name = 'HS84';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -33,7 +33,7 @@ dim = prob.n;
 bl = [];
 bu = [];
 bl = prob.bl;
-% bu = prob.bu;
+bu = prob.bu;
 cutest_lower_bounds = prob.bl > -1e19;
 cutest_upper_bounds = prob.bu < 1e19;
 lower_bounds = bl > -1e19;
@@ -94,7 +94,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 10000;
+mu = 10;
 
 epsilon = 1;
 delta = 1e-6;
@@ -120,7 +120,7 @@ l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'initial_radius', 0.5, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
-                        'criticality_omega', 0.5, 'basis', 'dummy', ...
+                        'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
                         'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
                         'pivot_imp', 1.1)
 

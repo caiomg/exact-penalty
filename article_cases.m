@@ -10,6 +10,8 @@ if exist('evaluate_polynomial', 'file') ~= 2
 end
 warning('OFF', 'cmg:bad_fvalue')
 
+fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+                               'SpecifyObjectiveGradient', true);
 
 
 terminate_cutest_problem()
@@ -60,7 +62,7 @@ Lambda = 0.075;
 
 list_of_problems
 
-all_mu = [10, 100, 1000]
+all_mu = [10]
 
 clear tries
 
@@ -107,8 +109,8 @@ for mu_i = 1:length(all_mu)
                 counter = evaluation_counter(f_obj);
                 bl = [];
                 bu = [];
-                % bl = prob.bl;
-                % bu = prob.bu;
+                bl = prob.bl;
+                bu = prob.bu;
 
                 lower_bounds = bl > -1e19;
                 upper_bounds = bu < 1e19;
@@ -161,14 +163,14 @@ for mu_i = 1:length(all_mu)
                 end
                 nlcon = @(x) constraints(all_con, {}, x, 1);
 
-                % Initial poiXSnt
+                % Initial point
                 x0 = prob.x;
 
-                % bl = prob.bl;
-                % bu = prob.bu;
                 fixed_scale = (prob.bu - prob.bl)/2;
                 no_scale = isinf(fixed_scale);
                 fixed_scale(no_scale) = no_scale(no_scale);
+                n_scale = sqrt(norm(fixed_scale));
+                fixed_scale = fixed_scale/n_scale;
                 O = (prob.bu + prob.bl)/2;
                 O(no_scale) = x0(no_scale);
                 s0 = (x0 - O)./fixed_scale;
@@ -176,25 +178,28 @@ for mu_i = 1:length(all_mu)
                 mean_scale = norm(fixed_scale);
                 l1_options = struct('tol_radius', 1e-6/mean_scale, ...
                         'initial_radius', 0.5/mean_scale, ...
-                        'radius_max', 1);
+                        'radius_max', n_scale, 'pivot_threshold', 0.05);
                 all_con_scaled = all_con;
                 for q = 1:length(all_con)
                    all_con_scaled{q} = @(w) scale_function(@(x) all_con{q}(x), O, Sc, w);
                 end
                 f = @(x) counter.evaluate(x);
                 fs = @(w) scale_function(@(x) f(x), O, Sc, w);
-                
+                bl_scaled = (bl - O)./fixed_scale;
+                bu_scaled = (bu - O)./fixed_scale;
+                nlcon_scaled = @(x) constraints(all_con_scaled, {}, x, 1);
                 %%
 if true
 
                 counter.reset_count();
-                counter.set_max_count(10000);
+                counter.set_max_count(15000);
 
                 try
                     p_seed = rng('default');
-                    [sf, hs2] = l1_penalty_solve(fs, all_con_scaled, s0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+                    [sf, hs2] = l1_penalty_solve(fs, all_con_scaled, s0, mu, epsilon, delta, Lambda, bl_scaled, bu_scaled, l1_options);
                     x = O + Sc*sf;
                     solved = true;
+                    % [s_fmincon, fs_fmincon, exitflag, output, lambda_fmincon] = fmincon(fs, s0,[],[],[],[], bl_scaled, bu_scaled, nlcon_scaled, fmincon_options);
                 catch thiserror
                     results(k, 1).except = thiserror;
                     solved = false;
