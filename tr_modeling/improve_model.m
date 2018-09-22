@@ -49,6 +49,7 @@ while true
         % Scaling
         points_scaled = points_abs;
         scale_factor_x = model.scale_factor_x;
+
         for column = 1:p_ini
             points_scaled(:, column) = (points_abs(:, column) ...
                                         - center)/scale_factor_x;
@@ -73,6 +74,12 @@ while true
             % Finding point to change
             pivot_index = find(pivot_absvalues < tol_pivot, 1);
             smaller_radius = min(1-2*tol_pivot, radius/scale_factor_x);
+            tol_shift = 10*eps(max(1, max(abs(center))))/min(1, scale_factor_x);
+            if tol_shift > 1e-3
+                tol_shift = 1e-3; % DANGER, still
+            end
+            larger_radius = 1 - tol_shift;
+
             if ~isempty(pivot_index)
                 chosen_poly = pivot_polynomials(pivot_index);
                 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -97,11 +104,11 @@ while true
                     elseif attempt == 1
                         % Minimize inside TR
                         [new_point_a, new_value_a] = ...
-                            minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, 1);
+                            minimize_polynomial_with_bounds(chosen_poly, bl_scaled, bu_scaled, larger_radius);
                         % Maximize inside TR
                         [new_point_b, new_value_b] = ...
                             minimize_polynomial_with_bounds(multiply_p(chosen_poly, ...
-                                                           -1), bl_scaled, bu_scaled, 1);
+                                                           -1), bl_scaled, bu_scaled, larger_radius);
                         if abs(new_value_a) >= abs(new_value_b)
                             new_point = new_point_a;
                             new_value = new_value_a;
@@ -110,7 +117,7 @@ while true
                             new_value = new_value_b;
                         end
                     elseif attempt == 3
-                        [new_point, new_value] = find_other_point_with_bounds(chosen_poly, bl_scaled, bu_scaled);
+                        [new_point, new_value] = find_other_point_with_bounds(chosen_poly, bl_scaled, bu_scaled, larger_radius);
                     end
                     if abs(new_value) >= tol_pivot
                         pivot_found = true;
