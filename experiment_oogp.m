@@ -40,7 +40,8 @@ bu_scaled = (bu - O)./fixed_scale;
 ec = evaluation_counter(@(y) santos_gas_network(y.*fixed_scale + O));
 cache = simple_cache(@(x) ec.evaluate(x), 3);
 
-f = @(x) cache.getvalue(x, 1);
+% Objective: minimizing negative of oil production
+f = @(x) -cache.getvalue(x, 1);
 all_con = {@(x) (cache.getvalue(x, 2) - 200)/1e4;
           @(x) (cache.getvalue(x, 3) - 0.025)};
 
