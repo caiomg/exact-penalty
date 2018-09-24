@@ -12,6 +12,9 @@ if exist('santos_gas_network', 'file') ~= 2
     addpath('../network_problem/')
 end
 
+initial_condition = 'base'
+scenario = 'C1'
+
 l1_options = struct('tol_radius', 1e-2, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
                     'eta_1', 0, 'eta_2', 0.1, 'gamma_inc', 2, ...
                     'gamma_dec', 0.5, 'initial_radius', 0.5, ...
@@ -24,11 +27,13 @@ l1_options = struct('tol_radius', 1e-2, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
 
 bl = [11.570;   0.040;  17.360;   0.040;  19.600;   0.033;   5.790;  34.720];
 bu = [34.720;   0.100;  38.298;   0.060;  36.400;   0.055;  57.870;  96.291];
-x0 = [16.62; 0.0502;  29.46;  0.0484;  28.0;  0.04;  31.21;  74.07];
-% base ['16.620000000000001', '0.050200000000000',
-% '29.460000000000001', '0.048400000000000', '28',
-% '0.040000000000000', '31.210000000000001', '74.069999999999993',
-% '0.100000000000000', '263.579000000000008']
+
+x0_base = [16.62; 0.0502;  29.46;  0.0484;  28.0;  0.04;  31.21; 74.07];
+x0_pre_gas = [19.11; 0.0502; 30.61; 0.0484; 32.2; 0.04; 26.53; 62.96];
+x0_pos_gas = [14.13; 0.0502; 25.04; 0.0484; 23.8; 0.04; 35.89; 85.18];
+x0_more_co2 = [16.62; 0.0577;  29.46;  0.0557;  28.0;  0.046;  31.21; 74.07];
+x0_less_co2 = [16.62; 0.0427;  29.46;  0.0411;  28.0;  0.034;  31.21; 74.07];
+
 
 O = (bl + bu)/2;
 fixed_scale = (bu - bl)/2;
@@ -45,15 +50,46 @@ cache = simple_cache(@(x) ec.evaluate(x), 3);
 
 % Objective: minimizing negative of oil production
 f = @(x) -cache.getvalue(x, 1);
-all_con = {@(x) (cache.getvalue(x, 2) - 200)/1e4;
-          @(x) (cache.getvalue(x, 3) - 0.025)};
+
+switch initial_condition
+  case 'base'
+    x0 = x_base;
+  case 'pre_gas'
+    x0 = x_pre_gas;
+  case 'pos_gas'
+    x0 = x_pos_gas;
+  case 'more_co2'
+    x0 = x_more_co2;
+  case 'less_co2'
+    x0 = x_less_co2;
+  otherwise
+        error('cmg:invalid_point', 'Invalid scenario choice');
+end
+
+switch scenario
+  case 'C1'
+    gas_lim = 200;
+    co2_lim = 0.025;
+  case 'C2'
+    gas_lim = 130;
+    co2_lim = 0.025;
+  case 'C3'
+    gas_lim = 200;
+    co2_lim = 0.0125;
+  otherwise
+    error('cmg:invalid_scenario', 'Invalid scenario choice');
+end
+
+all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
+          @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
 mu = 10;
 epsilon = 1;
 delta = 1e-6;
 Lambda = 0.1;
 
-[x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, Lambda, bl_scaled, bu_scaled, l1_options)
+[x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, ...
+                           Lambda, bl_scaled, bu_scaled, l1_options)
 
   
 
