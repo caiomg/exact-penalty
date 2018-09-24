@@ -36,15 +36,15 @@ x0_less_co2 = [16.62; 0.0427;  29.46;  0.0411;  28.0;  0.034;  31.21; 74.07];
 
 switch initial_condition
   case 'base'
-    x0 = x_base;
+    x0 = x0_base;
   case 'pre_gas'
-    x0 = x_pre_gas;
+    x0 = x0_pre_gas;
   case 'pos_gas'
-    x0 = x_pos_gas;
+    x0 = x0_pos_gas;
   case 'more_co2'
-    x0 = x_more_co2;
+    x0 = x0_more_co2;
   case 'less_co2'
-    x0 = x_less_co2;
+    x0 = x0_less_co2;
   otherwise
         error('cmg:invalid_point', 'Invalid scenario choice');
 end
