@@ -12,7 +12,21 @@ if exist('santos_gas_network', 'file') ~= 2
     addpath('../network_problem/')
 end
 
-log_dir = fullfile('..', 'logs', 'oogp', datestr(now(), 29));
+log_dir_prefix = fullfile('..', 'logs', 'oogp', datestr(now(), ...
+                                                  29));
+log_dir = log_dir_prefix;
+suffix = 'A';
+while exist(log_dir, 'dir') == 7
+    log_dir = [log_dir_prefix, '-', suffix];
+    suffix = char(suffix + 1);
+end
+success = mkdir(log_dir)
+if success
+    log_dir
+else
+    log_dir = '.';
+end
+
 all_scenarios = {'C1', 'C2' 'C3'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
 for scen = 1:length(all_scenarios)
