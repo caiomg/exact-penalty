@@ -56,7 +56,7 @@ ec = evaluation_counter(@(y) santos_gas_network(y.*fixed_scale + O));
 cache = simple_cache(@(x) ec.evaluate(x), 3);
 %
 
-l1_options = struct('tol_radius', 1e-3, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
+l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
                     'eta_1', 0, 'eta_2', 0.1, 'gamma_inc', 2, ...
                     'gamma_dec', 0.5, 'initial_radius', 0.2, ...
                     'radius_max', 2, 'criticality_mu', 50, ...
@@ -71,14 +71,15 @@ f = @(x) -cache.getvalue(x, 1);
 all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
           @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
-mu = 1e5;
+mu = 1e6;
 epsilon = 0.1/n_scale;
 delta = 1e-6/n_scale;
 Lambda = 0.1/n_scale;
 
 [x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, ...
                            Lambda, bl_scaled, bu_scaled, l1_options)
-evaluations = ec.get_count();
+evaluations = ec.get_count()
+x_full_space = x.*fixed_scale + O
   
 filename =  fullfile(log_dir, [initial_condition, '_', scenario]);
 save(filename);
