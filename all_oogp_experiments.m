@@ -17,9 +17,9 @@ all_scenarios = {'C1', 'C2' 'C3'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
 for scen = 1:length(all_scenarios)
     for ic = 1:length(all_ic)
-        %experiment_oogp
         scenario = all_scenarios{scen}
         initial_condition = all_ic{ic}
+        experiment_oogp
     end
 end
 
