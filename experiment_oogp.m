@@ -1,27 +1,4 @@
-if exist('terminate_cutest_problem', 'file') ~= 2
-  addpath('my_cutest_functions');
-end
-if exist('check_kkt', 'file') ~= 2
-  addpath('process');
-end
-if exist('evaluate_polynomial', 'file') ~= 2
-  addpath('tr_modeling');
-  addpath('tr_modeling/polynomials');
-end
-if exist('santos_gas_network', 'file') ~= 2
-    addpath('../network_problem/')
-end
 
-initial_condition = 'base'
-scenario = 'C1'
-
-l1_options = struct('tol_radius', 1e-2, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
-                    'eta_1', 0, 'eta_2', 0.1, 'gamma_inc', 2, ...
-                    'gamma_dec', 0.5, 'initial_radius', 0.5, ...
-                    'radius_max', 2, 'criticality_mu', 50, ...
-                    'criticality_beta', 10, 'criticality_omega', ...
-                    0.5, 'basis', 'diagonal hessian', 'pivot_threshold', ...
-                    0.1, 'poised_radius_factor', 2, 'pivot_imp', 1.1)
                     
                     
 
@@ -77,6 +54,15 @@ bu_scaled = (bu - O)./fixed_scale;
 
 ec = evaluation_counter(@(y) santos_gas_network(y.*fixed_scale + O));
 cache = simple_cache(@(x) ec.evaluate(x), 3);
+%
+
+l1_options = struct('tol_radius', 1e-3, 'tol_f', 1e-6, 'eps_c', 1e-5, ...
+                    'eta_1', 0, 'eta_2', 0.1, 'gamma_inc', 2, ...
+                    'gamma_dec', 0.5, 'initial_radius', 0.2, ...
+                    'radius_max', 2, 'criticality_mu', 50, ...
+                    'criticality_beta', 10, 'criticality_omega', ...
+                    0.5, 'basis', 'diagonal hessian', 'pivot_threshold', ...
+                    0.1, 'poised_radius_factor', 3, 'pivot_imp', 1.1)
 
 % Objective: minimizing negative of oil production
 f = @(x) -cache.getvalue(x, 1);
@@ -85,13 +71,14 @@ f = @(x) -cache.getvalue(x, 1);
 all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
           @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
-mu = 10;
-epsilon = 1;
-delta = 1e-6;
-Lambda = 0.1;
+mu = 1e5;
+epsilon = 0.1/n_scale;
+delta = 1e-6/n_scale;
+Lambda = 0.1/n_scale;
 
 [x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, ...
                            Lambda, bl_scaled, bu_scaled, l1_options)
-
+evaluations = ec.get_count();
   
-
+filename =  fullfile(log_dir, [initial_condition, '_', scenario]);
+save(filename);
