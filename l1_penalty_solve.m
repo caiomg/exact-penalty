@@ -19,7 +19,7 @@ for k = 1:length(option_names)
         options.(option_names{k}) = defaultoptions.(option_names{k});
     end
 end
-                    
+inspect_iteration = 40;
                     
 gamma_0 = 0.0625;
 gamma_1 = 0.5;
@@ -309,8 +309,8 @@ while ~finish
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if length(history_solution) > 55
-        1;
+    if iter == inspect_iteration
+        warning('cmg:inspect_iteration', 'Iteration %d reached', iter);
     end
 end
 % In case we decided to preallocate

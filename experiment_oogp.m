@@ -76,6 +76,7 @@ epsilon = 0.1/n_scale;
 delta = 1e-6/n_scale;
 Lambda = 0.1/n_scale;
 
+dbstop if warning 'cmg:inspect_iteration'
 [x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, ...
                            Lambda, bl_scaled, bu_scaled, l1_options)
 evaluations = ec.get_count()
