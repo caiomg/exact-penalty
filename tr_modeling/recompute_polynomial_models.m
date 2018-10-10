@@ -5,9 +5,6 @@ function polynomials = recompute_polynomial_models(shifted_points, fvalues, basi
     linear_basis_size = dim + 1;
     basis_size = length(basis);
     
-    %% Test
-    linear_basis_size = min(points_num, linear_basis_size);
-    %% Test
     
     if points_num <= linear_basis_size
         % Linear interpolation
