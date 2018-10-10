@@ -5,13 +5,14 @@ function [x, history_solution] = l1_penalty_solve(f, phi, initial_points, ...
 %   Detailed explanation goes here
 
 defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
-                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
-                        'initial_radius', 0.5, 'radius_max', 1e3, ...
+                        'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
+                        'pivot_threshold', 1/16, 'add_threshold', 100, ...
+                        'exchange_threshold', 1000,  ...
+                        'initial_radius', 1, 'radius_max', 1e3, ...
+                        'radius_factor', 6, ...
+                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
-                        'criticality_omega', 0.5, 'basis', 'full quadratic', ...
-                        'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
-                        'pivot_imp', 1.1);
+                        'criticality_omega', 0.5, 'basis', 'full quadratic');
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -21,16 +22,38 @@ for k = 1:length(option_names)
 end
 inspect_iteration = 40;
                     
-gamma_0 = 0.0625;
-gamma_1 = 0.5;
-gamma_2 = 2;
+gamma_1 = options.gamma_dec;
+gamma_2 = options.gamma_inc;
 ut_option.UT = true;
 eta_1 = options.eta_1;
 eta_2 = options.eta_2;
+initial_radius = options.initial_radius;
+rel_pivot_threshold = options.pivot_threshold;
+
 
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
 [dimension, n_initial_points] = size(initial_points);
+if n_initial_points == 1
+    % Finding a random second point
+    old_seed = rng('default');
+    second_point = rand(size(initial_points));
+    rng(old_seed);
+    while norm(second_point, inf) < rel_pivot_threshold
+        % Second point must not be too close
+        second_point = 2*second_point;
+    end
+    second_point = (second_point - 0.5)*initial_radius;
+    second_point = initial_points(:, 1) + second_point;
+    if ~isempty(bu)
+        second_point = min(bu, second_point);
+    end
+    if ~isempty(bl)
+        second_point = max(bl, second_point);
+    end
+    initial_points(:, 2) = second_point;
+    n_initial_points = 2;
+end
 initial_fvalues = zeros(n_functions, n_initial_points);
 % Calculating function values for other points of the set
 for nf = 1:n_functions
@@ -53,24 +76,16 @@ switch options.basis
 end
 
 % Initializing model structure
-trmodel.points = initial_points;
-trmodel.fvalues = initial_fvalues;
-trmodel.radius = options.initial_radius;
-trmodel.basis = basis;
+trmodel = tr_model(initial_points, initial_fvalues, initial_radius);
+trmodel = rebuild_model(trmodel, options);
+basis = band_prioritizing_basis(size(trmodel.points_shifted, 1));
+trmodel.modeling_polynomials = ...
+            recompute_polynomial_models(trmodel.points_shifted, trmodel.fvalues, ...
+                                        basis);
+
 
 fphi = {f, phi{:}}';
 
-% Completing set of interpolation points and calculating polynomial
-% model
-while true
-    % Recomplete interpolation set and calculate new model
-    [trmodel, exitflag] = complete_interpolation_set(trmodel, fphi, bl, bu, options);
-    if exitflag >= 0 || trmodel.radius < options.tol_radius
-        break
-    else
-        trmodel.radius = 0.5*trmodel.radius;
-    end
-end
 
 linsolve_opts.UT = true;
 
@@ -266,18 +281,15 @@ while ~finish
         end
         if rho > eta_2 || (rho > eta_1 && geometry_ok)
             x = trial_point;
-            trmodel = move_trust_region(trmodel, x, trial_fvalues, ...
-                                   fphi, bl, bu, options);
+            [trmodel, mchange_flag] = change_tr_center(trmodel, trial_point, trial_fvalues, options);
             px = p_trial;
         else
-            trmodel = try_to_add_interpolation_point(trmodel, trial_point, ...
-                                                trial_fvalues, ...
-                                                fphi, bl, bu, options);
+            [trmodel, mchange_flag] = try_to_add_point(trmodel, trial_point, trial_fvalues, fphi, bl, bu, options);
         end
     else
         rho = -inf;
         if ~geometry_ok
-            trmodel = improve_model(trmodel, fphi, bl, bu, options);
+            [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
         end
         if geometry_ok && (q < Lambda || pred <= 0)
             [epsilon, Lambda] = l1_reduce_lambda(epsilon, Lambda, ...

@@ -1,4 +1,4 @@
-function [model, epsilon] = tr_criticality_step(model, ff, epsilon, p_mu, ...
+function [model, epsilon] = tr_criticality_step(model, funcs, epsilon, p_mu, ...
                                                 bl, bu, options, one_pass)
 % CRITICALITY_STEP -- ensures model is sufficiently poised and with
 % a radius comparable to the gradient
@@ -18,11 +18,11 @@ tol_f = options.tol_f;
 factor_epsilon = 0.5;
 epsilon0 = epsilon;
 
-x = model.points(:, 1);
+x = model.points_abs(:, model.tr_center);
 initial_radius = model.radius;
 % I should be testing if it is not already FL
-if ~is_lambda_poised(model, options)
-    model = improve_model(model, ff, bl, bu, options);
+while ~is_lambda_poised(model, options)
+    [model, model_changed] = ensure_improvement(model, funcs, bl, bu, options);
 end
 [~, fmodel.g] = get_model_matrices(model, 0);
 cmodel = extract_constraints_from_tr_model(model);
@@ -48,9 +48,9 @@ while (model.radius > crit_mu*measure)
     model.radius = omega*model.radius;
     epsilon = factor_epsilon*epsilon;
     
-    model = improve_model(model, ff, bl, bu, options);
+    [model, model_changed] = ensure_improvement(model, funcs, bl, bu, options);
     while ~is_lambda_poised(model, options)
-        model = improve_model(model, ff, bl, bu, options);
+        [model, model_changed] = ensure_improvement(model, funcs, bl, bu, options);
     end
     [~, fmodel.g] = get_model_matrices(model, 0);
     cmodel = extract_constraints_from_tr_model(model);

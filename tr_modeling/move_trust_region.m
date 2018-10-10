@@ -24,12 +24,12 @@ function model = move_trust_region(model, new_center, new_center_fvals, ...
     % approach, other points may end substituted.
     while true
         % Recomplete interpolation set and calculate new model
-        [model, exitflag] = complete_interpolation_set(model, ff, bl, ...
-                                                       bu, options);
-        if exitflag >= 0 || model.radius < options.tol_radius
-            break
-        else
-            model.radius = 0.5*model.radius;
-        end
+        [model, exitflag] = improve_model(model, ff, bl, bu, options, true);
+        break
+%         if exitflag >= 0 || model.radius < options.tol_radius
+%             break
+%         else
+%             model.radius = 0.5*model.radius;
+%         end
     end
 end

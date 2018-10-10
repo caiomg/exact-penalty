@@ -1,20 +1,22 @@
-function [c, g, H] = get_model_matrices(model, m)
+function [c, g, H] = get_model_matrices(model, m, no_shift)
 %GET_MODEL_POLYNOMIAL Summary of this function goes here
 %   Detailed explanation goes here
 
+    if nargin < 3
+        no_shift = false;
+    end
+    
 
-if m == 0
-    poly = model.model_polynomial;
-else
-    poly = model.other_polynomials{m};
-end
-
-[c, g, H] = coefficients_to_matrices(poly.dimension, poly.coefficients);
+    polynomial_shifted = model.modeling_polynomials{m + 1};
 
 
-% Scale
-g = g/model.scale_factor_x;
-H = H/(model.scale_factor_x)^2;
+    if ~no_shift
+        % Shift to TR center
+        tr_center_shift = model.points_shifted(:, model.tr_center);
+        polynomial = shift_polynomial(polynomial_shifted, tr_center_shift);
+    end
+    
+    [c, g, H] = get_matrices(polynomial);
 
 end
 

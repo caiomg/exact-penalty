@@ -103,13 +103,13 @@ Lambda = 0.1;
 
 nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                               'SpecifyObjectiveGradient', true);
+                               'SpecifyObjectiveGradient', false);
 
 global x_fmincon
 [x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
 nlcon_fmincon = max(0, nlcon(x_fmincon));
 
-counter.get_count()
+fmincon_count = counter.get_count()
 counter.reset_count()
 % counter.set_max_count(15000);
 
@@ -133,7 +133,7 @@ nphi = norm(max(0, nlcon(x)))
 
 rng(p_seed);
 
-counter.get_count()
+l1_count = counter.get_count()
 counter.reset_count()
 
 
