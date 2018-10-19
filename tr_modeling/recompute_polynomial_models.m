@@ -5,7 +5,6 @@ function polynomials = recompute_polynomial_models(shifted_points, fvalues, basi
     linear_basis_size = dim + 1;
     basis_size = length(basis);
     
-    
     if points_num <= linear_basis_size
         % Linear interpolation
 
@@ -21,7 +20,8 @@ function polynomials = recompute_polynomial_models(shifted_points, fvalues, basi
         l_opts.LT = true;
         u = linsolve(R(1:points_num, :)', fvalues', l_opts);
         linear_coefficients = Q(:, 1:points_num)*u;
-        quadratic_coefficients = zeros(basis_size - linear_basis_size, n_interpolating_functions);
+        quadratic_coefficients = zeros(basis_size - linear_basis_size, ...
+                                       n_interpolating_functions);
         coefficients_basis = [linear_coefficients;
                               quadratic_coefficients];
         %% DEBUG

@@ -25,13 +25,13 @@ log_filename = fullfile(logdir, sprintf('%s_p1_db.log', datestr(now, 30)));
 log_fd = fopen(log_filename, 'w');
 
 
-l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
+l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
+                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.05, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
-                        'initial_radius', 0.5, 'radius_max', 1e3, ...
+                        'initial_radius', 1, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
-                        'pivot_threshold', 0.1, 'poised_radius_factor', 2, ...
+                        'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
                         'pivot_imp', 1.1)
 
 % Parameters
@@ -75,8 +75,8 @@ for k = 1:n_problems
     counter = evaluation_counter(f_obj);
     bl = [];
     bu = [];
-    % bl = prob.bl;
-    % bu = prob.bu;
+    bl = prob.bl;
+    bu = prob.bu;
 %%
     lower_bounds = bl > -1e19;
     upper_bounds = bu < 1e19;
@@ -136,16 +136,18 @@ for k = 1:n_problems
     % bu = prob.bu;
     fixed_scale = (prob.bu - prob.bl)/2;
     no_scale = isinf(fixed_scale);
+    no_scale = true(size(x0)); % Removing scale
     fixed_scale(no_scale) = no_scale(no_scale);
     O = (prob.bu + prob.bl)/2;
     O(no_scale) = x0(no_scale);
+    O = zeros(size(x0)); % Removing scale
     s0 = (x0 - O)./fixed_scale;
     Sc = diag(fixed_scale);
     
     for q = 1:length(all_con)
-       all_con{1} = @(w) scale_function(@(x) all_con{q}(x), O, Sc, w);
+       all_con{q} = @(w) scale_function(@(x) all_con{q}(x), O, Sc, w);
     end
-    % f = @(x) counter.evaluate(x);
+%     f = @(x) counter.evaluate(x);
     f = @(w) scale_function(@(x) counter.evaluate(x), O, Sc, w);
 
     

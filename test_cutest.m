@@ -4,19 +4,19 @@ clear global problem_path_cutest problem_name_cutest problem_data_cutest
 global problem_data_cutest
 
 problem_name = 'HS100';
-problem_name = 'WOMFLET';
-problem_name = 'POLAK1';
+% problem_name = 'WOMFLET';
+% problem_name = 'POLAK1';
 % problem_name = 'SNAKE';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
 % % problem_name = 'QC';
-% % problem_name = 'CB2';
+problem_name = 'CB2';
 % problem_name = 'LOOTSMA';
 % % problem_name = 'HS88';
 % problem_name = 'HS18';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS18';
+problem_name = 'HS97';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -94,7 +94,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 10;
+mu = 10000;
 
 epsilon = 1;
 delta = 1e-6;
@@ -106,7 +106,7 @@ fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                'SpecifyObjectiveGradient', false);
 
 global x_fmincon
-[x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options);
+[x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options)
 nlcon_fmincon = max(0, nlcon(x_fmincon));
 
 fmincon_count = counter.get_count()
@@ -121,7 +121,7 @@ l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
                         'initial_radius', 1, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
-                        'pivot_threshold', 0.01, 'poised_radius_factor', 6, ...
+                        'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
                         'pivot_imp', 1.1)
 
 %%

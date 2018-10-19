@@ -26,13 +26,14 @@ function [model, model_changed] = rebuild_model(model, options)
     fvalues = fvalues(:, pt_order);
     
     % Building model
-    pivot_polynomials = band_prioritizing_basis(dim);
+    %pivot_polynomials = band_prioritizing_basis(dim);
     %pivot_polynomials = natural_basis(dim);
+    pivot_polynomials = nfp_basis(dim);
     polynomials_num = length(pivot_polynomials);
-    pivot_absvalues = zeros(1, polynomials_num);
+    pivot_values = zeros(1, polynomials_num);
     % Constant term
     last_pt_included = 1;
-    pivot_absvalues(1) = 1;
+    pivot_values(1) = 1;
     poly_i = 2;
     for iter = 2:polynomials_num
         pivot_polynomials(poly_i) = ...
@@ -56,23 +57,29 @@ function [model, model_changed] = rebuild_model(model, options)
             block_beginning = dim+2;
             block_end = polynomials_num;
         end
+        maxlayer = max(1, maxlayer);
         all_layers = linspace(1, maxlayer, ceil(maxlayer));
-        max_absval = -inf;
+        max_absval = 0;
         pt_max = 0;
         for layer = all_layers
+            dist_max = layer*radius;
             for n = last_pt_included+1:p_ini
-                if distances(n) > layer*radius
-                    break
+                if distances(n) > dist_max
+                    break % for(n)
                 end
-                absval = abs(evaluate_polynomial(pivot_polynomials(poly_i), ...
-                                                 points_shifted(:, n)));
-                if max_absval < absval
-                    max_absval = absval;
+                val = evaluate_polynomial(pivot_polynomials(poly_i), ...
+                                                 points_shifted(:, n));
+                val = val/dist_max;
+                if abs(max_absval) < abs(val)
+                    max_absval = val;
                     pt_max = n;
                 end
             end
+            if abs(max_absval) > pivot_threshold
+                break % for(layer)
+            end
         end
-        if max_absval > pivot_threshold
+        if abs(max_absval) > pivot_threshold
             % Point accepted
             pt_next = last_pt_included + 1;
             points_shifted(:, [pt_next, pt_max]) = points_shifted(:, ...
@@ -81,7 +88,7 @@ function [model, model_changed] = rebuild_model(model, options)
             fvalues(:, [pt_next, pt_max]) = fvalues(:, [pt_max, ...
                                 pt_next]);
             distances([pt_next, pt_max]) = distances([pt_max, pt_next]);
-            pivot_absvalues(pt_next) = max_absval;
+            pivot_values(pt_next) = max_absval;
             
             % Normalize polynomial value
             pivot_polynomials(poly_i) = ...
@@ -119,10 +126,11 @@ function [model, model_changed] = rebuild_model(model, options)
     model.points_abs = points_abs(:, 1:last_pt_included);
     model.points_shifted = points_shifted(:, 1:last_pt_included);
     model.fvalues = fvalues(:, 1:last_pt_included);
-    model.cached_points = points_abs(:, last_pt_included+1:end);
-    model.cached_fvalues = fvalues(:, last_pt_included+1:end);
+    cache_size = min(p_ini - last_pt_included, 3*dim^2);
+    model.cached_points = points_abs(:, last_pt_included+1:last_pt_included + cache_size);
+    model.cached_fvalues = fvalues(:, last_pt_included+1:last_pt_included + cache_size);
     model.pivot_polynomials = pivot_polynomials;
-    model.pivot_absvalues = pivot_absvalues;
+    model.pivot_values = pivot_values;
     model.modeling_polynomials = {};
     model_changed = last_pt_included < p_ini;
 end

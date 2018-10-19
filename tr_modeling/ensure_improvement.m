@@ -36,17 +36,4 @@ function [model, exitflag] = ensure_improvement(model, funcs, bl, bu, options)
             exitflag = 4;
         end
     end
-
-    % Check if model changed
-    if isempty(model.modeling_polynomials)
-        % Recompute polynomials
-
-        % basis = pivot_polynomials; % Needs tests
-        basis = band_prioritizing_basis(size(model.points_shifted, 1)); % Hopefully more accurate
-                                              % than using pivots
-        % Always recompute on this function
-        model.modeling_polynomials = ...
-            recompute_polynomial_models(model.points_shifted, model.fvalues, ...
-                                        basis);        
-    end
 end

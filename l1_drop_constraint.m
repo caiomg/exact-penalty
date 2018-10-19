@@ -23,10 +23,16 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
                                                  Q, R, ind_eactive, true);
     else
         ind_qr(ind_j) = [];
-        [Q, R] = qrdelete(Q, R, ind_j);
-        % Update space orthogonal to active constraints
-        r_columns = size(R, 2);
-        N = Q(:, r_columns+1:end);
+        if length(ind_qr) > 0
+            [Q, R] = qrdelete(Q, R, ind_j);
+            % Update space orthogonal to active constraints
+            r_columns = size(R, 2);
+            N = Q(:, r_columns+1:end);
+        else
+           R = zeros(length(Q), 0);
+           Q = eye(length(Q));
+           N = Q;
+        end
     end
 
 end

@@ -53,7 +53,7 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
                         orthogonalize_to_other_polynomials(pivot_polynomials, poly_i, ...
                                                            points_shifted, p_ini);
                     
-                    [new_point_shifted, new_pivot_absvalue, point_found] ...
+                    [new_point_shifted, new_pivot_value, point_found] ...
                         = point_new(polynomial, tr_center_pt, ...
                                     radius_used, bl_shifted, bu_shifted, ...
                                     pivot_threshold);
@@ -110,7 +110,7 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
                 model.points_shifted = points_shifted;
                 model.fvalues(:, next_position) = new_fvalues;
                 model.pivot_polynomials = pivot_polynomials;
-                model.pivot_absvalues(:, next_position) = new_pivot_absvalue;
+                model.pivot_values(:, next_position) = new_pivot_value;
                 model.modeling_polynomials = {};
                 exitflag = true;
             else

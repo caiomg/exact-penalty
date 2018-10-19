@@ -1,18 +1,31 @@
-function [model] = move_to_best_point(model, f)
+function [model] = move_to_best_point(model, bl, bu, f)
 %MOVE_TO_BEST_POINT Summary of this function goes here
 %   Detailed explanation goes here
 
-    if nargin < 2
-        f = @(x) x(1);
+
+    points = model.points_abs;
+    fvalues = model.fvalues;
+    [dim, points_num] = size(points);
+
+    if nargin < 2 || isempty(bl)
+        bl = -inf(dim);
     end
-    [dim, points_num] = size(model.points_abs);
+    if nargin < 3 || isempty(bu)
+        bu = inf(dim);
+    end
+    if nargin < 4 || isempty(f)
+        f = @(v) v(1);
+    end    
+        
     min_f = inf;
     min_i = 0;
     for k = 1:points_num
-        val = f(model.fvalues(:, k));
-        if val < min_f
-            min_f = val;
-            min_i = k;
+        if isempty(find(points(:, k) < bl | points(:, k) > bu, 1))
+            val = f(fvalues(:, k));
+            if val < min_f
+                min_f = val;
+                min_i = k;
+            end
         end
     end
     if min_i ~= model.tr_center

@@ -1,4 +1,4 @@
-function [new_point, new_pivot_absvalue, point_found] = ...
+function [new_point, new_pivot_value, point_found] = ...
         point_new(polynomial, x_tr_center, radius, bl, bu, pivot_threshold)
     
     
@@ -14,24 +14,24 @@ function [new_point, new_pivot_absvalue, point_found] = ...
     if (exitflag_min == 0 || exitflag_min == 1) && (abs(pivot_min) ...
                                                     > pivot_threshold)
         if (exitflag_max == 0 || exitflag_max == 1) && (abs(pivot_max) ...
-                                                        > abs(pivot_min))
+                                                        >= abs(pivot_min))
             new_point = new_point_max;
-            new_pivot_absvalue = abs(pivot_max);
+            new_pivot_value = pivot_max;
             point_found = true;
         else
             new_point = new_point_min;
-            new_pivot_absvalue = abs(pivot_min);
+            new_pivot_value = pivot_min;
             point_found = true;
         end
     elseif (exitflag_max == 0 || exitflag_max == 1) && (abs(pivot_max) ...
-                                                        > pivot_threshold)
+                                                        >= pivot_threshold)
         new_point = new_point_max;
-        new_pivot_absvalue = abs(pivot_max);
+        new_pivot_value = pivot_max;
         point_found = true;
     else
         point_found = false;
         new_point = [];
-        new_pivot_absvalue = 0;
+        new_pivot_value = 0;
     end
     
         

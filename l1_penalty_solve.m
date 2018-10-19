@@ -20,7 +20,7 @@ for k = 1:length(option_names)
         options.(option_names{k}) = defaultoptions.(option_names{k});
     end
 end
-inspect_iteration = 40;
+inspect_iteration = 8;
                     
 gamma_1 = options.gamma_dec;
 gamma_2 = options.gamma_inc;
@@ -34,6 +34,11 @@ rel_pivot_threshold = options.pivot_threshold;
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
 [dimension, n_initial_points] = size(initial_points);
+if  (~isempty(bl) && ~isempty(find(initial_points(:, 1) < bl, 1))) || ...
+        (~isempty(bu) && ~isempty(find(initial_points(:, 1) > bu, 1)))
+     % Replace
+     initial_points(:, 1) = project_to_bounds(initial_points(:, 1), bl, bu);
+end
 if n_initial_points == 1
     % Finding a random second point
     old_seed = rng('default');
@@ -63,25 +68,11 @@ for nf = 1:n_functions
     end
 end
 
-% Calculating basis of polynomials
-switch options.basis
-  case 'linear'
-    basis = natural_basis(dimension, dimension+1);
-  case 'full quadratic'
-    basis = natural_basis(dimension);
-  case 'diagonal hessian'
-    basis = diagonal_basis(dimension);
-  case 'dummy'
-    basis = [];
-end
 
 % Initializing model structure
 trmodel = tr_model(initial_points, initial_fvalues, initial_radius);
 trmodel = rebuild_model(trmodel, options);
-basis = band_prioritizing_basis(size(trmodel.points_shifted, 1));
-trmodel.modeling_polynomials = ...
-            recompute_polynomial_models(trmodel.points_shifted, trmodel.fvalues, ...
-                                        basis);
+trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
 
 
 fphi = {f, phi{:}}';
@@ -102,8 +93,6 @@ p = @(x) l1_function(f, phi, mu, x);
 % QR decomposition of constraints gradients matrix A
 Q = zeros(dimension, 0);
 R = zeros(0, 0);
-ind_eactive = zeros(0, 1);
-
 
 
 radius_max = options.radius_max;
@@ -123,6 +112,8 @@ history_solution.q = nan;
 history_solution.ns = 0;
 while ~finish
 
+    trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
+
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
     current_constraints = extract_constraints_from_tr_model(trmodel);
 
@@ -137,8 +128,9 @@ while ~finish
                                [current_constraints(ind_qr).c]');
 
     if (q < 100*tol_g)
-        [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, epsilon, ...
-                                      mu, bl, bu, options);
+        [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, mu, ...
+                                                 epsilon, Lambda, ...
+                                                 bl, bu, options);
         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
         current_constraints = ...
             extract_constraints_from_tr_model(trmodel);
@@ -162,10 +154,11 @@ while ~finish
         % Stopping conditions
         if ~sum(multipliers < -tol_multipliers | ...
                 mu < multipliers - tol_multipliers) 
-            if q < tol_g
+            if norm(q) < tol_g
                 phih = [current_constraints(ind_qr).c]';
                 if norm(phih) < tol_con
                     if max([current_constraints.c]) > tol_con && false
+                        break % Address this outside
                         mu = mu*10;
                         p = @(x) l1_function(f, phi, mu, x);
                         px = trmodel.fvalues(1, 1) + mu*sum(max(0, trmodel.fvalues(2:end, 1)));
@@ -176,24 +169,24 @@ while ~finish
             end
         end
 
-        % Are there conditions for dropping one constraint?
-        if sum(multipliers < -tol_multipliers | mu < multipliers - ...
-               tol_multipliers)
-            while sum(multipliers < -tol_multipliers | mu < multipliers ...
-                      - tol_multipliers)
-                [Q, R, N, ind_qr, ind_eactive] = ...
-                        l1_drop_constraint(current_constraints, Q, R, ind_qr, ind_eactive, mu, ...
-                                           multipliers, tol_multipliers);
-                [multipliers, tol_multipliers] = ...
-                    l1_estimate_multipliers(fmodel, current_constraints, ...
-                                            mu, ind_qr, Q, R, x, bl, bu);
-                % break
-            end
+    % Are there conditions for dropping one constraint?
+        while sum(multipliers < -tol_multipliers | mu < multipliers ...
+                  - tol_multipliers)
+            [Q, R, N, ind_qr, ind_eactive] = ...
+                    l1_drop_constraint(current_constraints, Q, R, ind_qr, ind_eactive, mu, ...
+                                       multipliers, tol_multipliers);
             pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
                                                  current_constraints, ...
                                                  ind_qr, true);
             q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
-                                       [current_constraints(ind_qr).c]');
+                                       [current_constraints(ind_qr).c]');                                       
+            if norm(q) > max(Lambda, tol_g)
+                break
+            end
+            [multipliers, tol_multipliers] = ...
+                l1_estimate_multipliers(fmodel, current_constraints, ...
+                                        mu, ind_qr, Q, R, x, bl, bu);
+
         end
     end
 
@@ -206,7 +199,7 @@ while ~finish
                                          trmodel.radius, bl, bu);
         [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
                                                   current_constraints, ...
-                                                  mu, x0, ind_qr, ...
+                                                  mu, x, ind_qr, ...
                                                   Q, R, trmodel.radius, ...
                                                   bl, bu);
             if pred_h < pred_hc

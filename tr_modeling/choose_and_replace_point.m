@@ -11,7 +11,7 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
     tr_center = model.tr_center;
     tr_center_x = model.points_shifted(:, tr_center);
 
-    pivot_absvalues = model.pivot_absvalues;
+    pivot_values = model.pivot_values;
     pivot_polynomials = model.pivot_polynomials;
     
     points_shifted = model.points_shifted;
@@ -30,7 +30,7 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
     tol_shift = 10*eps(max(1, norm(shift_center, inf)));
 
     
-    [~, piv_order] = sort(pivot_absvalues(1:points_num));
+    [~, piv_order] = sort(pivot_values(1:points_num), 'ComparisonMethod', 'abs');
     polynomials_num = length(pivot_polynomials);
    
     % Could iterate through all pivots, but will try just dealing
@@ -41,8 +41,8 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
         % Better to just rebuild model
         success = false;
     else
-        current_absvalue = pivot_absvalues(pos);
-        [new_point_shifted, new_pivot_absvalue, point_found] = ...
+        current_pivot_value = pivot_values(pos);
+        [new_point_shifted, new_pivot_value, point_found] = ...
             point_new(pivot_polynomials(pos), tr_center_x, radius, ...
                       bl_shifted, bu_shifted, pivot_threshold);
         if point_found
@@ -82,13 +82,8 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
                 model.points_shifted(:, pos) = new_point_shifted;
                 model.fvalues(:, pos) = new_fvalues;
                 model.pivot_polynomials = pivot_polynomials;
-                model.pivot_absvalues(:, pos) = new_pivot_absvalue*model.pivot_absvalues(:, pos);
-                % basis = pivot_polynomials; % Needs tests
-                basis = band_prioritizing_basis(dim); % Hopefully more accurate than using pivots
-                model.modeling_polynomials = ...
-                    recompute_polynomial_models(model.points_shifted, ...
-                                                model.fvalues, ...
-                                                basis);
+                model.pivot_values(:, pos) = new_pivot_value*model.pivot_values(:, pos);
+                model.modeling_polynomials = {};
                 success = true;
             else
                success = false;

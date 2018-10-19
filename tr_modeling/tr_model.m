@@ -8,10 +8,11 @@ classdef tr_model < handle
         points_shifted
         cached_points
         cached_fvalues
+        cache_max
         tr_center
         radius
         pivot_polynomials
-        pivot_absvalues
+        pivot_values
         modeling_polynomials
     end
     
@@ -21,6 +22,8 @@ classdef tr_model < handle
             self.fvalues = fvalues;
             self.radius = radius;
             self.tr_center = 1;
+            dim = size(points, 1);
+            self.cache_max = 3*dim^2;
         end
     end
     

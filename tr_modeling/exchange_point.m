@@ -18,20 +18,20 @@ function [model, succeeded, pt_i] = exchange_point(model, new_point, new_fvalues
             block_beginning = dim+2;
             block_end = last_p;
         end
-        max_val = -inf;
+        max_val = 0;
         max_poly_i = 0;
         for poly_i = block_end:-1:block_beginning
             if poly_i ~= center_i
-                val = abs(model.pivot_absvalues(poly_i))*...
-                    abs(evaluate_polynomial(pivot_polynomials(poly_i), new_point_shifted));
-                if val > max_val
+                val = model.pivot_values(poly_i)*...
+                    evaluate_polynomial(pivot_polynomials(poly_i), new_point_shifted);
+                if abs(max_val) < abs(val)
                     max_val = val;
                     max_poly_i = poly_i;
                 end
             end
         end
         new_pivot_val = max_val;
-        if new_pivot_val > pivot_threshold
+        if abs(new_pivot_val) > pivot_threshold
             points_shifted(:, max_poly_i) = new_point_shifted;
             % Normalize polynomial value
             pivot_polynomials(max_poly_i) = normalize_polynomial(pivot_polynomials(max_poly_i), new_point_shifted);
@@ -48,7 +48,7 @@ function [model, succeeded, pt_i] = exchange_point(model, new_point, new_fvalues
             model.fvalues(:, max_poly_i) = new_fvalues;
             model.points_shifted = points_shifted;
             model.pivot_polynomials = pivot_polynomials;
-            model.pivot_absvalues(:, max_poly_i) = new_pivot_val;
+            model.pivot_values(:, max_poly_i) = new_pivot_val;
             model.modeling_polynomials = {};
             succeeded = true;
             pt_i = max_poly_i;

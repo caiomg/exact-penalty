@@ -62,7 +62,7 @@ function [model, exitflag] = add_point(model, new_point, new_fvalues, relative_p
         model.fvalues = fvalues;
         model.points_shifted = points_shifted;
         model.pivot_polynomials = pivot_polynomials;
-        model.pivot_absvalues(:, next_position) = abs(pivot_value);
+        model.pivot_values(:, next_position) = pivot_value;
     end
 
 end

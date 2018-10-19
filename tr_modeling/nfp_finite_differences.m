@@ -18,5 +18,6 @@ function l_alpha = nfp_finite_differences(points, fvalues, polynomials)
             l_alpha(:, m) = l_alpha(:, m) - l_alpha(:, n)*val;
         end
     end
+    
 end
     
