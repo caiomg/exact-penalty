@@ -29,7 +29,7 @@ function [model, exitflag] = add_point(model, new_point, new_fvalues, relative_p
             block_end = dim+1;
         else
             % Add to quadratic block
-            block_beginning = dim+1;
+            block_beginning = dim+2;
             block_end = polynomials_num;
         end
         [pivot_polynomials, pivot_value, success] = choose_pivot_polynomial(pivot_polynomials, points_shifted, next_position, block_end, pivot_threshold);
