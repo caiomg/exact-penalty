@@ -37,11 +37,11 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
             if p_ini < dim+1
                 % The model is not yet fully linear
                 block_beginning = 2;
-                block_end = dim+1;
+                block_end = p_ini + 1;
             else
                 % We can add a point to the quadratic block
                 block_beginning = dim+2;
-                block_end = polynomials_num;
+                block_end = p_ini + 1;
             end
             next_position = p_ini + 1;
             radius_used = radius;

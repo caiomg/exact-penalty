@@ -37,7 +37,7 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
     % with the worst one
     pos = piv_order(1);
     if (pos == 1 || pos == tr_center || ...
-        (pos < linear_terms && points_num > linear_terms))
+        (pos <= linear_terms && points_num > linear_terms))
         % Better to just rebuild model
         success = false;
     else
@@ -57,7 +57,7 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
                 
                 % Orthogonalize polynomials on present block (all)
                 if pos <= dim + 1
-                    block_beginning = 1;
+                    block_beginning = 2;
                     block_end = min(points_num, dim + 1);
                 else
                     block_beginning = dim + 2;
