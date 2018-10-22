@@ -327,7 +327,7 @@ while ~finish
         try
             check_nfp_polynomials(trmodel);
         catch this_error
-           rethrow(this_error);
+           1;%rethrow(this_error);
         end
         if iter == inspect_iteration
             warning('cmg:inspect_iteration', 'Iteration %d reached', iter);

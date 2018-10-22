@@ -5,7 +5,7 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
     radius_factor = options.radius_factor;
     
     radius = model.radius;
-    pivot_threshold = rel_pivot_threshold*radius;
+    pivot_threshold = rel_pivot_threshold*min(1, radius);
     points_shifted = model.points_shifted;
     [dim, p_ini] = size(points_shifted);
     shift_center = model.points_abs(:, 1);

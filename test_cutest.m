@@ -16,7 +16,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS97';
+problem_name = 'HS101';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -115,21 +115,24 @@ counter.reset_count()
 
 
 
-l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
+l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                        'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.05, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'initial_radius', 1, 'radius_max', 1e3, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
                         'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
-                        'pivot_imp', 1.1)
+                        'pivot_imp', 1.1, 'debug', true, 'inspect_iteration', 569)
 
 %%
+warning('off', 'cmg:badly_conditioned_system');
 p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
 [x, hs2] = l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, bl, bu, l1_options)
 fx = f(x)
 nphi = norm(max(0, nlcon(x)))
+warning('on', 'cmg:badly_conditioned_system');
+
 
 rng(p_seed);
 

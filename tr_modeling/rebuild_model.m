@@ -1,11 +1,12 @@
 function [model, model_changed] = rebuild_model(model, options)
     
     radius_factor = options.radius_factor;
-    pivot_threshold = options.pivot_threshold;
+    pivot_threshold_rel = options.pivot_threshold;
+    radius = model.radius;
+    pivot_threshold = pivot_threshold_rel*min(1, radius);
 
     points_abs = [model.points_abs, model.cached_points];
     fvalues = [model.fvalues, model.cached_fvalues];
-    radius = model.radius;
     [dim, p_ini] = size(points_abs);
     
     % Center will be first
