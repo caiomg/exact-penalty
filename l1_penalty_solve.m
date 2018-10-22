@@ -12,7 +12,9 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'radius_factor', 6, ...
                         'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
-                        'criticality_omega', 0.5, 'basis', 'full quadratic');
+                        'criticality_omega', 0.5, ...
+                        'basis', 'full quadratic', 'debug', false, ...
+                        'inspect_iteration', 10);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -20,7 +22,11 @@ for k = 1:length(option_names)
         options.(option_names{k}) = defaultoptions.(option_names{k});
     end
 end
-inspect_iteration = 8;
+if options.debug
+    inspect_iteration = options.inspect_iteration;
+else
+    inspect_iteration = inf;
+end
                     
 gamma_1 = options.gamma_dec;
 gamma_2 = options.gamma_inc;
@@ -83,11 +89,10 @@ linsolve_opts.UT = true;
 x0 = initial_points(:, 1);
 x = x0;
 dimension = size(x, 1);
-n_constraints = size(phi, 1);
 tol_g = 1e-5;
 tol_con = 1e-5;
 tol_radius = options.tol_radius;
-gamma1 = 0.01;
+tol_f = options.tol_f;
 
 p = @(x) l1_function(f, phi, mu, x);
 % QR decomposition of constraints gradients matrix A
@@ -221,7 +226,7 @@ while ~finish
         end
     else
         % Step including multipliers
-        if norm(N'*pseudo_gradient) >= tol_g
+        if norm(N'*pseudo_gradient) >= tol_g % Should be using criticality measure
             try
                 [h, pred_h] = l1_horizontal_step(fmodel, ...
                                                  current_constraints, ...
@@ -257,7 +262,9 @@ while ~finish
             evaluate_step = true;
         end
     else
-        if pred <= 0 % || (norm(s) < 0.05*trmodel.radius && ~geometry_ok)
+        if ((pred < tol_radius*1e-2) || ...
+            (pred < tol_radius*abs(px) && norm(s) < tol_radius) || ...
+            (pred < tol_f*abs(px)*1e-3))
             evaluate_step = false;
         else
             evaluate_step = true;
@@ -281,9 +288,7 @@ while ~finish
         end
     else
         rho = -inf;
-        if ~geometry_ok
-            [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
-        end
+        [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
         if geometry_ok && (q < Lambda || pred <= 0)
             [epsilon, Lambda] = l1_reduce_lambda(epsilon, Lambda, ...
                                                  current_constraints, ...
@@ -291,7 +296,7 @@ while ~finish
                                                  R, tol_g, tol_con); 
         end
     end
-    if rho < eta_2 && geometry_ok
+    if rho <= eta_2 && mchange_flag == 4
         gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
         trmodel.radius = gamma_dec*trmodel.radius;
     else
