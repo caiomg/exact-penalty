@@ -22,7 +22,8 @@ for k = 1:length(option_names)
         options.(option_names{k}) = defaultoptions.(option_names{k});
     end
 end
-if options.debug
+debug_on = options.debug;
+if debug_on
     inspect_iteration = options.inspect_iteration;
 else
     inspect_iteration = inf;
@@ -118,6 +119,9 @@ history_solution.ns = 0;
 while ~finish
 
     trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
+    if debug_on
+        check_interpolation(trmodel);
+    end
 
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
     current_constraints = extract_constraints_from_tr_model(trmodel);
@@ -319,8 +323,15 @@ while ~finish
     if trmodel.radius < tol_radius
         finish = true;
     end
-    if iter == inspect_iteration
-        warning('cmg:inspect_iteration', 'Iteration %d reached', iter);
+    if debug_on
+        try
+            check_nfp_polynomials(trmodel);
+        catch this_error
+           rethrow(this_error);
+        end
+        if iter == inspect_iteration
+            warning('cmg:inspect_iteration', 'Iteration %d reached', iter);
+        end
     end
 end
 % In case we decided to preallocate
