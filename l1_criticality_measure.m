@@ -9,7 +9,7 @@ end
 
 dimension = size(x, 1);
 tol_ort = 1e-5;
-tol_con = 1e-10;
+tol_con = 1e-5;
 while true
     cols_r = size(R, 2);
     N = Q(:, cols_r+1:end);
