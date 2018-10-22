@@ -55,7 +55,7 @@ n_problems = length(selected_problems);
 solved_problems = false(n_problems, 1);
 clear results;
 
-
+bad_cond_warn = warning('off', 'cmg:badly_conditioned_system');
 
 for k = 1:n_problems
     iter = iter + 1;
@@ -221,6 +221,7 @@ for k = 1:n_problems
     end
     terminate_cutest_problem();
 end
+warning('on', 'cmg:badly_conditioned_system');
 [~, results_order] = sort(all_solved);
 good_results_ordered = {good_results{results_order}};
     filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
