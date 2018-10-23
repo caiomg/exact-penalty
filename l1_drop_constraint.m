@@ -9,12 +9,14 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
     end
 
 
-    % TODO: try other choices
-    if min(multipliers) < tol && ~(-min(multipliers) < max(multipliers) - mu)
-        [~, ind_j] = min(multipliers);
-    elseif max(multipliers) > mu + tol
-        [~, ind_j] = max(multipliers);
-    end
+%     % TODO: try other choices
+%     if min(multipliers) < tol && ~(-min(multipliers) < max(multipliers) - mu)
+%         [~, ind_j] = min(multipliers);
+%     elseif max(multipliers) > mu + tol
+%         [~, ind_j] = max(multipliers);
+%     end
+
+    ind_j = find(multipliers < tol | multipliers > mu + tol, 1);
 
     % Remove active constraint from set
     ind_eactive(ind_eactive == ind_qr(ind_j)) = [];
