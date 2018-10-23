@@ -1,5 +1,6 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, bu)
 
+    matlab_solver = true;
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);
@@ -44,34 +45,35 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
         end
     end
     
+    if matlab_solver
 
-%     fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-%                                    'Algorithm', 'sqp', ...
-%                                    'SpecifyObjectiveGradient', true);
-%     [x, fval, exitflag] = fmincon(f, x0, [], [], [], [], ...
-%                                   bl_mod, bu_mod, [], ...
-%                                   fmincon_options);
-    
-% %     if exitflag == 0 || exitflag == 1
-% %         true; % Success
-% %     else
-% %         warning('cmg:tr_minimization_failed', 'TR minimization failed');
-% %     end
+        fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+                                       'Algorithm', 'interior-point', ...
+                                       'SpecifyObjectiveGradient', true);
+        [x, fval, exitflag] = fmincon(f, x0, [], [], [], [], ...
+                                      bl_mod, bu_mod, [], ...
+                                      fmincon_options);
 
-    f_ipopt.objective = f;
-    f_ipopt.gradient = @(x) H*x + g;
-    f_ipopt.hessian = @(x, sigma, lambda) sparse(tril(H));
-    f_ipopt.hessianstructure = @() sparse(tril(ones(size(H))));
-    
-    ipopt_options.lb = bl_mod;
-    ipopt_options.ub = bu_mod;
-    ipopt_options.ipopt.print_level = 0;
-    ipopt_options.ipopt.hessian_constant = 'yes';
-    
-    [x, info] = ipopt(x0, f_ipopt, ipopt_options);
-    fval = f(x);
-    exitflag = 0;
-    
+        if exitflag >= 0
+             exitflag = 0;
+        else
+             warning('cmg:tr_minimization_failed', 'TR minimization failed');
+        end
+    else
+        f_ipopt.objective = f;
+        f_ipopt.gradient = @(x) H*x + g;
+        f_ipopt.hessian = @(x, sigma, lambda) sparse(tril(H));
+        f_ipopt.hessianstructure = @() sparse(tril(ones(size(H))));
+
+        ipopt_options.lb = bl_mod;
+        ipopt_options.ub = bu_mod;
+        ipopt_options.ipopt.print_level = 0;
+        ipopt_options.ipopt.hessian_constant = 'yes';
+
+        [x, info] = ipopt(x0, f_ipopt, ipopt_options);
+        fval = f(x);
+        exitflag = 0;
+    end
 end
 
     
