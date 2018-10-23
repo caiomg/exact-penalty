@@ -116,6 +116,7 @@ history_solution.px = px;
 history_solution.fx = fx;
 history_solution.q = nan;
 history_solution.ns = 0;
+evaluate_step = true;
 while ~finish
 
     trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
@@ -230,7 +231,7 @@ while ~finish
         end
     else
         % Step including multipliers
-        if norm(N'*pseudo_gradient) >= tol_g % Should be using criticality measure
+        if q >= tol_g % Should be using criticality measure
             try
                 [h, pred_h] = l1_horizontal_step(fmodel, ...
                                                  current_constraints, ...
@@ -266,7 +267,7 @@ while ~finish
             evaluate_step = true;
         end
     else
-        if ((pred < tol_radius*1e-2) || ...
+        if evaluate_step && ((pred < tol_radius*1e-2) || ...
             (pred < tol_radius*abs(px) && norm(s) < tol_radius) || ...
             (pred < tol_f*abs(px)*1e-3))
             evaluate_step = false;
