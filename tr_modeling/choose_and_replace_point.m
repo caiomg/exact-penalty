@@ -30,7 +30,7 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
     tol_shift = 10*eps(max(1, norm(shift_center, inf)));
 
     
-    [~, piv_order] = sort(pivot_values(1:points_num), 'ComparisonMethod', 'abs');
+    [~, piv_order] = sort(abs(pivot_values(1:points_num)));
     polynomials_num = length(pivot_polynomials);
    
     % Could iterate through all pivots, but will try just dealing
