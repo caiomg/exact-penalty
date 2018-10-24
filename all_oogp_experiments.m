@@ -27,10 +27,10 @@ else
     log_dir = '.';
 end
 
-all_scenarios = {'C2', 'C3', 'C1'};
+all_scenarios = {'C3', 'C2', 'C1'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
-for scen = 1:length(all_scenarios)
-    for ic = 1:length(all_ic)
+for ic = 1:length(all_ic)
+    for scen = 1:length(all_scenarios)
         scenario = all_scenarios{scen}
         initial_condition = all_ic{ic}
         experiment_oogp

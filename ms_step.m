@@ -38,15 +38,25 @@ else
    [va, ind_va] = min(diag(Dv));
    u = V(:, ind_va);
    % A bit higher
-   lambda = abs(va)*1.01 + eps(max(1, norm(H, 1)));
-   for k = 1:10
+   lambda = abs(va)*1.01 + 100*eps(max(1, norm(H, 1)));
+   r_computed = false;
+   for k = 1:15
        try
            R = chol(H + lambda*eye(size(H)));
+           r_computed = true;
            break
        catch current_exception
            % One more try with other tolerance...
            lambda = lambda*1.05;
        end
+   end
+   if ~r_computed
+       % This shouldn't happen
+       %  Gershgorin circles approach
+       H_offdiag = H - diag(diag(H));
+       sum_offdiag = sum(abs(H_offdiag), 2);
+       H = H + diag(sum_offdiag) + 100*eps(max(1, norm(H, 1)));
+       R = chol(H + lambda*eye(size(H)));
    end
    lambda_l = abs(va);
 end
