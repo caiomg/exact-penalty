@@ -72,7 +72,8 @@ f = @(x) -cache.getvalue(x, 1);
 all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
           @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
-mu = 1e6;
+%mu = 1e6;
+mu = 10^muexp;
 epsilon = 0.1/n_scale;
 delta = 1e-6/n_scale;
 Lambda = 0.1/n_scale;
@@ -82,6 +83,6 @@ dbstop if warning 'cmg:inspect_iteration'
                            Lambda, bl_scaled, bu_scaled, l1_options)
 evaluations = ec.get_count()
 x_full_space = x.*fixed_scale + O
-  
-filename =  fullfile(log_dir, [initial_condition, '_', scenario]);
+rel_name = sprintf('%s_%s_%d', initial_condition, scenario, muexp);
+filename =  fullfile(log_dir, rel_name);
 save(filename);
