@@ -274,7 +274,7 @@ while ~finish
     else
         if evaluate_step && ((pred < tol_radius*1e-2) || ...
             (pred < tol_radius*abs(px) && norm(s) < tol_radius) || ...
-            (pred < tol_f*abs(px)*1e-3))
+            (pred < tol_f*abs(px)*1e-5))
             evaluate_step = false;
         else
             evaluate_step = true;
