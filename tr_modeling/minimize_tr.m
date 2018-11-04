@@ -1,6 +1,6 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, bu)
 
-    matlab_solver = false;
+    matlab_solver = true;
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);
@@ -47,6 +47,10 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
 
     solver_x_tol = min(1e-8, 1e-2*min(min(bu_mod - bl_mod)));
     solver_constr_tol = min(1e-10, 1e-2*min(min(bu_mod - bl_mod)));
+    if ~matlab_solver && exist('ipopt', 'file') ~= 3
+        % Override option
+        matlab_solver = true;
+    end
     if matlab_solver
         if norm(H, inf) > 10*eps(norm(g))
             fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
