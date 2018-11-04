@@ -30,11 +30,13 @@ end
 all_mu = [6, 3, 4, 5];
 all_scenarios = {'C3', 'C2', 'C1'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
-for ic = 1:length(all_ic)
-    for scen = 1:length(all_scenarios)
-        scenario = all_scenarios{scen}
-        initial_condition = all_ic{ic}
-        experiment_oogp
+for muexp = all_mu
+    for ic = 1:length(all_ic)
+        for scen = 1:length(all_scenarios)
+            scenario = all_scenarios{scen}
+            initial_condition = all_ic{ic}
+            experiment_oogp
+        end
     end
 end
 
