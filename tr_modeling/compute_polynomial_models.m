@@ -12,7 +12,7 @@ function polynomials = compute_polynomial_models(model)
         polynomials = compute_quadratic_mn_polynomials(model.points_abs, model.tr_center, model.fvalues);
     end
     [~, wid] = lastwarn();
-    if points_num <= linear_terms || points_num == full_q_terms || strcmp(wid, 'cmg:badly_conditioned_system')
+    if points_num <= linear_terms || points_num == full_q_terms %|| strcmp(wid, 'cmg:badly_conditioned_system')
         % Compute model with incomplete (complete) basis
         l_alpha = nfp_finite_differences(model.points_shifted, model.fvalues, model.pivot_polynomials(1:points_num));
         for k = functions_num:-1:1
