@@ -7,9 +7,7 @@ linopts_u.UT = true;
 dim = size(H, 2);
 
 if ~issymmetric(H)
-    if norm(H - H') < sqrt(eps)
-        H = (H + H')/2;
-    end
+    H = (H + H')/2;
 end
 kappa_easy = 0.1;
 
@@ -53,9 +51,12 @@ else
    if ~r_computed
        % This shouldn't happen
        %  Gershgorin circles approach
-       H_offdiag = H - diag(diag(H));
+       diagH = diag(H);
+       H_offdiag = H - diag(diagH);
        sum_offdiag = sum(abs(H_offdiag), 2);
-       H = H + diag(sum_offdiag) + 100*eps(max(1, norm(H, 1)));
+       sign_diag_H = sign(diagH);
+       sign_diag_H(sign_diag_H == 0) = sign_diag_H(sign_diag_H == 0) +1;
+       H = H + diag(sum_offdiag).*sign_diag_H + 100*eps(max(1, norm(H, 1)));
        R = chol(H + lambda*eye(size(H)));
    end
    lambda_l = abs(va);
