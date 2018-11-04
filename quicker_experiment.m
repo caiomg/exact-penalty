@@ -166,7 +166,7 @@ for k = 1:n_problems
     %%
 
     counter.reset_count();
-    counter.set_max_count(10000);
+    counter.set_max_count(50000);
 
     try
         p_seed = rng('default');
@@ -183,6 +183,7 @@ for k = 1:n_problems
         fx = f(x);
         nphi = norm(max(0, nlcon(x)));
         error_obj = selected_problems(k).solution - fx;
+        error_rel = error_obj/abs(selected_problems(k).solution);
         [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-5, 5e-5);
     else
         x = [];
@@ -214,7 +215,7 @@ for k = 1:n_problems
 
     all_results{iter} = results;
     if kkt || ...
-            (~isempty(nphi) && nphi < 1e-6 && -error_obj < 5e-6)
+            (~isempty(nphi) && nphi < 1e-6 && -error_rel < 1e-6)
         solved_problems(k) = true;
         good_results{sum(solved_problems)} = results(k, 1);
         all_solved(end+1) = k;
