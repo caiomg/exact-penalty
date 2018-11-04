@@ -283,7 +283,7 @@ while ~finish
     if evaluate_step
         trial_point = project_to_bounds(x + s, bl, bu);
         [p_trial, trial_fvalues] = p(trial_point);
-        if find(isnan(trial_fvalues), 1)
+        if find(~isfinite(trial_fvalues), 1)
             rho = -inf;
         else
             ared = px - p_trial; % There are better ways
@@ -293,8 +293,10 @@ while ~finish
             x = trial_point;
             [trmodel, mchange_flag] = change_tr_center(trmodel, trial_point, trial_fvalues, options);
             px = p_trial;
-        else
+        elseif rho ~= -inf
             [trmodel, mchange_flag] = try_to_add_point(trmodel, trial_point, trial_fvalues, fphi, bl, bu, options);
+        else
+            [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
         end
     else
         rho = -inf;
