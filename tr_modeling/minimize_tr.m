@@ -1,6 +1,6 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, bu)
 
-    matlab_solver = true;
+    matlab_solver = false;
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);
@@ -44,16 +44,45 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
             x0 = x0 + min(min(alpha_l(~nz), alpha_u(~nz)))*V(:, min_eig);
         end
     end
-    
+
+    solver_x_tol = min(1e-8, 1e-2*min(min(bu_mod - bl_mod)));
+    solver_constr_tol = min(1e-10, 1e-2*min(min(bu_mod - bl_mod)));
     if matlab_solver
-
-        fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                                       'Algorithm', 'interior-point', ...
-                                       'SpecifyObjectiveGradient', true);
-        [x, fval, exitflag] = fmincon(f, x0, [], [], [], [], ...
-                                      bl_mod, bu_mod, [], ...
-                                      fmincon_options);
-
+        if norm(H, inf) > 10*eps(norm(g))
+            fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+                                           'Algorithm', 'interior-point', ...
+                                           'SpecifyObjectiveGradient', true);%, ...
+                                           %'StepTolerance', solver_x_tol, ...
+                                           %'OptimalityTolerance', 1e-6);
+                                           %'ConstraintTolerance', solver_constr_tol);
+            [x, fval, exitflag] = fmincon(f, x0, [], [], [], [], ...
+                                          bl_mod, bu_mod, [], ...
+                                          fmincon_options);
+            if exitflag < 0 || norm(x) < 0.001*radius
+                fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+                                               'Algorithm', 'active-set', ...
+                                               'SpecifyObjectiveGradient', true, ...
+                                               'StepTolerance', solver_x_tol, ...
+                                               'OptimalityTolerance', 1e-6);
+                                               %'ConstraintTolerance', solver_constr_tol);
+                [x2, fval2, exitflag2] = fmincon(f, x0, [], [], [], [], ...
+                                              bl_mod, bu_mod, [], ...
+                                              fmincon_options);
+                 if (fval2 < fval && exitflag2 >= 0) || exitflag < 0
+                     x = x2;
+                     fval = fval2;
+                     exitflag = exitflag2;
+                 end
+             end
+        else
+            linprog_problem.f = g;
+            linprog_problem.solver = 'linprog';
+            linprog_problem.lb = bl_mod;
+            linprog_problem.ub = bu_mod;
+            linprog_problem.options.Display = 'off';
+            [x, ~, exitflag, output] = linprog(linprog_problem);
+            fval = f(x);
+        end
         if exitflag >= 0
              exitflag = 0;
         else
@@ -69,6 +98,11 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
         ipopt_options.ub = bu_mod;
         ipopt_options.ipopt.print_level = 0;
         ipopt_options.ipopt.hessian_constant = 'yes';
+        ipopt_options.ipopt.acceptable_iter = 100;
+        ipopt_options.ipopt.tol = 1e-9;
+        ipopt_options.ipopt.compl_inf_tol = 1e-5;
+        % ipopt_options.ipopt.dual_inf_tol = 0.5;
+        % ipopt_options.ipopt.constr_viol_tol = solver_constr_tol;
 
         [x, info] = ipopt(x0, f_ipopt, ipopt_options);
         fval = f(x);
