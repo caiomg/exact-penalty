@@ -1,12 +1,16 @@
-function terminate_cutest_problem()
+function terminate_cutest_problem(problem_path)
 
 global problem_name_cutest
 global problem_path_cutest
 global problem_data_cutest
 
-if ~isempty(problem_path_cutest)
+if nargin < 1
+    problem_path = problem_path_cutest;
+end
+
+if ~isempty(problem_path)
     original_dir = pwd();
-    cd(problem_path_cutest);
+    cd(problem_path);
     try
         cutest_terminate();
     catch exception
@@ -16,7 +20,7 @@ if ~isempty(problem_path_cutest)
         end
     end
     cd(original_dir);
-    rmpath(problem_path_cutest);
+    rmpath(problem_path);
 
     clear global problem_path_cutest problem_name_cutest problem_data_cutest
 end
