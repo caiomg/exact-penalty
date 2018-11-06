@@ -10,7 +10,7 @@ function print_my_table_row(results, fd)
     else
         fprintf(fd, ' % 8d &', results.mu);
     end
-    fprintf(fd, ' % 5d &', results.fcount);
+    fprintf(fd, ' % 6d &', results.fcount);
     fprintf(fd, ' % +9.3g &', results.fx);
     fprintf(fd, ' % +9.3g &', results.error_obj);
     fprintf(fd, ' % 9.3g &', norm(results.lgrad));
