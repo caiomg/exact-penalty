@@ -14,7 +14,7 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, ...
                         'basis', 'full quadratic', 'debug', false, ...
-                        'inspect_iteration', 10);
+                        'inspect_iteration', 10, 'max_iter', 1e6);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -36,7 +36,7 @@ eta_1 = options.eta_1;
 eta_2 = options.eta_2;
 initial_radius = options.initial_radius;
 rel_pivot_threshold = options.pivot_threshold;
-
+max_iter = options.max_iter;
 
 all_f = {f, phi{:}};
 n_functions = size(all_f, 2);
@@ -328,12 +328,12 @@ while ~finish
     history_solution(iter).rho = rho;
     history_solution(iter).radius = trmodel.radius;
     history_solution(iter).px = px;
-    history_solution(iter).fx = trmodel.fvalues(1,1);
+    history_solution(iter).fx = trmodel.fvalues(1, trmodel.tr_center);
     history_solution(iter).q = q;
     history_solution(iter).ns = norm(s);
 
 
-    if trmodel.radius < tol_radius
+    if trmodel.radius < tol_radius || iter > iter_max
         finish = true;
     end
     if debug_on
