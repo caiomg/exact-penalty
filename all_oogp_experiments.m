@@ -27,7 +27,7 @@ else
     log_dir = '.';
 end
 
-all_mu = [6, 3, 4, 5];
+all_mu = [6, 5, 7];
 all_scenarios = {'C3', 'C2', 'C1'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
 for muexp = all_mu
