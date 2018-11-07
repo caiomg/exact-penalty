@@ -333,7 +333,7 @@ while ~finish
     history_solution(iter).ns = norm(s);
 
 
-    if trmodel.radius < tol_radius || iter > iter_max
+    if trmodel.radius < tol_radius || iter > max_iter
         finish = true;
     end
     if debug_on
