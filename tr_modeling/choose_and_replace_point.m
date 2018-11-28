@@ -42,13 +42,22 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
         success = false;
     else
         current_pivot_value = pivot_values(pos);
-        [new_point_shifted, new_pivot_value, point_found] = ...
+        [new_points_shifted, new_pivots, point_found] = ...
             point_new(pivot_polynomials(pos), tr_center_x, radius, ...
                       bl_shifted, bu_shifted, pivot_threshold);
         if point_found
-            new_point_abs = unshift_point(new_point_shifted);
-            [new_fvalues, f_succeeded] = ...
-                evaluate_new_fvalues(funcs, new_point_abs);
+            for found_i = 1:length(new_points_shifted)
+                new_point_shifted = new_points_shifted(:, found_i);
+                new_pivot_value = new_pivots(found_i);
+                new_point_abs = unshift_point(new_point_shifted);
+                [new_fvalues, f_succeeded] = ...
+                    evaluate_new_fvalues(funcs, new_point_abs);
+                if f_succeeded
+                    break
+                else
+                    true;
+                end
+            end
             if f_succeeded
                 % Normalize polynomial value
                 pivot_polynomials(pos) = ...
@@ -76,6 +85,8 @@ function [model, success] = choose_and_replace_point(model, funcs, bl, bu, optio
                                                         points_num);
                 
                 % Update model and recompute polynomials
+                cache_size = size(model.cached_points, 2);
+                cache_size = min(cache_size, model.cache_max - 1);
                 model.cached_points = [model.points_abs(:, pos), model.cached_points];
                 model.cached_fvalues = [model.fvalues(:, pos), model.cached_fvalues];
                 model.points_abs(:, pos) = new_point_abs;

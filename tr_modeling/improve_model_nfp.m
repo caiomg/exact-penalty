@@ -53,14 +53,23 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
                         orthogonalize_to_other_polynomials(pivot_polynomials, poly_i, ...
                                                            points_shifted, p_ini);
                     
-                    [new_point_shifted, new_pivot_value, point_found] ...
+                    [new_points_shifted, new_pivots, point_found] ...
                         = point_new(polynomial, tr_center_pt, ...
                                     radius_used, bl_shifted, bu_shifted, ...
                                     pivot_threshold);
                     if point_found
-                        new_point_abs = unshift_point(new_point_shifted);
-                        [new_fvalues, f_succeeded] = ...
-                            evaluate_new_fvalues(funcs, new_point_abs);
+                        for found_i = 1:length(new_points_shifted)
+                            new_point_shifted = new_points_shifted(:, found_i);
+                            new_pivot_value = new_pivots(found_i);
+                            new_point_abs = unshift_point(new_point_shifted);
+                            [new_fvalues, f_succeeded] = ...
+                                evaluate_new_fvalues(funcs, new_point_abs);
+                            if f_succeeded
+                                break
+                            else
+                                true;
+                            end
+                        end
                         if f_succeeded
                             % Stop trying pivot polynomials
                             break %(for poly_i)
@@ -70,12 +79,14 @@ function [model, exitflag] = improve_model_nfp(model, funcs, bl, bu, options)
                 end
                 if point_found && f_succeeded
                     break %(for attempts)
-                else
+                elseif point_found
                     % Reduce radius if it didn't break
                     radius_used = 0.5*radius_used;
                     if radius_used < tol_radius
                         break
                     end
+                else
+                    break
                 end
             end
             if point_found && f_succeeded
