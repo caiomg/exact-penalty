@@ -16,7 +16,7 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
 %         [~, ind_j] = max(multipliers);
 %     end
 
-    ind_j = find(multipliers < tol | multipliers > mu + tol, 1);
+    ind_j = find(multipliers < -tol | multipliers > mu + tol, 1);
 
     % Remove active constraint from set
     ind_eactive(ind_eactive == ind_qr(ind_j)) = [];
