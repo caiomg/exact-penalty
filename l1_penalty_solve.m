@@ -212,6 +212,8 @@ while ~finish
                 true;
                 % Just pass
             end
+%              h2 = null_space_step_cg(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu);
+%              pred_2 = predict_descent(fmodel, current_constraints, h2, mu, []);
         [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
                                                   current_constraints, ...
                                                   mu, x, ind_qr, ...
@@ -221,15 +223,23 @@ while ~finish
                 h = hc;
                 pred_h = pred_hc;
             end
+%              if pred_h < pred_2
+%                  h = h2;
+%                  pred_h = pred_2;
+%              end
         catch err1
             rethrow(err1);
         end
         v = tr_vertical_step_new(fmodel, current_constraints, Q, R, ...
                                  mu, h, ind_qr, trmodel.radius, x, bl, bu);
+        %        v2 = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+        %                   trmodel.radius, x, bl, bu);
 
         s = (h + v);
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
 
+%         s2 = (h + v2);
+%         pred2 = predict_descent(fmodel, current_constraints, s2, mu, []);
         if pred < pred_h
             s = h;
             pred = pred_h;

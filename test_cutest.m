@@ -16,7 +16,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS101';
+problem_name = 'HS85';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -94,7 +94,7 @@ end
 x0 = prob.x;
 
 % Parameters
-mu = 10000;
+mu = 10;
 
 epsilon = 1;
 delta = 1e-6;
