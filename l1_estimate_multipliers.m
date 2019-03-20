@@ -25,44 +25,40 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     I = eye(dimension);
     Al = -I(:, l_active);
     Au = I(:, u_active);
-    bounds_included = 0;
+    n_constraints = size(R, 2);
     lower_included = 0;
     upper_included = 0;
     for k = 1:n_lower_active
         this_grad = Al(:, k);
-        norm_n = norm((Q*R)*(R\(Q'*this_grad)) - this_grad, 1);
+        cols_r = size(R, 2);
+        norm_n = norm(Q(:, cols_r + 1:end)'*this_grad);
         if norm_n > tol_ort
             lower_included = lower_included + 1;
-            bounds_included = bounds_included + 1;
-            [Q, R] = qrinsert(Q, R, bounds_included, this_grad);
+            [Q, R] = qrinsert(Q, R, cols_r+1, this_grad);
         else
             l_active(this_grad ~= 0) = false;
         end
     end
     for k = 1:n_upper_active
         this_grad = Au(:, k);
-        norm_n = norm((Q*R)*(R\(Q'*this_grad)) - this_grad, 1);
+        cols_r = size(R, 2);
+        norm_n = norm(Q(:, cols_r + 1:end)'*this_grad);
         if norm_n > tol_ort
             upper_included = upper_included + 1;
-            bounds_included = bounds_included + 1;
-            [Q, R] = qrinsert(Q, R, bounds_included, this_grad);
+            [Q, R] = qrinsert(Q, R, cols_r+1, this_grad);
         else
             u_active(this_grad ~= 0) = false;
         end
     end
-    if lower_included ~= sum(l_active)
-        error()
-    end
-    if upper_included ~= sum(u_active)
-        error()
-    end
-    
-    % Estimate multipliers
     cols_r = size(R, 2);
-    
+    assert(lower_included == sum(l_active));
+    assert(upper_included == sum(u_active));
+    assert(n_constraints + lower_included + upper_included == cols_r);
+
+    % Actual multiplier estimation
     lastwarn(''); % Reseting warnings
     % First estimate
-    multipliers = -linsolve(R(1:cols_r, :), (Q(:, 1:cols_r)'*pseudo_gradient), ut_option);
+    multipliers = -linsolve(R(1:cols_r, 1:cols_r), (Q(:, 1:cols_r)'*pseudo_gradient), ut_option);
     [~, warnid] = lastwarn();
     if strcmp('MATLAB:nearlySingularMatrix', warnid)
         1; % Breakpoint for debugging
@@ -70,7 +66,7 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     remainder = -((Q*R)*multipliers + pseudo_gradient);
 
     % Correction
-    correction = linsolve(R(1:cols_r, :), Q(:, 1:cols_r)'*remainder, ut_option);
+    correction = linsolve(R(1:cols_r, 1:cols_r), Q(:, 1:cols_r)'*remainder, ut_option);
     % Final calculation
     multipliers = multipliers + correction;
     % Tolerance
@@ -80,12 +76,12 @@ function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, 
     bu_mult = zeros(size(bu));
 
     if lower_included > 0
-        bl_mult(l_active) = multipliers(1:lower_included);
+        bl_mult(l_active) = multipliers(n_constraints+1:n_constraints+lower_included);
     end
     if upper_included > 0
-        bu_mult(u_active) = multipliers(lower_included + 1:lower_included + upper_included);
+        bu_mult(u_active) = multipliers(n_constraints + lower_included + 1:n_constraints + lower_included + upper_included);
     end
-    multipliers = multipliers(lower_included + upper_included + 1:end);
+    multipliers = multipliers(1:n_constraints);
     
 
 end
