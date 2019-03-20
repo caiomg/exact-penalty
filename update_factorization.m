@@ -1,56 +1,45 @@
-function [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
+function [N, Q, R, ind_qr] = update_factorization(cmodel, ...
                                                   Q, R, ind_eactive, perturb)
 
 tol = 1e-8;
 
-n_variables = size(current_constraints(1).g, 1);
+n_variables = size(cmodel(1).g, 1);
 n_eactive = size(ind_eactive, 1);
 ind_qr = zeros(0, 1);
-A = zeros(n_variables, 0);
-if perturb
-    for n = 1:n_eactive
-        norm_n = norm(current_constraints(ind_eactive(n)).g, 1);
-        if norm_n > tol
-            A = [A, current_constraints(ind_eactive(n)).g];
-            ind_qr(end+1, 1) = ind_eactive(n);
-        end
-    end
-    % Testing degeneracy
-    [L, U, P] = lu(A');
-    degenerate = false;
-    if size(L, 1) > n_variables
-        L = L(1:n_variables, :);
-        ind_qr = P*ind_qr;
-        ind_qr = ind_qr(1:n_variables, :);
-        degenerate = true;
-        A = U'*L';
-    end
-    [Q, R] = qr(A);
-    for n = 2:size(R, 2)
-        if abs(R(n, n)) < tol
-            R(n, n) = max(1, max(diag(R)))*tol*10*rand();
-            degenerate = true;
-        end
-    end
-    A = Q*R;
 
-else
-    Q = eye(n_variables);
-    R = zeros(n_variables, 0);
-    inserted = 0;
+Q = eye(n_variables);
+R = zeros(n_variables, 0);
+included = false(n_eactive, 1);
+n_included = 0;
+
+for rounds = 1:n_eactive
+    n_max = find(~included, 1);
+    norm_max = 0;
     for n = 1:n_eactive
-        this_grad = current_constraints(ind_eactive(n)).g;
-        norm_n = norm(A*(R\(Q'*this_grad)) - this_grad, 1);
-        if norm_n > tol
-            % Try to add column
-            [Q, R] = qrinsert(Q, R, inserted + 1, this_grad);
-            % Check if column really added
-            if size(R, 2) > inserted
-                inserted = inserted + 1;
-                A = [A, this_grad];
-                ind_qr(end+1, 1) = ind_eactive(n);
-            end
+        if ~included(n)
+            this_grad = cmodel(ind_eactive(n)).g;
+            norm_n = norm(Q(:, n_included+1:end)'*this_grad);
+        else
+            norm_n = 0;
         end
+        if norm_n > norm_max
+            norm_max = norm_n;
+            n_max = n;
+        end
+    end
+    if norm_max > tol
+        [Q, R] = qrinsert(Q, R, n_included + 1, cmodel(ind_eactive(n_max)).g);
+        n_included = n_included + 1;
+        included(n_max) = true;
+        ind_qr(n_included, 1) = ind_eactive(n_max);
+    elseif perturb && n_included < n_variables
+        perturbation_size = (10*tol)/(n_variables - n_included);
+        grad_perturbed = cmodel(ind_eactive(n_max)).g ...
+            + sum(Q(:, n_included+1:end), 2)*perturbation_size;
+        [Q, R] = qrinsert(Q, R, n_included + 1, grad_perturbed);
+        n_included = n_included + 1;
+        included(n_max) = true;
+        ind_qr(n_included, 1) = ind_eactive(n_max);
     end
 end
 
