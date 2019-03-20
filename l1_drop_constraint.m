@@ -9,9 +9,10 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
     end
 
 
-    %ind_j = find(multipliers < -tol | multipliers > mu + tol, 1);
+    ind_j = find(multipliers < -tol | multipliers > mu + tol, 1, 'last');
+    mval = min(multipliers(ind_j), mu - multipliers(ind_j));
 
-    [mval, ind_j] = min(min(multipliers, mu - multipliers));
+    %[mval, ind_j] = min(min(multipliers, mu - multipliers));
 
     if mval < -tol
         % Remove active constraint from set
