@@ -9,32 +9,31 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
     end
 
 
-%     % TODO: try other choices
-%     if min(multipliers) < tol && ~(-min(multipliers) < max(multipliers) - mu)
-%         [~, ind_j] = min(multipliers);
-%     elseif max(multipliers) > mu + tol
-%         [~, ind_j] = max(multipliers);
-%     end
+    %ind_j = find(multipliers < -tol | multipliers > mu + tol, 1);
 
-    ind_j = find(multipliers < -tol | multipliers > mu + tol, 1);
+    [mval, ind_j] = min(min(multipliers, mu - multipliers));
 
-    % Remove active constraint from set
-    ind_eactive(ind_eactive == ind_qr(ind_j)) = [];
-    if length(ind_eactive) > length(ind_qr)
-        [N, Q, R, ind_qr] = update_factorization(cmodel, ...
-                                                 Q, R, ind_eactive, true);
-    else
-        ind_qr(ind_j) = [];
-        if length(ind_qr) > 0
-            [Q, R] = qrdelete(Q, R, ind_j);
-            % Update space orthogonal to active constraints
-            r_columns = size(R, 2);
-            N = Q(:, r_columns+1:end);
+    if mval < -tol
+        % Remove active constraint from set
+        ind_eactive(ind_eactive == ind_qr(ind_j)) = [];
+        if length(ind_eactive) > length(ind_qr)
+            [N, Q, R, ind_qr] = update_factorization(cmodel, ...
+                                                     Q, R, ind_eactive, true);
         else
-           R = zeros(length(Q), 0);
-           Q = eye(length(Q));
-           N = Q;
+            ind_qr(ind_j) = [];
+            if ~isempty(ind_qr)
+                [Q, R] = qrdelete(Q, R, ind_j);
+                % Update space orthogonal to active constraints
+                r_columns = size(R, 2);
+                N = Q(:, r_columns+1:end);
+            else
+               R = zeros(length(Q), 0);
+               Q = eye(length(Q));
+               N = Q;
+            end
         end
+    else
+        warning('cmg:runtime', 'Shouldnt have tried to drop constraint');
     end
 
 end
