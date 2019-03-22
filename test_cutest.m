@@ -16,7 +16,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS85';
+problem_name = 'HS101';
 
 prob = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -122,7 +122,7 @@ l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
                         'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
-                        'pivot_imp', 1.1, 'debug', true, 'inspect_iteration', 569)
+                        'pivot_imp', 1.1, 'debug', true, 'inspect_iteration', 30)
 
 %%
 warning('off', 'cmg:badly_conditioned_system');

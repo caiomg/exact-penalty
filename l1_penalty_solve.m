@@ -14,7 +14,8 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, ...
                         'basis', 'full quadratic', 'debug', false, ...
-                        'inspect_iteration', 10, 'max_iter', 1e6);
+                        'inspect_iteration', 10, 'max_iter', 1e6, ...
+                        'divergence_threshold', 1e10);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -123,6 +124,9 @@ while ~finish
     if debug_on
         check_interpolation(trmodel);
     end
+    if abs(px) > options.divergence_threshold
+        break
+    end
 
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
     current_constraints = extract_constraints_from_tr_model(trmodel);
@@ -203,93 +207,54 @@ while ~finish
     geometry_ok = is_lambda_poised(trmodel, options);
     if norm(q) > Lambda
         % First-order step
-        try
-            try
-                [h, pred_h] = l1_horizontal_step(fmodel, current_constraints, ...
-                                                 mu, x, ind_qr, Q, R, ...
-                                                 trmodel.radius, bl, bu);
-            catch err0
-                true;
-                % Just pass
-            end
-%              h2 = null_space_step_cg(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu);
-%              pred_2 = predict_descent(fmodel, current_constraints, h2, mu, []);
-        [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
-                                                  current_constraints, ...
-                                                  mu, x, ind_qr, ...
-                                                  Q, R, trmodel.radius, ...
-                                                  bl, bu);
-            if pred_h < pred_hc
-                h = hc;
-                pred_h = pred_hc;
-            end
-%              if pred_h < pred_2
-%                  h = h2;
-%                  pred_h = pred_2;
-%              end
-        catch err1
-            rethrow(err1);
-        end
-        v = tr_vertical_step_new(fmodel, current_constraints, Q, R, ...
-                                 mu, h, ind_qr, trmodel.radius, x, bl, bu);
-        %        v2 = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-        %                   trmodel.radius, x, bl, bu);
+        h = null_space_step_cg(fmodel, current_constraints, mu, x, ...
+                                ind_qr, Q, R, trmodel.radius, bl, bu);
+        pred = predict_descent(fmodel, current_constraints, h, mu, []);
 
+        v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+                          trmodel.radius, x, bl, bu);
         s = (h + v);
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
 
-%         s2 = (h + v2);
-%         pred2 = predict_descent(fmodel, current_constraints, s2, mu, []);
-        if pred < pred_h
-            s = h;
-            pred = pred_h;
-        end
     else
         % Step including multipliers
         if q >= tol_g % Should be using criticality measure
-            try
-                [h, pred_h] = l1_horizontal_step(fmodel, ...
-                                                 current_constraints, ...
-                                                 mu, x, ind_qr, Q, ...
-                                                 R, trmodel.radius, ...
-                                                 bl, bu, multipliers);
-                [hc, pred_hc] = l1_horizontal_cauchy_step(fmodel, ...
-                                                          current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
-                if pred_h < pred_hc
-                    h = hc;
-                end
-            catch err1
-                rethrow(err1);
-            end
+            
+            [h, status_step] = null_space_step_complete(fmodel, ...
+                                                   current_constraints, ...
+                                                   mu, x, ind_qr, ...
+                                                   Q, R, trmodel.radius, ...
+                                                   bl, bu, multipliers);
             if isempty(find(multipliers < -tol_multipliers | ...
                              mu < multipliers - tol_multipliers, 1))
-                v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                         Q, R, mu, h, ind_qr, trmodel.radius, ...
-                                         x, bl, bu);
+                v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+                                  trmodel.radius, x, bl, bu);
             else
                 v = zeros(size(h));
             end
             s = correct_step_to_bounds(x, h + v, bl, bu);
         else
-            v = tr_vertical_step_new(fmodel, current_constraints, ...
-                                     Q, R, mu, zeros(dimension,1), ind_qr, ...
-                                     trmodel.radius, x, bl, bu);
+            v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+                              trmodel.radius, x, bl, bu);
             s = correct_step_to_bounds(x, v, bl, bu);
+            status_step = true;
         end
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
         normphi = norm([current_constraints(ind_eactive).c], 1);
         ppgrad = N'*pseudo_gradient;
     end
     if q < Lambda
-        if pred < delta*(norm(ppgrad)^2 + normphi)
+        if ~status_step%pred < delta*(norm(ppgrad)^2 + normphi)
             evaluate_step = false;
         else
             evaluate_step = true;
         end
     else
-        if evaluate_step && ((pred < tol_radius*1e-2) || ...
-            (pred < tol_radius*abs(px) && norm(s) < tol_radius) || ...
-            (pred < tol_f*abs(px)*1e-5))
+        if evaluate_step && (...
+            (pred < tol_radius*abs(px) && norm(s) < tol_radius) ...    
+             || (pred < tol_f*abs(px)*1e-5)) % ...
+            % || (pred < tol_radius*1e-2) ...
+            %)
             evaluate_step = false;
         else
             evaluate_step = true;

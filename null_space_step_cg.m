@@ -2,7 +2,8 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
                                 radius, lb, ub, multipliers)
 
                             
-    tol_d = 1e-5;
+    tol_d = eps(1);
+    tol_h = eps(1);
     suff_radius = 0.9*radius;
     [dim, r_cols] = size(R);
     N = Q(:, r_cols+1:end);
@@ -43,24 +44,10 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
         [t_lb, t_ub, tmax_bounds] = bounds_breakpoints(x0 + s, lb, ub, d);
         tmax_tr = tr_radius_breakpoint(d, radius, s);
         
-% $$$         lower_breakpoints = (lb - x)./d;
-% $$$         upper_breakpoints = (ub - x)./d;
-% $$$ 
-% $$$         tr_breakpoint = roots([d'*d, 2*s'*d, s'*s - radius^2]);
-% $$$         tr_breakpoint = min(tr_breakpoint(tr_breakpoint > 0));
-% $$$         if isempty(tr_breakpoint) || ~isreal(tr_breakpoint)
-% $$$             tr_breakpoint = radius/norm(d);
-% $$$         end
-% $$$ 
-% $$$         l_breakpoints = (lower_breakpoints > 0);
-% $$$         u_breakpoints = (upper_breakpoints > 0);
-% $$$         max_t = min([lower_breakpoints(l_breakpoints); ...
-% $$$                      upper_breakpoints(u_breakpoints); ...
-% $$$                      tr_breakpoint]);
         tmax = min(tmax_bounds, tmax_tr);
         [t, brpoints_crossed] = line_search_cg(fmodel_d, cmodel_d, mu, d, tmax);
         s = s + t*d;
-        if t == 0 || norm(s) >= suff_radius
+        if t == 0 || t == tmax_tr
             break
         elseif t == tmax
             % Repeat all those projections
@@ -115,7 +102,7 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
             g_new(bl_active | bu_active) = ...
                 zeros(sum(bl_active | bu_active), 1);
             dHd = d'*H*d;
-            if norm(dHd) < 1e-5
+            if norm(dHd) < tol_h
                 break
             end
             beta = (g_new'*H*d)/dHd;
@@ -124,6 +111,7 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
                 zeros(sum(bl_active | bu_active), 1);
 
         end
+        x = x0 + s;
         if ~isempty(find(x(bl_active) ~= lb(bl_active), 1)) ...
                         || ~isempty(find(x(bu_active) ~= ub(bu_active), 1))
             warning('cmg:runtime_error', 'This needs debugging');

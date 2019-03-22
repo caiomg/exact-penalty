@@ -10,8 +10,8 @@ function Hp = l1_hessian(fmodel, cmodel, mu, s, ind_eactive)
     Hc = zeros(size(Hfx));
     for n = 1:n_constraints
         
-        if (cmodel(n).c + cmodel(n).g'*s + 0.5*(s'*cmodel(n).H*s)> 0 ...
-            && isempty(find(ind_eactive == n, 1)))
+        if (isempty(find(ind_eactive == n, 1)) ...
+            && cmodel(n).c + cmodel(n).g'*s + 0.5*(s'*cmodel(n).H*s)> 0)
             Hc = Hc + cmodel(n).H;
         end
     end
