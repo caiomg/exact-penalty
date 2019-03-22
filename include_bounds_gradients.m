@@ -14,7 +14,7 @@ function [Q, R, bl_included, bu_included] = ...
     for k = 1:dim
         if include_bl(k)
             this_gradient = gradients_lb(:, k);
-            independent = Q(:, 1:r_cols)'*this_gradient;
+            independent = Q(:, r_cols+1:end)'*this_gradient;
             if norm(independent) > tol_indep
                 [Q, R] = qrinsert(Q, R, r_cols + 1, this_gradient);
                 r_cols = r_cols + 1;
@@ -23,7 +23,7 @@ function [Q, R, bl_included, bu_included] = ...
         end
         if include_bu(k)
             this_gradient = gradients_ub(:, k);
-            independent = Q(:, 1:r_cols)'*this_gradient;
+            independent = Q(:, r_cols+1:end)'*this_gradient;
             if norm(independent) > tol_indep
                 [Q, R] = qrinsert(Q, R, r_cols + 1, this_gradient);
                 r_cols = r_cols + 1;
