@@ -14,7 +14,8 @@ function [lb_active, ub_active] = active_bounds(x, d, lb, ub, tol_x, ...
         lb_dist = x - lb;
         tl = -lb_dist./d;
         lb_active = lb_dist < 0 ...
-            | (0 < tl & (lb_dist < tol_x | tl < tol_d));
+            | (lb_dist < tol_x & d < 0) ...
+            | (0 < tl & tl < tol_d);
     end
     if isempty(ub)
         ub_active = false(size(x));
@@ -22,7 +23,8 @@ function [lb_active, ub_active] = active_bounds(x, d, lb, ub, tol_x, ...
         ub_dist = ub - x;
         tu = ub_dist./d;
         ub_active = ub_dist < 0 ...
-            | (0 < tu & (ub_dist < tol_x | tu < tol_d));
+            | (ub_dist  < tol_x & d > 0) ...
+            | (0 < tu & tu < tol_d);
     end
     
 end

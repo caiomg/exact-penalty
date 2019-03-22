@@ -15,22 +15,28 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
     d = -g;
     bl_active = false(dim, 1);
     bu_active = false(dim, 1);
-    [bl_active_x, bu_active_x] = active_bounds(x0, d, lb, ub);
-    bl_active_new = bl_active_x & ~bl_active;
-    bu_active_new = bu_active_x & ~bu_active;
-    bl_active = bl_active | bl_active_x;
-    bu_active = bu_active | bu_active_x;
     
-    if ~isempty(find(bl_active_new | bu_active_new, 1))
-        [Q, R, bl_included, bu_included] = ...
-            include_bounds_gradients(Q, R, bl_active_new, ...
-                                     bu_active_new);
-        r_cols = size(R, 2);
-        N = Q(:, r_cols+1:end);
-        g = N*(N'*pgradient);
-        d = -g;
-        d(bl_active | bu_active) = ...
-            zeros(sum(bl_active | bu_active), 1);
+    for checks = 1:dim
+        [bl_active_x, bu_active_x] = active_bounds(x0, d, lb, ub);
+        bl_active_new = bl_active_x & ~bl_active;
+        bu_active_new = bu_active_x & ~bu_active;
+
+        if isempty(find(bl_active_new | bu_active_new, 1))
+            break
+        else
+            [Q, R, bl_included, bu_included] = ...
+                include_bounds_gradients(Q, R, bl_active_new, ...
+                                         bu_active_new);
+            r_cols = size(R, 2);
+            N = Q(:, r_cols+1:end);
+            bl_active = bl_active | bl_active_x;
+            bu_active = bu_active | bu_active_x;
+
+            g = N*(N'*pgradient);
+            d = -g;
+            d(bl_active | bu_active) = ...
+                zeros(sum(bl_active | bu_active), 1);
+        end
     end
     fmodel_d = fmodel;
     cmodel_d = cmodel;
@@ -59,25 +65,31 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
             bl_active_new_2 = bl_active_x & ~bl_active;
             bu_active_new_2 = bu_active_x & ~bu_active;
     
-            if (bl_active_new ~= bl_active_new_2) ...
-                    | (bu_active_new ~= bu_active_new_2)
+            if ~isempty(find((bl_active_new ~= bl_active_new_2) ...
+                    | (bu_active_new ~= bu_active_new_2), 1))
                 warning('cmg:runtime_error', 'This needs debugging');
             end
             
-            if ~isempty(find(bl_active_new | bu_active_new, 1))
-                [Q, R, bl_included, bu_included] = ...
-                    include_bounds_gradients(Q, R, bl_active_new, ...
-                                             bu_active_new);
-                r_cols = size(R, 2);
-                N = Q(:, r_cols+1:end);
-
-                pgradient = l1_pseudo_gradient_new(fmodel, cmodel, mu, s);
-                g = N*(N'*pgradient);
-                d = -g;
-                d(bl_active | bu_active) = ...
-                    zeros(sum(bl_active | bu_active), 1);
-            else
-                warning('cmg:runtime_error', 'This needs debugging');
+            for checks = 1:sum(~(bl_active | bu_active))
+                if isempty(find(bl_active_new | bu_active_new, 1))
+                    if checks == 1
+                        warning('cmg:runtime_error', 'This needs debugging');
+                    end                        
+                    break
+                else
+                    [Q, R, bl_included, bu_included] = ...
+                        include_bounds_gradients(Q, R, bl_active_new, ...
+                                                 bu_active_new);
+                    r_cols = size(R, 2);
+                    N = Q(:, r_cols+1:end);
+                    bl_active = bl_active | bl_included;
+                    bu_active = bu_active | bu_included;
+                    pgradient = l1_pseudo_gradient_new(fmodel, cmodel, mu, s);
+                    g = N*(N'*pgradient);
+                    d = -g;
+                    d(bl_active | bu_active) = ...
+                        zeros(sum(bl_active | bu_active), 1);
+                end
             end
         else
             % Stopped at a local minimum
