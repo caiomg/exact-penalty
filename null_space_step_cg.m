@@ -124,8 +124,8 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
 
         end
         x = x0 + s;
-        if max(max(0, lb(bl_active) - x(bl_active)), ...
-               max(0, x(bu_active) - ub(bu_active))) > sqrt(eps)
+        if max([max(0, lb(bl_active) - x(bl_active));
+                max(0, x(bu_active) - ub(bu_active))]) > sqrt(eps)
             warning('cmg:bounds_error', 'This needs debugging');
         end
 
