@@ -1,6 +1,4 @@
 classdef tr_model < handle
-    %TR_MODEL Summary of this class goes here
-    %   Detailed explanation goes here
     
     properties
         points_abs
@@ -9,11 +7,11 @@ classdef tr_model < handle
         cached_points
         cached_fvalues
         cache_max
-        tr_center
+        tr_center % Index among points_abs
         radius
-        pivot_polynomials
+        pivot_polynomials % Newton Fundamental Polynomials...
         pivot_values
-        modeling_polynomials
+        modeling_polynomials % Model objective, constraint
     end
     
     methods

@@ -1,4 +1,5 @@
-function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, bu)
+function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
+                                           radius, bl, bu)
 
     matlab_solver = true;
     dim = size(x_tr_center, 1);
@@ -84,7 +85,7 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
             linprog_problem.lb = bl_mod;
             linprog_problem.ub = bu_mod;
             linprog_problem.options.Display = 'off';
-            linprog_problem.options.Algorithm = 'interior-point';
+            linprog_problem.options.Algorithm = 'dual-simplex';
             [x, ~, exitflag, output] = linprog(linprog_problem);
             fval = f(x);
         end
@@ -103,11 +104,9 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, radius, bl, 
         ipopt_options.ub = bu_mod;
         ipopt_options.ipopt.print_level = 0;
         ipopt_options.ipopt.hessian_constant = 'yes';
-%         ipopt_options.ipopt.acceptable_iter = 100;
-        ipopt_options.ipopt.tol = 5e-8;
-%         ipopt_options.ipopt.acceptable_tol = 1e-7;
-        ipopt_options.ipopt.obj_scaling_factor = 1/(radius);
-%         ipopt_options.ipopt.compl_inf_tol = 1e-5;
+        ipopt_options.ipopt.acceptable_iter = 100;
+        ipopt_options.ipopt.tol = 1e-9;
+        ipopt_options.ipopt.compl_inf_tol = 1e-5;
         % ipopt_options.ipopt.dual_inf_tol = 0.5;
         % ipopt_options.ipopt.constr_viol_tol = solver_constr_tol;
 

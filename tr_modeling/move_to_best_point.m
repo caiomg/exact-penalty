@@ -1,4 +1,4 @@
-function [model, point, fval] = move_to_best_point(model, bl, bu, f)
+function model = move_to_best_point(model, bl, bu, f)
 %MOVE_TO_BEST_POINT Changes TR center pointer to best point
 %   bl, bu (optional) are lower and upper bounds on variables
 %   f (optional) is a function for comparison of points. It receives a
@@ -19,10 +19,7 @@ function [model, point, fval] = move_to_best_point(model, bl, bu, f)
     if best_i ~= model.tr_center
         model.tr_center = best_i;
     end
-    if nargout > 1
-        point = model.points_abs(:, best_i);
-        fval = f(model.fvalues(:, best_i));
-    end
+    % Here should rebuild polynomials!!!
     
 
 end
