@@ -124,8 +124,8 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
 
         end
         x = x0 + s;
-        if ~isempty(find(x(bl_active) ~= lb(bl_active), 1)) ...
-                        || ~isempty(find(x(bu_active) ~= ub(bu_active), 1))
+        if sqrt(eps) < norm([x(bl_active) - lb(bl_active);
+                             x(bu_active) - ub(bu_active)])
             warning('cmg:runtime_error', 'This needs debugging');
         end
 
