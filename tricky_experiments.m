@@ -58,7 +58,7 @@ clear results;
 bad_cond_warn = warning('off', 'cmg:badly_conditioned_system');
 ill_cond_warn = warning('off', 'cmg:ill_conditioned_system');
 
-for k = [18, 22, 28, 23, 15, 29]
+for k = [18, 23, 28, 24, 15, 29]
     iter = iter + 1;
 %     if solved_problems(k)
 %         continue
