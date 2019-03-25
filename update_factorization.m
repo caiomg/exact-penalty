@@ -1,7 +1,7 @@
 function [N, Q, R, ind_qr] = update_factorization(cmodel, ...
                                                   Q, R, ind_eactive, perturb)
 
-tol = 1e-8;
+tol = 1e-10;
 
 n_variables = size(cmodel(1).g, 1);
 n_eactive = size(ind_eactive, 1);
@@ -18,7 +18,12 @@ for rounds = 1:n_eactive
     for n = 1:n_eactive
         if ~included(n)
             this_grad = cmodel(ind_eactive(n)).g;
-            norm_n = norm(Q(:, n_included+1:end)'*this_grad);
+            norm_grad = norm(this_grad);
+            if norm_grad > tol
+                norm_n = norm(Q(:, n_included+1:end)'*this_grad)/norm_grad;
+            else
+                norm_n = norm_grad;
+            end
         else
             norm_n = 0;
         end
