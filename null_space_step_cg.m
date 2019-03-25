@@ -124,9 +124,9 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
 
         end
         x = x0 + s;
-        if sqrt(eps) < norm([x(bl_active) - lb(bl_active);
-                             x(bu_active) - ub(bu_active)])
-            warning('cmg:runtime_error', 'This needs debugging');
+        if max(max([lb(bl_active) - x(bl_active)], ...
+                   [x(bu_active) - ub(bu_active)])) > sqrt(eps)
+            warning('cmg:bounds_error', 'This needs debugging');
         end
 
         fmodel_d = shift_model(fmodel, s);
