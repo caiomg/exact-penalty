@@ -209,7 +209,7 @@ while ~finish
         % First-order step
         h = null_space_step_cg(fmodel, current_constraints, mu, x, ...
                                 ind_qr, Q, R, trmodel.radius, bl, bu);
-        pred = predict_descent(fmodel, current_constraints, h, mu, []);
+        pred_h = predict_descent(fmodel, current_constraints, h, mu, []);
 
         v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
                           trmodel.radius, x, bl, bu);
