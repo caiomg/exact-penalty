@@ -215,27 +215,36 @@ while ~finish
                           trmodel.radius, x, bl, bu);
         s = (h + v);
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
+        if pred < pred_h
+            s = h;
+            pred = pred_h;
+        end
 
     else
         % Step including multipliers
         if q >= tol_g % Should be using criticality measure
-            
-            [h, status_step] = null_space_step_complete(fmodel, ...
-                                                   current_constraints, ...
-                                                   mu, x, ind_qr, ...
-                                                   Q, R, trmodel.radius, ...
-                                                   bl, bu, multipliers);
+            [h, pred] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+%             [h, status_step] = null_space_step_complete(fmodel, ...
+%                                                    current_constraints, ...
+%                                                    mu, x, ind_qr, ...
+%                                                    Q, R, trmodel.radius, ...
+%                                                    bl, bu, multipliers);
             if isempty(find(multipliers < -tol_multipliers | ...
-                             mu < multipliers - tol_multipliers, 1))
-                v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-                                  trmodel.radius, x, bl, bu);
+                             mu < multipliers - tol_multipliers, ...
+                            1))
+                v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
+                                         h, ind_qr, trmodel.radius, x, bl, bu);
+                %v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+                %                  trmodel.radius, x, bl, bu);
             else
                 v = zeros(size(h));
             end
             s = correct_step_to_bounds(x, h + v, bl, bu);
         else
-            v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-                              trmodel.radius, x, bl, bu);
+            v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
+                                         h, ind_qr, trmodel.radius, x, bl, bu);
+            %v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+            %                  trmodel.radius, x, bl, bu);
             s = correct_step_to_bounds(x, v, bl, bu);
             status_step = true;
         end
@@ -244,7 +253,7 @@ while ~finish
         ppgrad = N'*pseudo_gradient;
     end
     if q < Lambda
-        if ~status_step%pred < delta*(norm(ppgrad)^2 + normphi)
+        if pred < delta*(norm(ppgrad)^2 + normphi)
             evaluate_step = false;
         else
             evaluate_step = true;
