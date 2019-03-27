@@ -18,13 +18,12 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
         % Remove active constraint from set
         ind_eactive(ind_eactive == ind_qr(ind_j)) = [];
         if length(ind_eactive) > length(ind_qr)
-            [N, Q, R, ind_qr] = update_factorization(cmodel, ...
-                                                     Q, R, ind_eactive, true);
+            [Q, R, ind_qr] = ...
+                update_factorization(cmodel, Q, R, ind_eactive, true);
         else
             ind_qr(ind_j) = [];
             if ~isempty(ind_qr)
                 [Q, R] = qrdelete(Q, R, ind_j);
-                % Update space orthogonal to active constraints
                 r_columns = size(R, 2);
                 N = Q(:, r_columns+1:end);
             else
