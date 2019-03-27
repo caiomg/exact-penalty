@@ -46,8 +46,8 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
         if norm(d) < tol_d
             break
         end
-
-        [t_lb, t_ub, tmax_bounds] = bounds_breakpoints(x0 + s, lb, ub, d);
+        x = project_to_bounds(x0 + s, lb, ub);
+        [t_lb, t_ub, tmax_bounds] = bounds_breakpoints(x, lb, ub, d);
         tmax_tr = tr_radius_breakpoint(d, radius, s);
         
         tmax = min(tmax_bounds, tmax_tr);
@@ -61,7 +61,8 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
             bl_active_new = t_lb == t;
             bu_active_new = t_ub == t;
             
-            [bl_active_x, bu_active_x] = active_bounds(x0 + s, d, lb, ub);
+            x = project_to_bounds(x0 + s, lb, ub);
+            [bl_active_x, bu_active_x] = active_bounds(x, d, lb, ub);
             bl_active_new_2 = bl_active_x & ~bl_active;
             bu_active_new_2 = bu_active_x & ~bu_active;
     
