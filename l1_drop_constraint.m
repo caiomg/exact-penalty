@@ -1,4 +1,4 @@
-function [Q, R, N, ind_qr, ind_eactive] = ...
+function [Q, R, ind_qr, ind_eactive] = ...
     l1_drop_constraint(cmodel, Q, R, ind_qr, ind_eactive, mu, multipliers, tol)
                                                        
 % I AM ASSUMING A = QR HAS THE SAME ORDENATION AS MULTIPLIERS!
@@ -24,12 +24,9 @@ function [Q, R, N, ind_qr, ind_eactive] = ...
             ind_qr(ind_j) = [];
             if ~isempty(ind_qr)
                 [Q, R] = qrdelete(Q, R, ind_j);
-                r_columns = size(R, 2);
-                N = Q(:, r_columns+1:end);
             else
                R = zeros(length(Q), 0);
                Q = eye(length(Q));
-               N = Q;
             end
         end
     else
