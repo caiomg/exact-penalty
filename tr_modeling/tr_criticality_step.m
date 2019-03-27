@@ -1,11 +1,12 @@
 function [model, epsilon] = tr_criticality_step(model, funcs, p_mu, ...
-                                                epsilon, Lambda, bl, bu, ...
+                                                epsilon, Lambda, bl, ...
+                                                bu, con_lb, con_ub, ...
                                                 options, one_pass)
 % CRITICALITY_STEP -- ensures model is sufficiently poised and with
 % a radius comparable to the gradient
 %
 
-if nargin < 9 || isempty(one_pass)
+if nargin < 11 || isempty(one_pass)
     one_pass = false;
 end
 
@@ -21,19 +22,23 @@ epsilon0 = epsilon;
 
 x = model.points_abs(:, model.tr_center);
 initial_radius = model.radius;
-% I should be testing if it is not already FL
-while ~is_lambda_poised(model, options) || is_old(model, options)
-    [model, model_changed] = ensure_improvement(model, funcs, bl, bu, options);
-    model.modeling_polynomials = compute_polynomial_models(model);
-    if ~model_changed
-        warning('cmg:model_didnt_change', 'Model didnt change');
-        break
-    end
+model_changed = false;
+if has_distant_points(model, options) || is_old(model, options)
+    model = rebuild_model(model, options);
+    model_changed = true;
 end
+while ~is_lambda_poised(model, options)
+    model = ensure_improvement(model, funcs, bl, bu, options);
+    model_changed = true;
+end
+if model_changed
+    model.modeling_polynomials = compute_polynomial_models(model);
+end
+
 [~, fmodel.g] = get_model_matrices(model, 0);
-cmodel = extract_constraints_from_tr_model(model);
+cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
 [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-[N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
+[Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
 pseudo_gradient = l1_pseudo_gradient(fmodel.g, p_mu, cmodel, ind_qr, true);
 
 % Criticality measure
@@ -41,7 +46,8 @@ measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, [cmodel(ind_q
 
 if norm(measure) <= Lambda
     while true
-        [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
+        [multipliers, tol_multipliers] = ...
+            l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
         if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
             [Q, R, N, ind_qr, ind_eactive] = ...
                     l1_drop_constraint(cmodel, Q, R, ind_qr, ind_eactive, p_mu, ...
@@ -63,25 +69,31 @@ while (model.radius > crit_mu*measure)
     model.radius = omega*model.radius;
     epsilon = factor_epsilon*epsilon;
     
-    while ~is_lambda_poised(model, options)
-        [model, model_changed] = ensure_improvement(model, funcs, bl, bu, options);
-        model.modeling_polynomials = compute_polynomial_models(model);
-        if ~model_changed
-            warning('cmg:model_didnt_change', 'Model didnt change');
-            break
-        end
+    model_changed = false;
+    if has_distant_points(model, options) || is_old(model, options)
+        model = rebuild_model(model, options);
+        model_changed = true;
     end
+    while ~is_lambda_poised(model, options)
+        model = ensure_improvement(model, funcs, bl, bu, options);
+        model_changed = true;
+    end
+    if model_changed
+        model.modeling_polynomials = compute_polynomial_models(model);
+    end
+
     [~, fmodel.g] = get_model_matrices(model, 0);
-    cmodel = extract_constraints_from_tr_model(model);
+    cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
     [ind_eactive, ~] = identify_new_constraints(cmodel, ...
                                                       epsilon, []);
-    [N, Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
+    [Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
                                              ind_eactive, true);
     measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, ...
                                      bu, [cmodel(ind_qr).c]');
     if norm(measure) <= Lambda
         while true
-            [multipliers, tol_multipliers] = l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
+            [multipliers, tol_multipliers] = ...
+                l1_estimate_multipliers(fmodel, cmodel, p_mu, ind_qr, Q, R, x, bl, bu);
             if sum(multipliers < -tol_multipliers | p_mu < multipliers - tol_multipliers)
                 [Q, R, N, ind_qr, ind_eactive] = ...
                         l1_drop_constraint(cmodel, Q, R, ind_qr, ind_eactive, p_mu, ...
@@ -116,8 +128,8 @@ end
 model.radius = min(max(model.radius, beta*norm(measure)), initial_radius);
 identified = length(ind_eactive);
 while true
-    [ind_eactive2, ~] = identify_new_constraints(cmodel, epsilon/factor_epsilon, []);
-    if identified == length(ind_eactive2) && epsilon/factor_epsilon <= epsilon0
+    [active_larger, ~] = identify_new_constraints(cmodel, epsilon/factor_epsilon, []);
+    if identified == length(active_larger) && epsilon/factor_epsilon <= epsilon0
         epsilon = epsilon/factor_epsilon;
     else
         break

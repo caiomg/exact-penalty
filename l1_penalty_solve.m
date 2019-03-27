@@ -1,4 +1,4 @@
-function [x, history_solution] = l1_penalty_solve(f, phi, initial_points, ...
+function [x, history_solution] = l1_penalty_solve(f, phi, con_lb, con_ub, initial_points, ...
                                                   mu, epsilon, delta, ...
                                                   Lambda, bl, bu, options)
 %L1_PENALTY Summary of this function goes here
@@ -14,9 +14,11 @@ defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
                         'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, ...
-                        'basis', 'full quadratic', 'debug', false, ...
-                        'inspect_iteration', 10, 'max_iter', 1e6, ...
-                        'divergence_threshold', 1e10);
+                        'max_iter', 1e6, ...
+                        'divergence_threshold', 1e10, ...
+                        'basis', 'unused option', ...
+                        'debug', false, ...
+                        'inspect_iteration', 10);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -40,8 +42,8 @@ initial_radius = options.initial_radius;
 rel_pivot_threshold = options.pivot_threshold;
 max_iter = options.max_iter;
 
-all_f = {f, phi{:}};
-n_functions = size(all_f, 2);
+fphi = {f, phi{:}}';
+n_functions = size(fphi, 1);
 [dimension, n_initial_points] = size(initial_points);
 if  (~isempty(bl) && ~isempty(find(initial_points(:, 1) < bl, 1))) || ...
         (~isempty(bu) && ~isempty(find(initial_points(:, 1) > bu, 1)))
@@ -73,7 +75,7 @@ initial_fvalues = zeros(n_functions, n_initial_points);
 for nf = 1:n_functions
     for k = 1:n_initial_points
         initial_points(:, k) = project_to_bounds(initial_points(:, k), bl, bu);
-        initial_fvalues(nf, k) = all_f{nf}(initial_points(:, k));
+        initial_fvalues(nf, k) = fphi{nf}(initial_points(:, k));
     end
 end
 
@@ -84,7 +86,6 @@ trmodel = rebuild_model(trmodel, options);
 trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
 
 
-fphi = {f, phi{:}}';
 
 
 linsolve_opts.UT = true;
@@ -97,7 +98,7 @@ tol_con = 1e-5;
 tol_radius = options.tol_radius;
 tol_f = options.tol_f;
 
-p = @(x) l1_function(f, phi, mu, x);
+p = @(x) l1_function(f, phi, con_lb, con_ub, mu, x);
 % QR decomposition of constraints gradients matrix A
 Q = zeros(dimension, 0);
 R = zeros(0, 0);
@@ -105,10 +106,12 @@ R = zeros(0, 0);
 
 radius_max = options.radius_max;
 
+exchange_counts = 0;
 iter = 1;
 finish = false;
 [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-current_constraints = extract_constraints_from_tr_model(trmodel);
+current_constraints = extract_constraints_from_tr_model(trmodel, ...
+                                                  con_lb, con_ub);
 px = fx + mu*sum(max(0, [current_constraints.c]));
 history_solution.x = x;
 rho = nan;
@@ -130,11 +133,12 @@ while ~finish
     end
 
     [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-    current_constraints = extract_constraints_from_tr_model(trmodel);
+    current_constraints = extract_constraints_from_tr_model(trmodel, ...
+                                                      con_lb, con_ub);
 
     [ind_eactive, ~] = ...
         identify_new_constraints(current_constraints, epsilon, []);
-    [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
+    [Q, R, ind_qr] = update_factorization(current_constraints, ...
                                              Q, R, ind_eactive, false);
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_qr, true);
@@ -142,16 +146,20 @@ while ~finish
     q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
                                [current_constraints(ind_qr).c]');
 
-    if q <= max(Lambda, tol_g)
+    if q > Lambda
+        tr_criticality_step_executed = false;
+    else
+        tr_criticality_step_executed = true;
         [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, mu, ...
                                                  epsilon, Lambda, ...
-                                                 bl, bu, options);
+                                                 bl, bu, con_lb, ...
+                                                 con_ub, options);
         [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
         current_constraints = ...
-            extract_constraints_from_tr_model(trmodel);
+            extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
         [ind_eactive, ~] = ...
             identify_new_constraints(current_constraints, epsilon, []);
-        [N, Q, R, ind_qr] = update_factorization(current_constraints, [], ...
+        [Q, R, ind_qr] = update_factorization(current_constraints, [], ...
                                                  [], ...
                                                  ind_eactive, true);
         pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
@@ -161,15 +169,15 @@ while ~finish
                                    [current_constraints(ind_qr).c]');
     end
 
-    if (norm(q) <= max(Lambda, tol_g))
-            [multipliers, tol_multipliers] = ...
-            l1_estimate_multipliers(fmodel, current_constraints, mu, ind_qr, ...
-                                    Q, R, x, bl, bu);
+    if (norm(q) <= Lambda)
+        [Q, R, ind_qr, q, multipliers, tol_multipliers] = ...
+            l1_confirm_constraints(fmodel, current_constraints, ind_eactive, ind_qr, ...
+                                   Q, R, mu, x, bl, bu, Lambda);
 
         % Stopping conditions
-        if ~sum(multipliers < -tol_multipliers | ...
-                mu < multipliers - tol_multipliers) 
-            if norm(q) < tol_g
+        if norm(q) < tol_g
+            if ~sum(multipliers < -tol_multipliers | ...
+                    mu < multipliers - tol_multipliers) 
                 phih = [current_constraints(ind_qr).c]';
                 if norm(phih) < tol_con
                     if max([current_constraints.c]) > tol_con && false
@@ -184,27 +192,7 @@ while ~finish
             end
         end
 
-    % Are there conditions for dropping one constraint?
-        while sum(multipliers < -tol_multipliers | mu < multipliers ...
-                  - tol_multipliers)
-            [Q, R, N, ind_qr, ind_eactive] = ...
-                    l1_drop_constraint(current_constraints, Q, R, ind_qr, ind_eactive, mu, ...
-                                       multipliers, tol_multipliers);
-            pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
-                                                 current_constraints, ...
-                                                 ind_qr, true);
-            q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
-                                       [current_constraints(ind_qr).c]');                                       
-            if norm(q) > max(Lambda, tol_g)
-                break
-            end
-            [multipliers, tol_multipliers] = ...
-                l1_estimate_multipliers(fmodel, current_constraints, ...
-                                        mu, ind_qr, Q, R, x, bl, bu);
-
-        end
     end
-
     geometry_ok = is_lambda_poised(trmodel, options);
     if norm(q) > Lambda
         % First-order step
@@ -225,36 +213,31 @@ while ~finish
         % Step including multipliers
         if q >= tol_g % Should be using criticality measure
             [h, pred] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
-%             [h, status_step] = null_space_step_complete(fmodel, ...
+%             h = null_space_step_complete(fmodel, ...
 %                                                    current_constraints, ...
 %                                                    mu, x, ind_qr, ...
 %                                                    Q, R, trmodel.radius, ...
 %                                                    bl, bu, multipliers);
-            if isempty(find(multipliers < -tol_multipliers | ...
-                             mu < multipliers - tol_multipliers, ...
-                            1))
-                v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
-                                         h, ind_qr, trmodel.radius, x, bl, bu);
-                %v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-                %                  trmodel.radius, x, bl, bu);
-            else
-                v = zeros(size(h));
-            end
+
+            v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
+                                     h, ind_qr, trmodel.radius, x, bl, bu);
+%             v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+%                              trmodel.radius, x, bl, bu);
+
             s = correct_step_to_bounds(x, h + v, bl, bu);
         else
             v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
                                          h, ind_qr, trmodel.radius, x, bl, bu);
-            %v = l1_range_step_complete(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-            %                  trmodel.radius, x, bl, bu);
+%             v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+%                              trmodel.radius, x, bl, bu);
             s = correct_step_to_bounds(x, v, bl, bu);
-            status_step = true;
+%             status_step = true;
         end
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
         normphi = norm([current_constraints(ind_eactive).c], 1);
-        ppgrad = N'*pseudo_gradient;
     end
     if q < Lambda
-        if pred < delta*(norm(ppgrad)^2 + normphi)
+        if pred < delta*(q^2 + normphi)
             evaluate_step = false;
         else
             evaluate_step = true;
@@ -295,10 +278,10 @@ while ~finish
             [epsilon, Lambda] = l1_reduce_lambda(epsilon, Lambda, ...
                                                  current_constraints, ...
                                                  fmodel.g, mu, Q, ...
-                                                 R, tol_g, tol_con); 
+                                                 R, x, bl, bu, tol_g, tol_con); 
         end
     end
-    if rho <= eta_2 && mchange_flag == 4
+    if rho <= eta_2 && (mchange_flag == 4 || tr_criticality_step_executed)
         gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
         trmodel.radius = gamma_dec*trmodel.radius;
     else
@@ -306,6 +289,16 @@ while ~finish
             radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
             trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
         end
+    end
+    if mchange_flag == 2 && rho >= eta_2
+        exchange_counts = exchange_counts + 1;
+        if exchange_counts > 2*dimension
+            [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
+%             trmodel = rebuild_model(trmodel, options);
+            exchange_counts = 0;
+        end
+    else
+        exchange_counts = 0;
     end
 
     iter = iter + 1;
@@ -316,6 +309,7 @@ while ~finish
     history_solution(iter).fx = trmodel.fvalues(1, trmodel.tr_center);
     history_solution(iter).q = q;
     history_solution(iter).ns = norm(s);
+    history_solution(iter).mchange = mchange_flag;
 
 
     if trmodel.radius < tol_radius || iter > max_iter

@@ -200,7 +200,14 @@ if true
 
                 try
                     p_seed = rng('default');
-                    [sf, hs2] = l1_penalty_solve(fs, all_con_scaled, s0, mu, epsilon, delta, Lambda, bl_scaled, bu_scaled, l1_options);
+                    len_con = length(all_con_scaled);
+                    con_lb = -inf(len_con, 1);
+                    con_ub = zeros(len_con, 1);
+                    [sf, hs2] = l1_penalty_solve(fs, all_con_scaled, ...
+                                                 con_lb, con_ub, s0, ...
+                                                 mu, epsilon, delta, ...
+                                                 Lambda, bl_scaled, ...
+                                                 bu_scaled, l1_options);
                     x = O + Sc*sf;
                     solved = true;
                     % [s_fmincon, fs_fmincon, exitflag, output, lambda_fmincon] = fmincon(fs, s0,[],[],[],[], bl_scaled, bu_scaled, nlcon_scaled, fmincon_options);

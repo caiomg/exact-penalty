@@ -1,4 +1,4 @@
-function [status, lgrad] = check_kkt(f, c, x, bl, bu, tol_c, tol_g)
+function [status, lgrad] = check_kkt(f, c, x, con_lb, con_ub, bl, bu, tol_c, tol_g)
 
     if isempty(bl)
         bl = -inf(size(x));
@@ -14,7 +14,14 @@ function [status, lgrad] = check_kkt(f, c, x, bl, bu, tol_c, tol_g)
     G = zeros(dim, nconstraints);
     cvals = zeros(nconstraints, 1);
     for k = 1:nconstraints
-        [cvals(k), G(:, k)] = c{k}(x);
+        [con_val, con_grad] = c{k}(x);
+        if abs(con_lb(k) - con_val) < abs(con_val - con_ub(k))
+            cvals(k) = con_lb(k) - con_val;
+            G(:, k) = -con_grad;
+        else
+            cvals(k) = con_val - con_ub(k);
+            G(:, k) = con_grad;
+        end
     end
     lcvals = bl - x;
     ucvals = x - bu;

@@ -1,23 +1,20 @@
-function [p, fvalues] = l1_function(f, phi, mu, x, ind_eactive)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+function [p, fvalues] = l1_function(f, phi, con_lb, con_ub, mu, x)
 
-if nargin < 5
-    ind_eactive = [];
-end
+    assert(nargin == 6);
 
-n_functions = 1 + length(phi);
-fvalues = zeros(n_functions, 1);
-value_used = false(n_functions, 1);
-fvalues(1) = f(x);
-for n = 1:n_functions-1
-    fvalues(n+1, 1) = phi{n}(x);
-    if isempty(find(ind_eactive == n, 1))
-        value_used(n+1) = true;
+    n_constraints = length(phi);
+    f_val = f(x);
+    con_vals = zeros(n_constraints, 1);
+    sum_violations = 0;
+    for n = 1:n_constraints
+        con_vals(n) = phi{n}(x);
     end
-end
-sum_phi = sum(max(fvalues(value_used), 0));
-p = fvalues(1) + mu*sum_phi;
+    viol_lb = max(0, con_lb - con_vals);
+    viol_ub = max(0, con_vals - con_ub);
+
+    p = f_val+ mu*sum(viol_lb + viol_ub);
+    fvalues = [f_val;
+               con_vals];
 
 end
 

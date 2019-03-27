@@ -25,14 +25,9 @@ log_filename = fullfile(logdir, sprintf('%s_p1_db.log', datestr(now, 30)));
 log_fd = fopen(log_filename, 'w');
 
 
-l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.05, ...
-                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
-                        'initial_radius', 1, 'radius_max', 1e3, ...
-                        'criticality_mu', 50, 'criticality_beta', 10, ...
-                        'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
-                        'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
-                        'pivot_imp', 1.1)
+l1_options = [];
+l1_options.eta_2 = 0.1;
+l1_options.pivot_threshold = 0.01;
 
 % Parameters
 epsilon = 1;
@@ -59,83 +54,56 @@ bad_cond_warn = warning('off', 'cmg:badly_conditioned_system');
 
 for k = 1:n_problems
     iter = iter + 1;
-%     if solved_problems(k)
-%         continue
-%     end
+
     problem_name = selected_problems(k).name;
     mu = selected_problems(k).mu;
-    prob = setup_cutest_problem(problem_name, '../my_problems/');
+    [prob, prob_iface] = setup_cutest_problem(problem_name, '~/docd/exchange/my_problems');
     dim = prob.n;
     n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
     cutest_lower_bounds = prob.bl > -1e19;
     cutest_upper_bounds = prob.bu < 1e19;
     
-    % Objective
-    f_obj = @(x) get_cutest_objective(x);
-    counter = evaluation_counter(f_obj);
-    bl = [];
-    bu = [];
+
     bl = prob.bl;
     bu = prob.bu;
 %%
     lower_bounds = bl > -1e19;
     upper_bounds = bu < 1e19;
-    % 'Nonlinear' constraints
-    all_con = cell(n_constraints, 1);
-
-    for q = 1:n_constraints
-        gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
-        all_con{q} = gk;
-    end
-
-    for q = 1:dim
-        if prob.bl(q) > -1e19
-            % Lower bound to consider
-            if (isempty(bl) || bl(q) < -1e19)
-                % Include constraint as black-box function
-                H = zeros(dim);
-                g = zeros(dim, 1);
-                g(q) = -1;
-                c = prob.bl(q);
-                gk = @(x) quadratic(H, g, c, x);
-                all_con{end+1} = gk;
-            else
-                % Considered explicitly
-                % pass
-                1;
-            end
+    old_constraints_approach = false;
+    if old_constraints_approach
+        % Objective
+        f_obj = @(x) get_cutest_objective(x);
+        % 'Nonlinear' constraints
+        all_con = cell(n_constraints, 1);
+        for q = 1:n_constraints
+            gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
+            all_con{q} = gk;
         end
-        if prob.bu(q) < 1e19
-            % Upper bound to consider
-            if (isempty(bu) || bu(q) < -1e19)
-                % Include constraint as black-box function
-                H = zeros(dim);
-                g = zeros(dim, 1);
-                g(q) = 1;
-                c = -prob.bu(q);
-                gk = @(x) quadratic(H, g, c, x);
-                all_con{end+1} = gk;
-            else
-                % Considered explicitly
-                % pass
-                1;
-            end
-        end
+        len_con = length(all_con);
+        con_lb = -inf(len_con, 1);
+        con_ub = zeros(len_con, 1);
+    else
+        f_obj = @(x) prob_iface.evaluate_objective(x);
+        con_lb = prob.cl;
+        con_ub = prob.cu;
+        con_lb(con_lb < -1e19) = -inf(size(con_lb(con_lb < -1e19)));
+        con_ub(con_ub > 1e19) = inf(size(con_ub(con_ub > 1e19)));
+        all_con = cell(prob.m, 1);
+        for q = 1:prob.m
+            all_con{q} = @(x) prob_iface.evaluate_constraint(x, q);
+        end 
     end
+    counter = evaluation_counter(f_obj);
 
-    if length (all_con) ~= n_constraints + sum(cutest_lower_bounds) + ...
-            sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds)
-        error();
-    end
     nlcon = @(x) constraints(all_con, {}, x, 1);
     
     % Initial point
     x0 = prob.x;
 
-    % bl = prob.bl;
-    % bu = prob.bu;
+
     fixed_scale = (prob.bu - prob.bl)/2;
     no_scale = isinf(fixed_scale);
+
     no_scale = true(size(x0)); % Removing scale
     fixed_scale(no_scale) = no_scale(no_scale);
     O = (prob.bu + prob.bl)/2;
@@ -151,26 +119,17 @@ for k = 1:n_problems
     f = @(w) scale_function(@(x) counter.evaluate(x), O, Sc, w);
 
     
-%%
 
-
-%                 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-%                                                'SpecifyObjectiveGradient', true);
-%                 [x_fmincon, fx_fmincon, exitflag, output, mult_fmincon] = fmincon(f, x0,[],[],[],[],bl,bu, nlcon, fmincon_options);
-%                 fprintf(1, '| %8s |', problem_name);
-%                 fprintf(1, '  % +9.3g |\n', sum(abs([mult_fmincon.lower; mult_fmincon.upper; mult_fmincon.ineqnonlin])));
-
-%                 fcount_fmincon = counter.get_count();
-%                 fx_fmincon = f(x_fmincon);
-%                 nphi_fmincon = norm(max(0, nlcon(x_fmincon)));
-    %%
 
     counter.reset_count();
     counter.set_max_count(50000);
 
     try
         p_seed = rng('default');
-        [sf, hs2] = l1_penalty_solve(f, all_con, s0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+
+        [sf, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, s0, ...
+                                     mu, epsilon, delta, Lambda, bl, ...
+                                     bu, l1_options);
         x = O + Sc*sf;
         solved = true;
     catch thiserror
@@ -181,10 +140,10 @@ for k = 1:n_problems
     if solved
         fcount = counter.get_count();
         fx = f(x);
-        nphi = norm(max(0, nlcon(x)));
+        nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)));
         error_obj = selected_problems(k).solution - fx;
         error_rel = error_obj/abs(selected_problems(k).solution);
-        [kkt, lgrad] = check_kkt(f, all_con, x, bl, bu, 1e-5, 5e-5);
+        [kkt, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5);
     else
         x = [];
         hs2 = [];

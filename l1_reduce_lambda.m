@@ -1,6 +1,6 @@
 function [epsilon, Lambda] = ...
     l1_reduce_lambda(epsilon, Lambda, current_constraints, gfx, mu, ...
-                        Q, R, tol_g, tol_con)
+                        Q, R, x, bl, bu, tol_g, tol_con)
 
 n_variables = size(gfx, 1);
 while true
@@ -11,11 +11,13 @@ while true
     ind_eactive = zeros(0, 1);
     [ind_eactive, ind_eviolated] = ...
         identify_new_constraints(current_constraints, epsilon, ind_eactive);
-    [N, Q, R, ind_qr] = update_factorization(current_constraints, ...
+    [Q, R, ind_qr] = update_factorization(current_constraints, ...
                                              Q, R, ind_eactive, true);
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
                                          ind_qr, true);
-    if norm(N'*pseudo_gradient) > tol_g
+    measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, ...
+                                    bu, []);
+    if measure > tol_g
         break
     elseif Lambda < tol_g
         break

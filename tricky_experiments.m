@@ -171,7 +171,12 @@ for k = [18, 23, 28, 24, 15, 29]
 
     try
         p_seed = rng('default');
-        [sf, hs2] = l1_penalty_solve(f, all_con, s0, mu, epsilon, delta, Lambda, bl, bu, l1_options);
+        len_con = length(all_con);
+        con_lb = -inf(len_con, 1);
+        con_ub = zeros(len_con, 1);
+        [sf, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, s0, ...
+                                     mu, epsilon, delta, Lambda, bl, ...
+                                     bu, l1_options);
         x = O + Sc*sf;
         solved = true;
     catch thiserror

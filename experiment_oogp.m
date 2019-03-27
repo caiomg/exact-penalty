@@ -79,8 +79,12 @@ delta = 1e-6/n_scale;
 Lambda = 0.1/n_scale;
 
 dbstop if warning 'cmg:inspect_iteration'
-[x, hs] = l1_penalty_solve(f, all_con, x0_scaled, mu, epsilon, delta, ...
-                           Lambda, bl_scaled, bu_scaled, l1_options)
+len_con = length(all_con);
+con_lb = -inf(len_con, 1);
+con_ub = zeros(len_con, 1);
+[x, hs] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0_scaled, ...
+                           mu, epsilon, delta, Lambda, bl_scaled, ...
+                           bu_scaled, l1_options)
 evaluations = ec.get_count()
 x_full_space = x.*fixed_scale + O
 [qo, qg, zco2] = santos_gas_network(x_full_space);
