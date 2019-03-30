@@ -1,7 +1,7 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
                                            radius, bl, bu)
 
-    matlab_solver = true;
+    matlab_solver = false;
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);

@@ -5,7 +5,8 @@ function [x, history_solution] = l1_penalty_solve(f, phi, con_lb, con_ub, initia
 %   Detailed explanation goes here
 
 defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                        'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.1, ...
+                        'tol_con', 1e-5, ...
+                        'eta_1', 0, 'eta_2', 0.1, ...
                         'pivot_threshold', 1/16, 'add_threshold', 100, ...
                         'exchange_threshold', 1000,  ...
                         'initial_radius', 1, 'radius_max', 1e3, ...
@@ -26,6 +27,15 @@ for k = 1:length(option_names)
         options.(option_names{k}) = defaultoptions.(option_names{k});
     end
 end
+n_functions = 1 + numel(phi);
+if ~isfield(options, 'model_type')
+    for k = n_functions:-1:1
+        model_type{k} = 'minimum norm hessian';
+    end
+    options.model_type = model_type;
+end
+assert (n_functions == numel(options.model_type));
+
 debug_on = options.debug;
 if debug_on
     inspect_iteration = options.inspect_iteration;
@@ -43,7 +53,7 @@ rel_pivot_threshold = options.pivot_threshold;
 max_iter = options.max_iter;
 
 fphi = {f, phi{:}}';
-n_functions = size(fphi, 1);
+
 [dimension, n_initial_points] = size(initial_points);
 if  (~isempty(bl) && ~isempty(find(initial_points(:, 1) < bl, 1))) || ...
         (~isempty(bu) && ~isempty(find(initial_points(:, 1) > bu, 1)))
@@ -94,7 +104,7 @@ x0 = initial_points(:, 1);
 x = x0;
 dimension = size(x, 1);
 tol_g = 1e-5;
-tol_con = 1e-5;
+tol_con = options.tol_con;
 tol_radius = options.tol_radius;
 tol_f = options.tol_f;
 
@@ -109,9 +119,15 @@ radius_max = options.radius_max;
 exchange_counts = 0;
 iter = 1;
 finish = false;
-[fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-current_constraints = extract_constraints_from_tr_model(trmodel, ...
-                                                  con_lb, con_ub);
+
+if ~strcmp(options.basis, 'dummy')
+    [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+    current_constraints = extract_constraints_from_tr_model(trmodel, ...
+                                                      con_lb, con_ub);
+else
+    [fx, fmodel.g, fmodel.H] = f(x);
+    current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+end
 px = fx + mu*sum(max(0, [current_constraints.c]));
 history_solution.x = x;
 rho = nan;
@@ -121,20 +137,30 @@ history_solution.px = px;
 history_solution.fx = fx;
 history_solution.q = nan;
 history_solution.ns = 0;
+history_solution.mchange = nan;
+history_solution.step_type = nan;
+history_solution.epsilon = epsilon;
+history_solution.Lambda = Lambda;
+
 evaluate_step = true;
 while ~finish
 
-    trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
-    if debug_on
-        check_interpolation(trmodel);
-    end
+%     if debug_on
+%         check_interpolation(trmodel);
+%     end
     if abs(px) > options.divergence_threshold
         break
     end
 
-    [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-    current_constraints = extract_constraints_from_tr_model(trmodel, ...
-                                                      con_lb, con_ub);
+    if ~strcmp(options.basis, 'dummy')
+        trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
+        [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+        current_constraints = extract_constraints_from_tr_model(trmodel, ...
+                                                          con_lb, con_ub);
+    else
+        [fx, fmodel.g, fmodel.H] = f(x);
+        current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+    end
 
     [ind_eactive, ~] = ...
         identify_new_constraints(current_constraints, epsilon, []);
@@ -154,9 +180,16 @@ while ~finish
                                                  epsilon, Lambda, ...
                                                  bl, bu, con_lb, ...
                                                  con_ub, options);
-        [~, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-        current_constraints = ...
-            extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
+
+        if ~strcmp(options.basis, 'dummy')
+            [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
+            current_constraints = ...
+                extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
+        else
+            [fx, fmodel.g, fmodel.H] = f(x);
+            current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+        end
+
         [ind_eactive, ~] = ...
             identify_new_constraints(current_constraints, epsilon, []);
         [Q, R, ind_qr] = update_factorization(current_constraints, [], ...
@@ -169,7 +202,7 @@ while ~finish
                                    [current_constraints(ind_qr).c]');
     end
 
-    if (norm(q) <= Lambda)
+    if norm(q) <= max(tol_g, Lambda)
         [Q, R, ind_qr, q, multipliers, tol_multipliers] = ...
             l1_confirm_constraints(fmodel, current_constraints, ind_eactive, ind_qr, ...
                                    Q, R, mu, x, bl, bu, Lambda);
@@ -195,41 +228,34 @@ while ~finish
     end
     geometry_ok = is_lambda_poised(trmodel, options);
     if norm(q) > Lambda
-        % First-order step
-        h = null_space_step_cg(fmodel, current_constraints, mu, x, ...
-                                ind_qr, Q, R, trmodel.radius, bl, bu);
-        pred_h = predict_descent(fmodel, current_constraints, h, mu, []);
-
-        v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-                          trmodel.radius, x, bl, bu);
-        s = (h + v);
+        step_type = 1;
+        s = iterated_steps(fmodel, current_constraints, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
         pred = predict_descent(fmodel, current_constraints, s, mu, []);
-        if pred < pred_h
-            s = h;
-            pred = pred_h;
+        if pred < 0
+            warning('cmg:fumou', 'check this');
         end
-
     else
+        step_type = 2;
         % Step including multipliers
         if q >= tol_g % Should be using criticality measure
-            [h, pred] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
-%             h = null_space_step_complete(fmodel, ...
-%                                                    current_constraints, ...
-%                                                    mu, x, ind_qr, ...
-%                                                    Q, R, trmodel.radius, ...
-%                                                    bl, bu, multipliers);
+%              [h, pred] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
+            h = null_space_step_complete(fmodel, ...
+                                                   current_constraints, ...
+                                                   mu, x, ind_qr, ...
+                                                   Q, R, trmodel.radius, ...
+                                                   bl, bu, multipliers);
 
-            v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
-                                     h, ind_qr, trmodel.radius, x, bl, bu);
-%             v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-%                              trmodel.radius, x, bl, bu);
+%             v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
+%                                      h, ind_qr, trmodel.radius, x, bl, bu);
+            v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+                             trmodel.radius, x, bl, bu);
 
             s = correct_step_to_bounds(x, h + v, bl, bu);
         else
-            v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
-                                         h, ind_qr, trmodel.radius, x, bl, bu);
-%             v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
-%                              trmodel.radius, x, bl, bu);
+%             v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
+%                                      zeros(size(x)), ind_qr, trmodel.radius, x, bl, bu);
+            v = l1_range_step(fmodel, current_constraints, Q, R, mu, zeros(size(x)), ind_qr, ...
+                             trmodel.radius, x, bl, bu);
             s = correct_step_to_bounds(x, v, bl, bu);
 %             status_step = true;
         end
@@ -253,6 +279,12 @@ while ~finish
             evaluate_step = true;
         end
     end
+    if norm(s) - 1.1*trmodel.radius > 0
+%        warning('long step'); 
+    end
+    if norm(s) < 0.5*tol_radius
+%        warning('short step'); 
+    end
     if evaluate_step
         trial_point = project_to_bounds(x + s, bl, bu);
         [p_trial, trial_fvalues] = p(trial_point);
@@ -264,21 +296,34 @@ while ~finish
         end
         if rho > eta_2 || (rho > eta_1 && geometry_ok)
             x = trial_point;
-            [trmodel, mchange_flag] = change_tr_center(trmodel, trial_point, trial_fvalues, options);
+            if strcmp(options.basis, 'dummy')
+                geometry_ok = true;
+                mchange_flag = 4;
+            else
+                [trmodel, mchange_flag] = change_tr_center(trmodel, trial_point, trial_fvalues, options);
+            end
             px = p_trial;
         elseif rho ~= -inf
-            [trmodel, mchange_flag] = try_to_add_point(trmodel, trial_point, trial_fvalues, fphi, bl, bu, options);
+            if strcmp(options.basis, 'dummy')
+                geometry_ok = true;
+                mchange_flag = 4;
+            else
+                [trmodel, mchange_flag] = try_to_add_point(trmodel, trial_point, trial_fvalues, fphi, bl, bu, options);
+            end
         else
-            [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
+            if strcmp(options.basis, 'dummy')
+                geometry_ok = true;
+                mchange_flag = 4;
+            else
+                [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
+            end
         end
     else
         rho = -inf;
         [trmodel, mchange_flag] = ensure_improvement(trmodel, fphi, bl, bu, options);
-        if geometry_ok && (q < Lambda || pred <= 0)
-            [epsilon, Lambda] = l1_reduce_lambda(epsilon, Lambda, ...
-                                                 current_constraints, ...
-                                                 fmodel.g, mu, Q, ...
-                                                 R, x, bl, bu, tol_g, tol_con); 
+        if geometry_ok && q < Lambda
+            Lambda = 0.5*Lambda;
+            epsilon = 0.5*epsilon;
         end
     end
     if rho <= eta_2 && (mchange_flag == 4 || tr_criticality_step_executed)
@@ -310,10 +355,16 @@ while ~finish
     history_solution(iter).q = q;
     history_solution(iter).ns = norm(s);
     history_solution(iter).mchange = mchange_flag;
+    history_solution(iter).step_type= step_type;
+    history_solution(iter).epsilon = epsilon;
+    history_solution(iter).Lambda= Lambda;
 
 
     if trmodel.radius < tol_radius || iter > max_iter
         finish = true;
+    end
+    if pred < 0 && ~isinf(rho) || norm(s) - 1.1*history_solution(iter-1).radius > 0
+        1;
     end
     if debug_on
         try

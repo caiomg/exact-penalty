@@ -28,7 +28,12 @@ end
 
 if h_pos_def
     lambda = 0;
-    lambda_l = 0;
+    dR = abs(diag(R));
+    if min(dR)/max(dR) < sqrt(eps)
+        lambda_l = min(dR);
+    else
+        lambda_l = 0;
+    end
 else
    % Computing leftmost eigenvalue/vector
 %    [~, va] = eigs(H, 1, 'SA');
@@ -65,7 +70,7 @@ end
 y = linsolve(R', -g, linopts_l);
 s = linsolve(R, y, linopts_u);
 
-if lambda_l > 0 && norm(s) < radius
+if ~h_pos_def && norm(s) < radius
     alphas = roots([u'*u, 2*s'*u, s'*s - radius^2]);
     s1 = s + alphas(1)*u;
     s2 = s + alphas(2)*u;

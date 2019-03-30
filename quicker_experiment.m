@@ -26,8 +26,9 @@ log_fd = fopen(log_filename, 'w');
 
 
 l1_options = [];
-l1_options.eta_2 = 0.1;
-l1_options.pivot_threshold = 0.01;
+l1_options.eta_2 = 0.05;
+l1_options.pivot_threshold = 0.001;
+l1_options.basis = 'dummy'
 
 % Parameters
 epsilon = 1;
@@ -52,7 +53,9 @@ clear results;
 
 bad_cond_warn = warning('off', 'cmg:badly_conditioned_system');
 
-for k = 1:n_problems
+reordered_problems = [1:14, 16:30, 15];
+
+for k = reordered_problems
     iter = iter + 1;
 
     problem_name = selected_problems(k).name;

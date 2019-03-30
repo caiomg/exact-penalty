@@ -1,51 +1,36 @@
 function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
-                                radius, lb, ub, multipliers)
+                                radius, lb, ub)
 
                             
     tol_d = eps(1);
     tol_h = eps(1);
-    suff_radius = 0.9*radius;
+    tol_con = 1e-6;
+    
+
+
+    pgradient = l1_pseudo_gradient_new(fmodel, cmodel, mu, [], ind_qr);
+    [Q, R, bl_active, bu_active] = ...
+        detect_and_include_active_bounds(Q, R, x0, -pgradient, lb, ub, tol_con);
+
+    active_bounds = bl_active | bu_active;
     [dim, r_cols] = size(R);
     N = Q(:, r_cols+1:end);
-    
-    pgradient = l1_pseudo_gradient_new(fmodel, cmodel, mu);
-
-    s = zeros(dim, 1);
+    N(active_bounds, :) = zeros(sum(active_bounds), dim - r_cols);
     g = (N*(N'*pgradient));
     d = -g;
-    bl_active = false(dim, 1);
-    bu_active = false(dim, 1);
     
-    for checks = 1:dim
-        [bl_active_x, bu_active_x] = active_bounds(x0, d, lb, ub);
-        bl_active_new = bl_active_x & ~bl_active;
-        bu_active_new = bu_active_x & ~bu_active;
+    s = zeros(dim, 1);
 
-        if isempty(find(bl_active_new | bu_active_new, 1))
-            break
-        else
-            [Q, R, bl_included, bu_included] = ...
-                include_bounds_gradients(Q, R, bl_active_new, ...
-                                         bu_active_new);
-            r_cols = size(R, 2);
-            N = Q(:, r_cols+1:end);
-            bl_active = bl_active | bl_active_x;
-            bu_active = bu_active | bu_active_x;
-
-            g = N*(N'*pgradient);
-            d = -g;
-            d(bl_active | bu_active) = ...
-                zeros(sum(bl_active | bu_active), 1);
-        end
-    end
     fmodel_d = fmodel;
     cmodel_d = cmodel;
     
     for iter = 1:dim
-        
+
+        d(bl_active | bu_active) = zeros(sum(bl_active | bu_active), 1);
         if norm(d) < tol_d
             break
         end
+        
         x = project_to_bounds(x0 + s, lb, ub);
         [t_lb, t_ub, tmax_bounds] = bounds_breakpoints(x, lb, ub, d);
         tmax_tr = tr_radius_breakpoint(d, radius, s);
@@ -53,45 +38,34 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
         tmax = min(tmax_bounds, tmax_tr);
         [t, brpoints_crossed] = line_search_cg(fmodel_d, cmodel_d, mu, d, tmax);
         s = s + t*d;
-        if t == 0 || t == tmax_tr
+        if tmax_bounds ~= 0 && (t == 0 || t == tmax_tr)
             break
-        elseif t == tmax
+        elseif tmax_bounds == 0 || t == tmax
             % Repeat all those projections
             % Restart method
             bl_active_new = t_lb == t;
             bu_active_new = t_ub == t;
+            s(bl_active_new) = lb(bl_active_new) - x0(bl_active_new);
+            s(bu_active_new) = ub(bu_active_new) - x0(bu_active_new);
             
-            x = project_to_bounds(x0 + s, lb, ub);
-            [bl_active_x, bu_active_x] = active_bounds(x, d, lb, ub);
-            bl_active_new_2 = bl_active_x & ~bl_active;
-            bu_active_new_2 = bu_active_x & ~bu_active;
-    
-            if ~isempty(find((bl_active_new ~= bl_active_new_2) ...
-                    | (bu_active_new ~= bu_active_new_2), 1))
-                warning('cmg:runtime_error', 'This needs debugging');
+            
+            [Q, R, bl_included, bu_included] = ...
+                     detect_and_include_active_bounds(Q, R, x, d, lb, ub, tol_con);
+            bl_active = bl_active | bl_included;
+            bu_active = bu_active | bu_included;
+
+            fmodel_d = shift_model(fmodel, s);
+            for k = 1:length(cmodel)
+                cmodel_d(k) = shift_model(cmodel(k), s);
             end
             
-            for checks = 1:sum(~(bl_active | bu_active))
-                if isempty(find(bl_active_new | bu_active_new, 1))
-                    if checks == 1
-                        warning('cmg:runtime_error', 'This needs debugging');
-                    end                        
-                    break
-                else
-                    [Q, R, bl_included, bu_included] = ...
-                        include_bounds_gradients(Q, R, bl_active_new, ...
-                                                 bu_active_new);
-                    r_cols = size(R, 2);
-                    N = Q(:, r_cols+1:end);
-                    bl_active = bl_active | bl_included;
-                    bu_active = bu_active | bu_included;
-                    pgradient = l1_pseudo_gradient_new(fmodel, cmodel, mu, s);
-                    g = N*(N'*pgradient);
-                    d = -g;
-                    d(bl_active | bu_active) = ...
-                        zeros(sum(bl_active | bu_active), 1);
-                end
-            end
+            pgradient = l1_pseudo_gradient_new(fmodel_d, cmodel_d, mu, [], ind_qr);
+            [dim, r_cols] = size(R);
+            N = Q(:, r_cols+1:end);
+            N(bl_active | bu_active, :) = ...
+                zeros(sum(bl_active | bu_active), dim - r_cols);
+            g = (N*(N'*pgradient));
+            d = -g;
         else
             % Stopped at a local minimum
             % Compute conjugate directions
@@ -110,7 +84,7 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
             end
             
             % Conjugate direction
-            pgradient_new = l1_pseudo_gradient_new(fmodel, cmodel, mu, s);
+            pgradient_new = l1_pseudo_gradient_new(fmodel, cmodel, mu, s, ind_qr);
             g_new = N*(N'*pgradient_new);
             g_new(bl_active | bu_active) = ...
                 zeros(sum(bl_active | bu_active), 1);
@@ -120,15 +94,9 @@ function s = null_space_step_cg(fmodel, cmodel, mu, x0, ind_qr, Q, R, ...
             end
             beta = (g_new'*H*d)/dHd;
             d = -g_new + beta*d;
-            d(bl_active | bu_active) = ...
-                zeros(sum(bl_active | bu_active), 1);
-
         end
-        x = x0 + s;
-        if max([max(0, lb(bl_active) - x(bl_active));
-                max(0, x(bu_active) - ub(bu_active))]) > sqrt(eps)
-            warning('cmg:bounds_error', 'This needs debugging');
-        end
+        s(bl_active) = lb(bl_active) - x0(bl_active);
+        s(bu_active) = ub(bu_active) - x0(bu_active);
 
         fmodel_d = shift_model(fmodel, s);
         for k = 1:length(cmodel)

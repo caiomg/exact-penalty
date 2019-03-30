@@ -2,7 +2,8 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
                                                 x0, ind_qr, Q, R, ...
                                                 radius, lb, ub, multipliers)
 
-    tol_l = 1e-4;                    
+    tol_l = 1e-4;
+    tol_con = 1e-6;
     [dim, r_cols] = size(R);
     N = Q(:, r_cols+1:end);
     kappa_easy = 0.1;
@@ -40,8 +41,13 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
 %                  status = true;
 %              end
 %          end
-        radius_icb = radius;
+        x = project_to_bounds(x0 + s, lb, ub);
+        radius_icb = radius - norm(s);
         while true
+            if isempty(N)
+                finish = true;
+                break
+            end
             try
                 [d_red, d_change] = ms_step(H_red, g_red, radius_icb);
             catch myerror
@@ -50,7 +56,6 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
             d = N*d_red;
             d(bl_active | bu_active) = ...
                 zeros(sum(bl_active | bu_active), 1);
-            x = project_to_bounds(x0 + s, lb, ub);
             [t_lb, t_ub, tmax_bounds] = bounds_breakpoints(x, lb, ub, d);
             if tmax_bounds >= 1 ...
                     && norm(s + d) < radius*(1 + kappa_easy)
@@ -64,17 +69,21 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
                 if bounded_change < 0.5*d_change ...
                         || (bounded_change <= 0 ...
                             && radius_icb < kappa_easy*radius)
+                    
                     % Decrease OK. Use this direction
+                    s = s + tmax_bounds*d;
                     bl_active_new = t_lb == tmax_bounds;
                     bu_active_new = t_ub == tmax_bounds;
+                    s(bl_active_new) = x0(bl_active_new) - lb(bl_active_new);
+                    s(bu_active_new) = x0(bu_active_new) - lb(bu_active_new);
+                    
+                    x = project_to_bounds(x0 + s, lb, ub);
                     [Q, R, bl_included, bu_included] = ...
-                        include_bounds_gradients(Q, R, bl_active_new, ...
-                                                 bu_active_new);
+                        detect_and_include_active_bounds(Q, R, x, ...
+                                                         d, lb, ub, tol_con);
 
                     bl_active = bl_active | bl_included;
                     bu_active = bu_active | bu_included;
-
-                    s = s + tmax_bounds*d;
                     break
                 else
                     % Decrease not OK, recompute direction

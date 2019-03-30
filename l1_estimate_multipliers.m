@@ -1,4 +1,6 @@
-function [multipliers, tol, bl_mult, bu_mult] = l1_estimate_multipliers(fmodel, cmodel, mu, ind_eactive, Q, R, x, bl, bu)
+function [multipliers, tol, bl_mult, bu_mult] = ...
+        l1_estimate_multipliers(fmodel, cmodel, mu, ind_eactive, Q, ...
+                                R, x, bl, bu)
 
     if isempty(bl)
         bl = -inf(size(x));
