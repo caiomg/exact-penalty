@@ -122,13 +122,13 @@ finish = false;
 
 if ~strcmp(options.basis, 'dummy')
     [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-    current_constraints = extract_constraints_from_tr_model(trmodel, ...
+    cmodel = extract_constraints_from_tr_model(trmodel, ...
                                                       con_lb, con_ub);
 else
     [fx, fmodel.g, fmodel.H] = f(x);
-    current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+    cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
 end
-px = fx + mu*sum(max(0, [current_constraints.c]));
+px = fx + mu*sum(max(0, [cmodel.c]));
 history_solution.x = x;
 rho = nan;
 history_solution.rho = rho;
@@ -155,18 +155,18 @@ while ~finish
     if ~strcmp(options.basis, 'dummy')
         trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
         [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-        current_constraints = extract_constraints_from_tr_model(trmodel, ...
+        cmodel = extract_constraints_from_tr_model(trmodel, ...
                                                           con_lb, con_ub);
     else
         [fx, fmodel.g, fmodel.H] = f(x);
-        current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+        cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
     end
 
     [ind_eactive, ~] = ...
-        identify_new_constraints(current_constraints, epsilon, []);
-    [Q, R, ind_qr] = update_factorization(current_constraints, ...
+        identify_new_constraints(cmodel, epsilon, []);
+    [Q, R, ind_qr] = update_factorization(cmodel, ...
                                              Q, R, ind_eactive, false);
-    pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
+    pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, cmodel, ...
                                          ind_qr, true);
 
     pg_proj = projected_direction(x, -pseudo_gradient, Q, R, bl, bu);
@@ -183,20 +183,20 @@ while ~finish
 
         if ~strcmp(options.basis, 'dummy')
             [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-            current_constraints = ...
+            cmodel = ...
                 extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
         else
             [fx, fmodel.g, fmodel.H] = f(x);
-            current_constraints = evaluate_constraints(phi, x, con_lb, con_ub);
+            cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
         end
 
         [ind_eactive, ~] = ...
-            identify_new_constraints(current_constraints, epsilon, []);
-        [Q, R, ind_qr] = update_factorization(current_constraints, [], ...
+            identify_new_constraints(cmodel, epsilon, []);
+        [Q, R, ind_qr] = update_factorization(cmodel, [], ...
                                                  [], ...
                                                  ind_eactive, true);
         pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
-                                             current_constraints, ...
+                                             cmodel, ...
                                              ind_qr, true);
         pg_proj = projected_direction(x, -pseudo_gradient, Q, R, bl, bu);
         q = norm(pg_proj);
@@ -204,16 +204,16 @@ while ~finish
 
     if norm(q) <= max(tol_g, Lambda)
         [Q, R, ind_qr, q, multipliers, tol_multipliers] = ...
-            l1_confirm_constraints(fmodel, current_constraints, ind_eactive, ind_qr, ...
+            l1_confirm_constraints(fmodel, cmodel, ind_eactive, ind_qr, ...
                                    Q, R, mu, x, bl, bu, Lambda);
 
         % Stopping conditions
         if norm(q) < tol_g
             if ~sum(multipliers < -tol_multipliers | ...
                     mu < multipliers - tol_multipliers) 
-                phih = [current_constraints(ind_qr).c]';
+                phih = [cmodel(ind_qr).c]';
                 if norm(phih) < tol_con
-                    if max([current_constraints.c]) > tol_con && false
+                    if max([cmodel.c]) > tol_con && false
                         break % Address this outside
                         mu = mu*10;
                         p = @(x) l1_function(f, phi, mu, x);
@@ -229,8 +229,8 @@ while ~finish
     geometry_ok = is_lambda_poised(trmodel, options);
     if norm(q) > Lambda
         step_type = 1;
-        s = iterated_steps(fmodel, current_constraints, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
-        pred = predict_descent(fmodel, current_constraints, s, mu, []);
+        s = iterated_steps(fmodel, cmodel, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
+        pred = predict_descent(fmodel, cmodel, s, mu, []);
         if pred < 0
             warning('cmg:fumou', 'check this');
         end
@@ -240,27 +240,27 @@ while ~finish
         if q >= tol_g % Should be using criticality measure
 %              [h, pred] = l1_horizontal_step(fmodel, current_constraints, mu, x, ind_qr, Q, R, trmodel.radius, bl, bu, multipliers);
             h = null_space_step_complete(fmodel, ...
-                                                   current_constraints, ...
+                                                   cmodel, ...
                                                    mu, x, ind_qr, ...
                                                    Q, R, trmodel.radius, ...
                                                    bl, bu, multipliers);
 
 %             v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
 %                                      h, ind_qr, trmodel.radius, x, bl, bu);
-            v = l1_range_step(fmodel, current_constraints, Q, R, mu, h, ind_qr, ...
+            v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, ...
                              trmodel.radius, x, bl, bu);
 
             s = correct_step_to_bounds(x, h + v, bl, bu);
         else
 %             v = tr_vertical_step_new(fmodel, current_constraints, Q, R, mu, ...
 %                                      zeros(size(x)), ind_qr, trmodel.radius, x, bl, bu);
-            v = l1_range_step(fmodel, current_constraints, Q, R, mu, zeros(size(x)), ind_qr, ...
+            v = l1_range_step(fmodel, cmodel, Q, R, mu, zeros(size(x)), ind_qr, ...
                              trmodel.radius, x, bl, bu);
             s = correct_step_to_bounds(x, v, bl, bu);
 %             status_step = true;
         end
-        pred = predict_descent(fmodel, current_constraints, s, mu, []);
-        normphi = norm([current_constraints(ind_eactive).c], 1);
+        pred = predict_descent(fmodel, cmodel, s, mu, []);
+        normphi = norm([cmodel(ind_eactive).c], 1);
     end
     if q < Lambda
         if pred < delta*(q^2 + normphi)
