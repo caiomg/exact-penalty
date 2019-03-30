@@ -16,46 +16,15 @@ function [multipliers, tol, bl_mult, bu_mult] = ...
     tol_ort = 1e-5;
     tol_con = 1e-10;
     
+    n_constraints = size(R, 2);
+    
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, cmodel, ...
                                          ind_eactive, true);
 
-	% Test bounds
-    l_active = x - bl <= tol_con & pseudo_gradient > 0;
-    u_active = x - bu >= -tol_con & pseudo_gradient < 0;
-    n_lower_active = sum(l_active);
-    n_upper_active = sum(u_active);
-    I = eye(dimension);
-    Al = -I(:, l_active);
-    Au = I(:, u_active);
-    n_constraints = size(R, 2);
-    lower_included = 0;
-    upper_included = 0;
-    for k = 1:n_lower_active
-        this_grad = Al(:, k);
-        cols_r = size(R, 2);
-        norm_n = norm(Q(:, cols_r + 1:end)'*this_grad);
-        if norm_n > tol_ort
-            lower_included = lower_included + 1;
-            [Q, R] = qrinsert(Q, R, cols_r+1, this_grad);
-        else
-            l_active(this_grad ~= 0) = false;
-        end
-    end
-    for k = 1:n_upper_active
-        this_grad = Au(:, k);
-        cols_r = size(R, 2);
-        norm_n = norm(Q(:, cols_r + 1:end)'*this_grad);
-        if norm_n > tol_ort
-            upper_included = upper_included + 1;
-            [Q, R] = qrinsert(Q, R, cols_r+1, this_grad);
-        else
-            u_active(this_grad ~= 0) = false;
-        end
-    end
+    [Q, R, lower_included, upper_included] = ...
+        detect_and_include_active_bounds(Q, R, x, -pseudo_gradient, bl, bu, tol_con);
+
     cols_r = size(R, 2);
-    assert(lower_included == sum(l_active));
-    assert(upper_included == sum(u_active));
-    assert(n_constraints + lower_included + upper_included == cols_r);
 
     % Actual multiplier estimation
     lastwarn(''); % Reseting warnings
@@ -77,11 +46,19 @@ function [multipliers, tol, bl_mult, bu_mult] = ...
     bl_mult = zeros(size(bl));
     bu_mult = zeros(size(bu));
 
-    if lower_included > 0
-        bl_mult(l_active) = multipliers(n_constraints+1:n_constraints+lower_included);
+    n_lower_included = sum(lower_included);
+    if n_lower_included > 0
+        bl_mult(lower_included) = multipliers(n_constraints+1: ...
+                                              n_constraints+ ...
+                                              n_lower_included);
     end
-    if upper_included > 0
-        bu_mult(u_active) = multipliers(n_constraints + lower_included + 1:n_constraints + lower_included + upper_included);
+    n_upper_included = sum(upper_included);
+    if n_upper_included > 0
+        bu_mult(upper_included) = multipliers(n_constraints + ...
+                                              n_lower_included + 1 ...
+                                              :n_constraints + ...
+                                              n_lower_included + ...
+                                              n_upper_included);
     end
     multipliers = multipliers(1:n_constraints);
     

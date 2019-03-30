@@ -16,7 +16,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS67';
+problem_name = 'HS83';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -31,8 +31,6 @@ n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
 dim = prob.n;
 
 % Bound constraints
-bl = [];
-bu = [];
 bl = prob.bl;
 bu = prob.bu;
 cutest_lower_bounds = prob.bl > -1e19;
@@ -63,8 +61,7 @@ else
     end
 end
 
-% assert(length (all_con) == n_constraints + sum(cutest_lower_bounds) + ...
-%         sum(cutest_upper_bounds) - sum(lower_bounds) - sum(upper_bounds))
+
 
 
 % Initial point
@@ -72,34 +69,41 @@ x0 = prob.x;
 
 % Parameters
 mu = 10;
+for m = 1:length(selected_problems)
+    if strcmp(problem_name, selected_problems(m).name)
+        mu = selected_problems(m).mu
+        break
+    end
+end
 
-epsilon = 0.038;
+epsilon = 1;
 delta = 1e-6;
 Lambda = 0.1;
 
 
 nlcon = @(x) constraints(all_con, {}, x, 1);
 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
+                               'Algorithm', 'interior-point', ...
                                'SpecifyObjectiveGradient', false);
-
+nlcon_fmincon = @(x) [nlcon(x) - con_ub; con_lb - nlcon(x)];
 % global x_fmincon
 % [x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options)
-% nlcon_fmincon = max(0, nlcon(x_fmincon));
-
-fmincon_count = counter.get_count()
-counter.reset_count()
+% viol_fmincon = max(0, nlcon_fmincon(x_fmincon))
+% fmincon_count = counter.get_count()
+counter.reset_count();
 % counter.set_max_count(15000);
 
 
 
-l1_options = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
-                       'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.05, ...
-                       'gamma_inc', 2, 'gamma_dec', 0.5, ...
-                        'initial_radius', 1, 'radius_max', 1e3, ...
-                        'criticality_mu', 50, 'criticality_beta', 10, ...
-                        'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
-                        'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
-                        'pivot_imp', 1.1, 'debug', false, 'inspect_iteration', 30)
+l1_options = struct('eta_2', 0.05, ...
+                    'pivot_threshold', 0.001, ...
+                    'basis', 'dummy', ...
+                    'debug', true, 'inspect_iteration', 5);
+%                , 'poised_radius_factor', 6)
+%                    'pivot_imp', 1.1, 'debug', false, 'inspect_iteration', 30)
+% l1_options = [];
+% l1_options.eta_2 = 0.1;
+
 
 %%
 warning('off', 'cmg:badly_conditioned_system');
@@ -108,26 +112,26 @@ p_seed = rng('default');
 len_con = length(all_con);
 
 
-rng('shuffle')
-[x, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, mu, ...
+% rng('shuffle')
+[x_l1, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, mu, ...
                             epsilon, delta, Lambda, bl, bu, l1_options)
 l1_count = counter.get_count()
-fx = f(x)
-nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)))
+fx = f(x_l1)
+viol_l1 = norm(max(0,max(con_lb - nlcon(x_l1), nlcon(x_l1) - con_ub)))
 warning('on', 'cmg:badly_conditioned_system');
 counter.reset_count()
 
 
 rng(p_seed);
 
+[kkt_ok, lgrad] = check_kkt(f, all_con, x_l1, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
 
 
-tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
+%tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
 % tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
 % time_exact_penalty = timeit(tl1)
 % time_fmincon = timeit(tmlab)
 
-[kkt_ok, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
 
 terminate_cutest_problem()
 

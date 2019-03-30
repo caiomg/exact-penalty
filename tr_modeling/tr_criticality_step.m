@@ -9,9 +9,7 @@ function [model, epsilon] = tr_criticality_step(model, funcs, p_mu, ...
 if nargin < 11 || isempty(one_pass)
     one_pass = false;
 end
-if strcmp(options.basis, 'dummy')
-    return
-end
+
 crit_mu = options.criticality_mu; % factor between radius and
                              % criticality measure
 omega = options.criticality_omega; % factor used to reduce radius
@@ -43,8 +41,8 @@ if ~strcmp(options.basis, 'dummy')
     cmodel = extract_constraints_from_tr_model(model, ...
                                                       con_lb, con_ub);
 else
-    [fx, fmodel.g, fmodel.H] = f(x);
-    cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
+    [fx, fmodel.g, fmodel.H] = funcs{1}(x);
+    cmodel = evaluate_constraints({funcs{2:end}}, x, con_lb, con_ub);
 end
 
 [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
@@ -76,9 +74,6 @@ while (model.radius > crit_mu*measure)
     if ~strcmp(options.basis, 'dummy')
         [fx, fmodel.g, fmodel.H] = get_model_matrices(model, 0);
         cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
-    else
-        [fx, fmodel.g, fmodel.H] = f(x);
-        cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
     end
     [ind_eactive, ~] = identify_new_constraints(cmodel, ...
                                                       epsilon, []);

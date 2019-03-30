@@ -1,11 +1,13 @@
 function pg = l1_pseudo_gradient_new(fmodel, cmodel, mu, s, ind_eactive)
 
+    dim = size(fmodel.g, 1);
     if nargin < 4 || isempty(s)
-        s = zeros(size(fmodel.g));
+        s = zeros(dim, 1);
     end
     if nargin < 5
         ind_eactive = [];
     end
+    assert(numel(s) == dim);
     
     n_constraints = length(cmodel);
 

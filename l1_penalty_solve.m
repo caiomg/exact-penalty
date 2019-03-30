@@ -299,6 +299,8 @@ while ~finish
             if strcmp(options.basis, 'dummy')
                 geometry_ok = true;
                 mchange_flag = 4;
+                trmodel.points_abs(:, 1) = x;
+                trmodel.tr_center = 1;
             else
                 [trmodel, mchange_flag] = change_tr_center(trmodel, trial_point, trial_fvalues, options);
             end
