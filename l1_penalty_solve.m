@@ -169,8 +169,8 @@ while ~finish
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, current_constraints, ...
                                          ind_qr, true);
 
-    q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
-                               [current_constraints(ind_qr).c]');
+    pg_proj = projected_direction(x, -pseudo_gradient, Q, R, bl, bu);
+    q = norm(pg_proj);
 
     if q > Lambda
         tr_criticality_step_executed = false;
@@ -198,8 +198,8 @@ while ~finish
         pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, ...
                                              current_constraints, ...
                                              ind_qr, true);
-        q = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, bu, ...
-                                   [current_constraints(ind_qr).c]');
+        pg_proj = projected_direction(x, -pseudo_gradient, Q, R, bl, bu);
+        q = norm(pg_proj);
     end
 
     if norm(q) <= max(tol_g, Lambda)

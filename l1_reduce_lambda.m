@@ -15,8 +15,8 @@ while true
                                              Q, R, ind_eactive, true);
     pseudo_gradient = l1_pseudo_gradient(gfx, mu, current_constraints, ...
                                          ind_qr, true);
-    measure = l1_criticality_measure(x, pseudo_gradient, Q, R, bl, ...
-                                    bu, []);
+    pg_proj = projected_direction(x, -pseudo_gradient, Q, R, bl, bu);
+    measure = norm(pg_proj);
     if measure > tol_g
         break
     elseif Lambda < tol_g

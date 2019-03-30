@@ -6,8 +6,8 @@ function [Q, R, ind_qr, crit_measure, multipliers, tol_multipliers, dropped_grad
     while true
         pgradient = ...
             l1_pseudo_gradient(fmodel.g, mu, cmodel, ind_qr, true);
-        crit_measure = ...
-            l1_criticality_measure(x, pgradient, Q, R, bl, bu, []);
+        pg_proj = projected_direction(x, -pgradient, Q, R, bl, bu);
+        crit_measure = norm(pg_proj);
         if crit_measure >= Lambda
             % No use calculating multipliers
             multipliers = [];
