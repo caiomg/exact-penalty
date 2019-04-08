@@ -1,6 +1,5 @@
-function [multipliers, tol, bl_mult, bu_mult] = ...
-        l1_estimate_multipliers(fmodel, cmodel, mu, ind_eactive, Q, ...
-                                R, x, bl, bu)
+function [multipliers, tol, bl_mult, bu_mult, Q, R] = ...
+        l1_estimate_multipliers(fmodel, cmodel, mu, ind_qr, Q, R, x, bl, bu)
 
     if isempty(bl)
         bl = -inf(size(x));
@@ -19,10 +18,14 @@ function [multipliers, tol, bl_mult, bu_mult] = ...
     n_constraints = size(R, 2);
     
     pseudo_gradient = l1_pseudo_gradient(fmodel.g, mu, cmodel, ...
-                                         ind_eactive, true);
+                                         ind_qr, true);
 
-    [Q, R, lower_included, upper_included] = ...
-        detect_and_include_active_bounds(Q, R, x, -pseudo_gradient, bl, bu, tol_con);
+	include_bl = bl - x > -tol_con;
+    include_bu = bu - x < tol_con;
+	[Q, R, lower_included, upper_included] = ...
+        include_bounds_gradients(Q, R, include_bl, include_bu);
+    %[Q, R, lower_included, upper_included] = ...
+    %    detect_and_include_active_bounds(Q, R, x, -pseudo_gradient, bl, bu, tol_con);
 
     cols_r = size(R, 2);
 
@@ -37,7 +40,7 @@ function [multipliers, tol, bl_mult, bu_mult] = ...
     remainder = -((Q*R)*multipliers + pseudo_gradient);
 
     % Correction
-    correction = linsolve(R(1:cols_r, 1:cols_r), Q(:, 1:cols_r)'*remainder, ut_option);
+    [correction, rc] = linsolve(R(1:cols_r, 1:cols_r), Q(:, 1:cols_r)'*remainder, ut_option);
     % Final calculation
     multipliers = multipliers + correction;
     % Tolerance

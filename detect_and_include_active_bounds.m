@@ -23,7 +23,7 @@ function [Q, R, bl_included, bu_included] = ...
             newly_active_ub = t_ub == tmax_bounds;
             max_product = 0;
             for m = find(newly_active_lb)'
-                this_product = norm(N(m, :));
+                this_product = abs(d_proj(m));
                 if this_product > max_product
                     max_product = this_product;
                     max_grad = zeros(dim, 1);
@@ -31,7 +31,7 @@ function [Q, R, bl_included, bu_included] = ...
                 end
             end
             for m = find(newly_active_ub)'
-                this_product = norm(N(m, :));
+                this_product = abs(d_proj(m));
                 if this_product > max_product
                     max_product = this_product;
                     max_grad = zeros(dim, 1);

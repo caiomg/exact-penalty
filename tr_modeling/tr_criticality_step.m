@@ -38,19 +38,18 @@ end
 
 if ~strcmp(options.basis, 'dummy')
     [fx, fmodel.g, fmodel.H] = get_model_matrices(model, 0);
-    cmodel = extract_constraints_from_tr_model(model, ...
-                                                      con_lb, con_ub);
+    cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
 else
     [fx, fmodel.g, fmodel.H] = funcs{1}(x);
     cmodel = evaluate_constraints({funcs{2:end}}, x, con_lb, con_ub);
 end
 
 [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-[Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, true);
+[Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
 
-[Q, R, ind_qr, measure] = ...
-        l1_confirm_constraints(fmodel, cmodel, ind_eactive, ind_qr, ...
-                               Q, R, p_mu, x, bl, bu, Lambda);
+[q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ind_qr, ...
+                                  x, bl, bu, Lambda);
+measure = max(q1, q2);
 
 
 while (model.radius > crit_mu*measure)
@@ -75,14 +74,12 @@ while (model.radius > crit_mu*measure)
         [fx, fmodel.g, fmodel.H] = get_model_matrices(model, 0);
         cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
     end
-    [ind_eactive, ~] = identify_new_constraints(cmodel, ...
-                                                      epsilon, []);
-    [Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
-                                             ind_eactive, true);
+    [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
+    [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
+    [q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ind_qr, ...
+                                      x, bl, bu, Lambda);
+    measure = max(q1, q2);
 
-    [Q, R, ind_qr, measure] = ...
-        l1_confirm_constraints(fmodel, cmodel, ind_eactive, ind_qr, ...
-                               Q, R, p_mu, x, bl, bu, Lambda);
     
     if (model.radius < tol_radius || ...
         (beta*measure < tol_f && model.radius < 100*tol_radius))
@@ -99,12 +96,12 @@ end
 identified = length(ind_eactive);
 while true
     [active_larger, ~] = identify_new_constraints(cmodel, epsilon/factor_epsilon, []);
-    [Q, R, ind_qr] = update_factorization(cmodel, [], [], ...
-                                             active_larger, true);
-    [Q, R, ind_qr, measure_larger] = l1_confirm_constraints(fmodel, cmodel, ...
-                                                     active_larger, ...
-                                                     ind_qr, Q, R, ...
-                                                     p_mu, x, bl, bu, Lambda);
+    [Q, R, ind_qr] = update_factorization(cmodel, [], [], active_larger, ...
+                                          false);
+    [q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ...
+                                      ind_qr, x, bl, bu, Lambda);
+    measure_larger = max(q1, q2);
+
     if model.radius <= crit_mu*measure_larger...
             && epsilon/factor_epsilon <= epsilon0
         measure = measure_larger;
