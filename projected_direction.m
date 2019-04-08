@@ -20,6 +20,8 @@ function d_proj = projected_direction(x, d, Q, R, lb, ub)
         d_proj = zeros(dim, 1);
     else
         d_proj = N*(N'*d);
+        d_proj(bl_included | bu_included) = ...
+            zeros(sum(bl_included | bu_included), 1);
     end
 
 end

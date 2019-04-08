@@ -21,7 +21,8 @@ function [polynomials, accuracy] = compute_quadratic_mn_polynomials(points, cent
     sym_opts.SYM = true;
     [mult_mn, accuracy] = linsolve(M, fvalues_diff', sym_opts);
     if accuracy < 1e4*eps(1)
-        warning('cmg:ill_conditioned_system', 'Ill conditioned system');
+        warning('cmg:ill_conditioned_system', ...
+                'Ill conditioned system. rcond = %g', accuracy);
     end
     
     if accuracy == 0
