@@ -1,5 +1,5 @@
-function [Q, R, ind_qr] = update_factorization(cmodel, ...
-                                                  Q, R, ind_eactive, perturb)
+function [Q, R, ind_qr] = update_factorization(cmodel, Q, R, ...
+                                               ind_eactive, perturb)
 
 tol = 1e-10;
 
@@ -14,7 +14,7 @@ n_included = 0;
 
 for rounds = 1:n_eactive
     n_max = find(~included, 1);
-    norm_max = 0;
+    norm_max = -1;
     c_val_max = inf;
     for n = 1:n_eactive
         if ~included(n)
@@ -27,7 +27,7 @@ for rounds = 1:n_eactive
                 norm_n = norm_grad;
             end
         else
-            norm_n = 0;
+            norm_n = -1;
         end
         if norm_n > norm_max ...
                 || (norm_n == norm_max && abs(c_val) < c_val_max)
