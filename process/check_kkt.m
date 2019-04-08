@@ -49,8 +49,8 @@ function [status, lgrad] = check_kkt(f, c, x, con_lb, con_ub, bl, bu, tol_c, tol
             break
         end
         
-        m0 = -(G(:, active_constraints)\fg);
-        m0_z = isinf(m0) | isnan(m0);
+        [m0, r] = linsolve(G(:, active_constraints), -fg);
+        m0_z = ~isfinite(m0);
         m0(m0_z) = zeros(sum(m0_z), 1);
 
         lgrad_diff = @(m) G(:, active_constraints)*m + fg;
