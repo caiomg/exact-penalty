@@ -8,7 +8,7 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
     N = Q(:, r_cols+1:end);
     kappa_easy = 0.1;
     
-    pgrad_center = l1_pseudo_gradient_new(fmodel, cmodel, mu);
+    pgrad_center = l1_pseudo_gradient_new(fmodel, cmodel, mu, zeros(dim, 1), ind_qr);
     pH = l1_pseudo_hessian(fmodel, cmodel, mu, ind_qr, multipliers);
 
     finish = false;
@@ -43,6 +43,9 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
 %          end
         x = project_to_bounds(x0 + s, lb, ub);
         radius_icb = radius - norm(s);
+        if radius_icb < tol_con
+            break
+        end
         while true
             if isempty(N)
                 finish = true;
