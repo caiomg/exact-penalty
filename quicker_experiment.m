@@ -51,7 +51,7 @@ n_problems = length(selected_problems);
 solved_problems = false(n_problems, 1);
 clear results;
 
-bad_cond_warn = warning('off', 'cmg:badly_conditioned_system');
+bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
 
 reordered_problems = [1:14, 16:30, 15];
 
