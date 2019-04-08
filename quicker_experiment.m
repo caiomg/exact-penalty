@@ -60,7 +60,7 @@ for k = reordered_problems
 
     problem_name = selected_problems(k).name;
     mu = selected_problems(k).mu;
-    [prob, prob_iface] = setup_cutest_problem(problem_name, '~/docd/exchange/my_problems');
+    [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems');
     dim = prob.n;
     n_constraints = sum(prob.cl > -1e19) + sum(prob.cu < 1e19);
     cutest_lower_bounds = prob.bl > -1e19;
