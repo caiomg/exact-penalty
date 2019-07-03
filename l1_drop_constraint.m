@@ -57,7 +57,7 @@ function [Q, R, ind_qr, ind_eactive, ind_dropped, multiplier_dropped] = ...
         else
             ind_qr(ind_j) = [];
             if ~isempty(ind_qr)
-                [Q, R] = qrdelete(Q, R, ind_j);
+                [Q, R] = qrdelete_fix(Q, R, ind_j);
             else
                R = zeros(length(Q), 0);
                Q = eye(length(Q));

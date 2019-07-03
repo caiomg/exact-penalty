@@ -44,12 +44,16 @@ else
     cmodel = evaluate_constraints({funcs{2:end}}, x, con_lb, con_ub);
 end
 
-[ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-[Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
+% [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
+% [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
 
-[q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ind_qr, ...
-                                  x, bl, bu, Lambda);
-measure = max(q1, q2);
+% [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
+%    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
+%                           bl, bu, max(Lambda, eps_c));
+[q1, q2, q3, d, Q, R, ind_qr, multipliers] = ...
+    l1_measure_criticality_new(fmodel, cmodel, p_mu, epsilon, x, ...
+                               bl, bu, Lambda);
+measure = max([q1, q2, q3]);
 
 
 while (model.radius > crit_mu*measure)
@@ -74,11 +78,17 @@ while (model.radius > crit_mu*measure)
         [fx, fmodel.g, fmodel.H] = get_model_matrices(model, 0);
         cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
     end
-    [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-    [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
-    [q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ind_qr, ...
-                                      x, bl, bu, Lambda);
-    measure = max(q1, q2);
+
+    % [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
+    % [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
+
+    % [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
+    %    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
+    %                           bl, bu, max(Lambda, eps_c));
+    [q1, q2, q3, d, Q, R, ind_qr, multipliers] = ...
+        l1_measure_criticality_new(fmodel, cmodel, p_mu, epsilon, x, ...
+                                   bl, bu, Lambda);
+    measure = max([q1, q2, q3]);
 
     
     if (model.radius < tol_radius || ...
@@ -93,14 +103,18 @@ while (model.radius > crit_mu*measure)
     end
 end
 
-identified = length(ind_eactive);
 while true
-    [active_larger, ~] = identify_new_constraints(cmodel, epsilon/factor_epsilon, []);
-    [Q, R, ind_qr] = update_factorization(cmodel, [], [], active_larger, ...
-                                          false);
-    [q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ...
-                                      ind_qr, x, bl, bu, Lambda);
-    measure_larger = max(q1, q2);
+    % [active_larger, ~] = identify_new_constraints(cmodel, epsilon/factor_epsilon, []);
+    % [Q, R, ind_qr] = update_factorization(cmodel, [], [], active_larger, ...
+    %                                      false);
+    % [q1, q2] = l1_measure_criticality(fmodel, cmodel, p_mu, Q, R, ...
+    %                                  ind_qr, x, bl, bu, Lambda);
+    % measure_larger = max(q1, q2);
+
+    [q1, q2, q3, d, Q, R, ind_qr, multipliers] = ...
+        l1_measure_criticality_new(fmodel, cmodel, p_mu, epsilon/factor_epsilon, x, ...
+                                   bl, bu, Lambda);
+    measure_larger = max([q1, q2, q3]);
 
     if model.radius <= crit_mu*measure_larger...
             && epsilon/factor_epsilon <= epsilon0

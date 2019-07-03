@@ -1,0 +1,154 @@
+|     HS18 | f(x):        +5 | evals:     94 | f err: +5.85e-10 | g lag: +1.15e-06 | viol.:  2.97e-09 | 1 |
+|     HS19 | f(x): -6.96e+03 | evals:     70 | f err: +6.56e-05 | g lag: +3.42e-13 | viol.:  1.07e-14 | 1 |
+|     HS21 | f(x):      -100 | evals:      8 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS23 | f(x):        +2 | evals:     18 | f err: -6.79e-07 | g lag: +4.44e-16 | viol.:         0 | 1 |
+|     HS30 | f(x):        +1 | evals:     12 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS31 | f(x):        +6 | evals:     20 | f err: +1.15e-11 | g lag: +4.49e-07 | viol.:  1.92e-12 | 1 |
+|     HS34 | f(x):    -0.834 | evals:   1390 | f err: +4.28e-07 | g lag:        +0 | viol.:  9.94e-07 | 1 |
+|     HS36 | f(x):  -3.3e+03 | evals:     16 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS37 | f(x): -3.46e+03 | evals:     24 | f err: -4.55e-13 | g lag: +3.32e-09 | viol.:         0 | 1 |
+|     HS59 | f(x):     -6.75 | evals:     28 | f err:     -1.05 | g lag: +4.63e-06 | viol.:         0 | 1 |
+|     HS65 | f(x):    +0.954 | evals:     82 | f err: +7.05e-10 | g lag:  +5.4e-08 | viol.:  7.11e-15 | 1 |
+|     HS66 | f(x):    +0.518 | evals:    530 | f err: -5.86e-10 | g lag: +9.82e-06 | viol.:   1.3e-12 | 1 |
+|     HS67 | f(x): -1.14e+03 | evals:   4993 | f err:     -26.4 | g lag:   +0.0456 | viol.:  1.36e-12 | 0 |
+|     HS70 | f(x):   +0.0075 | evals:     56 | f err: +3.09e-10 | g lag: +4.62e-06 | viol.:         0 | 1 |
+|     HS83 | f(x): -3.07e+04 | evals:     32 | f err: +1.78e-06 | g lag: +2.56e-15 | viol.:  4.44e-14 | 1 |
+|     HS84 | f(x): -5.28e+06 | evals:     26 | f err:      +0.5 | g lag:        +0 | viol.:         0 | 1 |
+|     HS85 | f(x):     -1.39 | evals:    199 | f err:    -0.516 | g lag:   +0.0234 | viol.:         0 | 0 |
+|     HS95 | f(x):   +0.0156 | evals:     16 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS96 | f(x):   +0.0156 | evals:     16 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS97 | f(x):     +3.14 | evals:     20 | f err: -2.28e-08 | g lag: +1.99e-14 | viol.:         0 | 1 |
+|     HS98 | f(x):     +3.14 | evals:     20 | f err: -2.28e-08 | g lag: +1.99e-14 | viol.:         0 | 1 |
+|    HS102 | f(x):      +912 | evals:   1152 | f err: -0.000416 | g lag:     +90.2 | viol.:  1.57e-14 | 0 |
+|    HS103 | f(x):      +544 | evals:   1510 | f err:   -0.0533 | g lag: +2.64e+03 | viol.:  2.59e-15 | 0 |
+|    HS104 | f(x):     +3.95 | evals:    646 | f err: +1.27e-06 | g lag: +7.53e-06 | viol.:  1.07e-06 | 1 |
+|    HS105 | f(x): +1.06e+03 | evals:     64 | f err:     +76.5 | g lag: +1.91e-06 | viol.:         0 | 1 |
+|    HS118 | f(x):      +667 | evals:    125 | f err:     -2.65 | g lag:     +1.42 | viol.:  7.94e-15 | 0 |
+|    HS101 | f(x): +1.81e+03 | evals:    721 | f err: -7.79e-06 | g lag: +4.24e-05 | viol.:  6.81e-15 | 1 |
+
+
+
+|     HS18 | f(x):        +5 | evals:     90 | f err: +5.85e-10 | g lag: +1.15e-06 | viol.:  2.97e-09 | 1 |
+|     HS19 | f(x): -6.96e+03 | evals:     72 | f err: +6.56e-05 | g lag: +2.08e-12 | viol.:  2.43e-12 | 1 |
+|     HS21 | f(x):      -100 | evals:      7 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS23 | f(x):        +2 | evals:     18 | f err: -7.09e-09 | g lag:        +0 | viol.:         0 | 1 |
+|     HS30 | f(x):        +1 | evals:     31 | f err: -8.58e-06 | g lag:        +0 | viol.:         0 | 1 |
+|     HS31 | f(x):        +6 | evals:     17 | f err: +1.15e-11 | g lag: +4.49e-07 | viol.:  1.92e-12 | 1 |
+|     HS34 | f(x):    -0.834 | evals:   1400 | f err: +4.28e-07 | g lag:        +0 | viol.:  9.94e-07 | 1 |
+|     HS36 | f(x):  -3.3e+03 | evals:     15 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS37 | f(x): -3.46e+03 | evals:     22 | f err: -4.55e-13 | g lag: +3.32e-09 | viol.:         0 | 1 |
+|     HS59 | f(x):     -6.75 | evals:     25 | f err:     -1.05 | g lag: +4.63e-06 | viol.:         0 | 1 |
+|     HS65 | f(x):    +0.954 | evals:     79 | f err: +7.05e-10 | g lag:  +5.4e-08 | viol.:  7.11e-15 | 1 |
+|     HS66 | f(x):    +0.518 | evals:    514 | f err: +2.64e-06 | g lag: +9.79e-06 | viol.:  6.68e-06 | 1 |
+|     HS67 | f(x): -1.16e+03 | evals:     64 | f err: +6.96e-07 | g lag: +5.76e-06 | viol.:         0 | 1 |
+|     HS70 | f(x):   +0.0075 | evals:     48 | f err: +3.09e-10 | g lag: +4.62e-06 | viol.:         0 | 1 |
+|     HS83 | f(x): -3.07e+04 | evals:     37 | f err: -0.000271 | g lag: +5.71e-14 | viol.:         0 | 1 |
+|     HS84 | f(x): -5.28e+06 | evals:     22 | f err:      +0.5 | g lag:        +0 | viol.:  2.33e-10 | 1 |
+|     HS85 | f(x):      -1.4 | evals:    148 | f err:    -0.503 | g lag:   +0.0235 | viol.:         0 | 0 |
+|     HS95 | f(x):   +0.0156 | evals:     14 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS96 | f(x):   +0.0156 | evals:     14 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS97 | f(x):     +3.14 | evals:     19 | f err: -2.28e-08 | g lag: +1.99e-14 | viol.:         0 | 1 |
+|     HS98 | f(x):     +3.14 | evals:     19 | f err: -2.28e-08 | g lag: +1.99e-14 | viol.:         0 | 1 |
+|    HS102 | f(x):      +912 | evals:    992 | f err: -0.000531 | g lag:     +90.2 | viol.:         0 | 0 |
+|    HS103 | f(x):      +543 | evals:   1493 | f err:    +0.349 | g lag: +1.07e+03 | viol.:  0.000272 | 0 |
+|    HS104 | f(x):     +3.95 | evals:    735 | f err: -3.53e-07 | g lag:  +4.7e-06 | viol.:  1.78e-06 | 1 |
+|    HS105 | f(x): +1.06e+03 | evals:     52 | f err:     +76.5 | g lag: +5.82e-08 | viol.:         0 | 1 |
+|    HS118 | f(x):      +667 | evals:     99 | f err:     -2.65 | g lag:     +1.42 | viol.:  7.94e-15 | 0 |
+|    HS101 | f(x): +1.81e+03 | evals:    697 | f err: -7.79e-06 | g lag: +4.24e-05 | viol.:  6.81e-15 | 1 |
+
+
+
+
+|     HS18 | f(x):        +5 | evals:    137 | f err: -3.39e-13 | g lag: +4.26e-09 | viol.:         0 | 1 |
+|     HS19 | f(x): -6.96e+03 | evals:     37 | f err: +6.56e-05 | g lag: +1.05e-12 | viol.:  8.53e-13 | 1 |
+|     HS21 | f(x):      -100 | evals:      7 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS23 | f(x):        +2 | evals:     21 | f err: -8.88e-10 | g lag: +4.44e-16 | viol.:         0 | 1 |
+|     HS30 | f(x):        +1 | evals:     34 | f err: -3.81e-06 | g lag:        +0 | viol.:         0 | 1 |
+|     HS31 | f(x):        +6 | evals:     26 | f err: +8.66e-11 | g lag: +1.65e-06 | viol.:  1.45e-11 | 1 |
+|     HS34 | f(x):    -0.834 | evals:   2415 | f err: +6.12e-07 | g lag: +5.55e-17 | viol.:  1.42e-06 | 1 |
+|     HS36 | f(x):  -3.3e+03 | evals:     15 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS37 | f(x): -3.46e+03 | evals:     22 | f err:        +0 | g lag: +3.32e-09 | viol.:         0 | 1 |
+|     HS59 | f(x):     -6.75 | evals:     25 | f err:     -1.05 | g lag: +4.63e-06 | viol.:         0 | 1 |
+|     HS65 | f(x):    +0.954 | evals:     77 | f err: +7.05e-10 | g lag: +7.46e-08 | viol.:  3.55e-15 | 1 |
+|     HS66 | f(x):    +0.518 | evals:    411 | f err: +2.14e-06 | g lag: +9.79e-06 | viol.:  3.13e-06 | 1 |
+|     HS67 | f(x): -1.16e+03 | evals:     65 | f err: +6.94e-07 | g lag: +2.61e-07 | viol.:         0 | 1 |
+|     HS70 | f(x):   +0.0075 | evals:     48 | f err: +3.09e-10 | g lag: +4.62e-06 | viol.:         0 | 1 |
+|     HS83 | f(x): -3.07e+04 | evals:     79 | f err: +1.78e-06 | g lag:  +1.8e-15 | viol.:  4.44e-16 | 1 |
+|     HS84 | f(x): -5.28e+06 | evals:     24 | f err:      +0.5 | g lag:        +0 | viol.:         0 | 1 |
+|     HS85 | f(x):      -1.4 | evals:    148 | f err:    -0.503 | g lag:   +0.0235 | viol.:         0 | 0 |
+|     HS95 | f(x):   +0.0156 | evals:     14 | f err: -1.12e-08 | g lag:        +0 | viol.:  8.88e-16 | 1 |
+|     HS96 | f(x):   +0.0156 | evals:     14 | f err: -1.12e-08 | g lag:        +0 | viol.:  8.88e-16 | 1 |
+|     HS97 | f(x):     +3.14 | evals:     21 | f err: +3.69e-07 | g lag: +1.99e-14 | viol.:  1.56e-06 | 1 |
+|     HS98 | f(x):     +3.14 | evals:     21 | f err: +3.69e-07 | g lag: +1.99e-14 | viol.:  1.56e-06 | 1 |
+|    HS102 | f(x):      +912 | evals:   1619 | f err:  -0.00464 | g lag:     +90.2 | viol.:         0 | 0 |
+|    HS103 | f(x):      +543 | evals:   2143 | f err:    +0.467 | g lag: +1.07e+03 | viol.:  0.000385 | 0 |
+|    HS104 | f(x):     +3.95 | evals:   1002 | f err: +1.44e-08 | g lag: +4.14e-06 | viol.:  6.76e-08 | 1 |
+|    HS105 | f(x): +1.04e+03 | evals:     87 | f err:     +93.8 | g lag: +3.97e-08 | viol.:         0 | 1 |
+|    HS118 | f(x):      +665 | evals:     84 | f err: +6.96e-07 | g lag:        +0 | viol.:  3.77e-07 | 1 |
+|    HS101 | f(x): +1.81e+03 | evals:    915 | f err: -9.09e-06 | g lag: +2.84e-06 | viol.:         0 | 1 |
+
+
+
+
+
+
+|     HS18 | f(x):        +5 | evals:     80 | f err: -3.57e-10 | g lag: +6.65e-06 | viol.:         0 | 1 |
+|     HS19 | f(x): -6.96e+03 | evals:    115 | f err: +6.56e-05 | g lag: +2.39e-12 | viol.:  3.68e-11 | 1 |
+|     HS21 | f(x):      -100 | evals:     36 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS23 | f(x):        +2 | evals:     19 | f err: -2.33e-13 | g lag:        +0 | viol.:         0 | 1 |
+|     HS30 | f(x):        +1 | evals:     45 | f err:  -6.7e-05 | g lag:   +0.0164 | viol.:         0 | 0 |
+|     HS31 | f(x):        +6 | evals:     64 | f err:        +0 | g lag: +3.81e-09 | viol.:         0 | 1 |
+|     HS34 | f(x):    -0.834 | evals:   1069 | f err: +1.59e-07 | g lag: +8.82e-18 | viol.:  2.63e-06 | 1 |
+|     HS36 | f(x):  -3.3e+03 | evals:     19 | f err: -3.23e-05 | g lag:        +0 | viol.:         0 | 1 |
+|     HS37 | f(x): -3.46e+03 | evals:     64 | f err:        +0 | g lag: +3.52e-08 | viol.:         0 | 1 |
+|     HS59 | f(x):     -6.75 | evals:     43 | f err:     -1.05 | g lag: +1.47e-06 | viol.:         0 | 1 |
+|     HS65 | f(x):    +0.954 | evals:     94 | f err: +7.05e-10 | g lag:  +3.8e-08 | viol.:  1.21e-13 | 1 |
+|     HS66 | f(x):    +0.518 | evals:     33 | f err: -3.08e-10 | g lag:  +6.6e-06 | viol.:   3.7e-12 | 1 |
+|     HS67 | f(x): -1.16e+03 | evals:    634 | f err: +6.96e-07 | g lag: +3.63e-07 | viol.:  1.36e-12 | 1 |
+|     HS70 | f(x):   +0.0075 | evals:    888 | f err: -1.18e-06 | g lag:  +5.4e-05 | viol.:         0 | 0 |
+|     HS83 | f(x): -3.07e+04 | evals:    119 | f err: +1.78e-06 | g lag: +1.48e-14 | viol.:         0 | 1 |
+|     HS84 | f(x): -5.28e+06 | evals:     86 | f err:      +0.5 | g lag:        +0 | viol.:         0 | 1 |
+|     HS85 | f(x):     -2.22 | evals:   2052 | f err:     +0.31 | g lag: +7.06e-18 | viol.:   5.7e-14 | 1 |
+|     HS95 | f(x):   +0.0156 | evals:     22 | f err: -1.12e-08 | g lag:        +0 | viol.:  9.79e-16 | 1 |
+|     HS96 | f(x):   +0.0156 | evals:     22 | f err: -1.12e-08 | g lag:        +0 | viol.:  9.79e-16 | 1 |
+|     HS97 | f(x):     +3.14 | evals:     88 | f err: -0.000156 | g lag: +1.45e-14 | viol.:         0 | 1 |
+|     HS98 | f(x):     +3.14 | evals:     88 | f err: -0.000156 | g lag: +1.45e-14 | viol.:         0 | 1 |
+|    HS102 | f(x):      +911 | evals:   1095 | f err:    +0.682 | g lag: +4.54e+03 | viol.:     0.159 | 0 |
+|    HS103 | f(x): +1.18e+03 | evals:   2398 | f err:      -637 | g lag: +6.78e+03 | viol.:   4.9e-05 | 0 |
+|    HS104 | f(x):     +3.97 | evals:    346 | f err:   -0.0204 | g lag:   +0.0361 | viol.:  7.49e-16 | 0 |
+|    HS105 | f(x): +1.04e+03 | evals:   4224 | f err:     +93.8 | g lag: +3.04e-07 | viol.:         0 | 1 |
+|    HS118 | f(x):      +665 | evals:    328 | f err: +1.34e-10 | g lag:        +0 | viol.:   4.1e-10 | 1 |
+|    HS101 | f(x): +2.85e+03 | evals:   5464 | f err: -1.04e+03 | g lag: +9.52e+04 | viol.:     0.356 | 0 |
+|    HS116 | f(x):           | evals:        | f err:           | g lag:           | viol.:           | 0 |
+
+
+
+|     HS18 | f(x):        +5 | evals:     80 | f err: -3.57e-10 | g lag: +6.65e-06 | viol.:         0 | 1 |
+|     HS19 | f(x): -6.96e+03 | evals:    115 | f err: +6.56e-05 | g lag: +5.53e-13 | viol.:  3.68e-11 | 1 |
+|     HS21 | f(x):      -100 | evals:     31 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS23 | f(x):        +2 | evals:     20 | f err: -6.31e-14 | g lag:        +0 | viol.:  2.22e-16 | 1 |
+|     HS30 | f(x):        +1 | evals:     44 | f err:        +0 | g lag: +1.21e-14 | viol.:         0 | 1 |
+|     HS31 | f(x):        +6 | evals:     51 | f err:        +0 | g lag: +1.41e-08 | viol.:  1.11e-16 | 1 |
+|     HS34 | f(x):    -0.834 | evals:   1067 | f err: +3.82e-07 | g lag: +2.82e-17 | viol.:  6.22e-06 | 1 |
+|     HS36 | f(x):  -3.3e+03 | evals:     21 | f err:        +0 | g lag:        +0 | viol.:         0 | 1 |
+|     HS37 | f(x): -3.46e+03 | evals:     55 | f err: +1.82e-12 | g lag: +1.76e-07 | viol.:  1.07e-14 | 1 |
+|     HS59 | f(x):     -6.75 | evals:     44 | f err:     -1.05 | g lag: +5.01e-08 | viol.:         0 | 1 |
+|     HS65 | f(x):    +0.954 | evals:     74 | f err: +7.05e-10 | g lag: +1.47e-07 | viol.:  4.37e-13 | 1 |
+|     HS66 | f(x):    +0.518 | evals:     31 | f err:  -3.4e-10 | g lag: +7.03e-06 | viol.:         0 | 1 |
+|     HS67 | f(x): -1.13e+03 | evals:    515 | f err:     -28.6 | g lag:    +0.142 | viol.:         0 | 0 |
+|     HS70 | f(x):   +0.0075 | evals:    985 | f err: -8.39e-07 | g lag: +5.63e-05 | viol.:         0 | 0 |
+|     HS72 | f(x):      +728 | evals:   8227 | f err:   -0.0918 | g lag: +8.22e-06 | viol.:         0 | 1 |
+|     HS83 | f(x): -3.07e+04 | evals:    129 | f err: +1.78e-06 | g lag: +1.35e-15 | viol.:  1.33e-15 | 1 |
+|     HS84 | f(x): -5.28e+06 | evals:     75 | f err:      +0.5 | g lag:        +0 | viol.:         0 | 1 |
+|     HS85 | f(x):     -1.83 | evals:   1781 | f err:   -0.0738 | g lag:   +0.0022 | viol.:         0 | 0 |
+|     HS95 | f(x):   +0.0156 | evals:     21 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS96 | f(x):   +0.0156 | evals:     21 | f err: -1.12e-08 | g lag:        +0 | viol.:         0 | 1 |
+|     HS97 | f(x):     +3.14 | evals:    105 | f err: -2.28e-08 | g lag: +2.43e-14 | viol.:         0 | 1 |
+|     HS98 | f(x):     +3.14 | evals:    105 | f err: -2.28e-08 | g lag: +2.43e-14 | viol.:         0 | 1 |
+|    HS102 | f(x):      +903 | evals:  10819 | f err:     +9.06 | g lag: +3.68e+03 | viol.:    0.0155 | 0 |
+|    HS103 | f(x):      +866 | evals:   8550 | f err:      -322 | g lag: +1.14e+04 | viol.:    0.0251 | 0 |
+|    HS104 | f(x):     +3.97 | evals:    310 | f err:   -0.0146 | g lag:    +0.193 | viol.:         0 | 0 |
+|    HS105 | f(x): +1.04e+03 | evals:   5856 | f err:     +93.8 | g lag: +1.49e-05 | viol.:         0 | 1 |
+|    HS118 | f(x):      +665 | evals:    511 | f err: -4.31e-11 | g lag: +4.44e-16 | viol.:  6.22e-15 | 1 |
+|    HS101 | f(x): +1.51e+03 | evals:   2208 | f err:      +299 | g lag:  +4.5e+03 | viol.:     0.278 | 0 |
+|    HS116 | f(x):           | evals:        | f err:           | g lag:           | viol.:           | 0 |

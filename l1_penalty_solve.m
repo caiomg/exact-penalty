@@ -46,6 +46,7 @@ end
                     
 gamma_1 = options.gamma_dec;
 gamma_2 = options.gamma_inc;
+eps_c = options.eps_c;
 ut_option.UT = true;
 eta_1 = options.eta_1;
 eta_2 = options.eta_2;
@@ -139,6 +140,7 @@ history_solution.px = px;
 history_solution.fx = fx;
 history_solution.q1 = nan;
 history_solution.q2 = nan;
+history_solution.q3 = nan;
 history_solution.ns = 0;
 history_solution.mchange = nan;
 history_solution.step_type = nan;
@@ -158,23 +160,26 @@ while ~finish
     if ~strcmp(options.basis, 'dummy')
         trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
         [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-        cmodel = extract_constraints_from_tr_model(trmodel, ...
-                                                          con_lb, con_ub);
+        cmodel = extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
     else
         [fx, fmodel.g, fmodel.H] = f(x);
         cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
     end
 
-    [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-    [Q, R, ind_qr] = update_factorization(cmodel, Q, R, ind_eactive, true);
+    % [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
+    % [Q, R, ind_qr] = update_factorization(cmodel, Q, R, ind_eactive, true);
 
-    [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
-        l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
-                               bl, bu, max(Lambda, eps_c));
+    % [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
+    %    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
+    %                           bl, bu, max(Lambda, eps_c));
+    [q1, q2, q3, d, Q, R, ind_qr, multipliers] = ...
+        l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
+                                   bl, bu, max(Lambda, eps_c));
+    if numel(ind_qr) ~= size(R, 2)
+        1;
+    end
 
-
-
-    if q1 > Lambda || q2 > Lambda
+    if max([q1, q2, q3]) > max(eps_c, Lambda)
         tr_criticality_step_executed = false;
     else
         tr_criticality_step_executed = true;
@@ -189,21 +194,28 @@ while ~finish
                 extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
         end
 
-        [ind_eactive, ~] = ...
-            identify_new_constraints(cmodel, epsilon, []);
-        [Q, R, ind_qr] = update_factorization(cmodel, [], ...
-                                                 [], ...
-                                                 ind_eactive, false);
-        [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] ...
-            = l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, ...
-                                     x, bl, bu, max(Lambda, eps_c));
-        while Lambda > max(q1, q2) && q2 ~= 0
+        %[ind_eactive, ~] = ...
+        %    identify_new_constraints(cmodel, epsilon, []);
+        %[Q, R, ind_qr] = update_factorization(cmodel, [], ...
+        %                                         [], ...
+        %                                         ind_eactive, false);
+        % [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
+        %    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
+        %                           bl, bu, max(Lambda, eps_c));
+        [q1, q2, q3, d, Q, R, ind_qr, multipliers] = ...
+            l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
+                                       bl, bu, max(Lambda, eps_c));
+        while Lambda > max([q1, q2, q3]) && (q2 ~= 0 || q3 ~= 0)
             Lambda = 0.5*Lambda;
         end
     end
+    
+    if numel(ind_qr) ~= size(R, 2)
+        1;
+    end
 
     % Stopping conditions
-    if q1 < tol_g && q2 == 0 && numel(ind_qr) == numel(multipliers)
+    if q1 < tol_g && q2 == 0 && q3 == 0
         phih = [cmodel(ind_qr).c]';
         if norm(phih) < tol_con
             if max([cmodel.c]) > tol_con && false
@@ -218,7 +230,8 @@ while ~finish
     end
 
     geometry_ok = is_lambda_poised(trmodel, options);
-    if q1 > Lambda
+
+    if q1 > Lambda && q3 == 0
         % Regular step, away from stationary point
         step_type = 1;
         [s1, pred1] = iterated_steps_new(fmodel, cmodel, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
@@ -231,20 +244,24 @@ while ~finish
             s = s1;
             pred = pred1;
         end
-        if pred < 0
+        if pred <= 0
             warning('cmg:fumou', 'check this');
         end
-    elseif q2 > Lambda
+    elseif q2 > Lambda || q3 > 0
         % Drop step
-        step_type = 2;
-        s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q_drop, R_drop, ...
-                                          ind_qr_drop, x, d_drop, trmodel.radius, bl, bu);
+        if q2 > q3
+            step_type = 2;
+        else
+            step_type = 3;
+        end
+        s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, R, ...
+                                          ind_qr, x, d, trmodel.radius, bl, bu);
         pred = predict_descent(fmodel, cmodel, s, mu, []);
 
     elseif q2 == 0 % All multipliers in correct range
         % Near stationary point
         % Step including multipliers
-        step_type = 3;
+        step_type = 4;
         if q1 >= tol_g
             h = null_space_step_complete(fmodel, cmodel, mu, x, ...
                                          ind_qr, Q, R, trmodel.radius, ...
@@ -260,10 +277,11 @@ while ~finish
             s = v;
         end
         pred = predict_descent(fmodel, cmodel, s, mu, []);
-        normphi = norm([cmodel(ind_eactive).c], 1);
+        normphi = norm([cmodel(ind_qr).c], 1);
         if pred < delta*(q1^2 + normphi)
+            Lambda = 0.5*Lambda;
             % Regular step, away from stationary point
-            step_type = 4;
+            step_type = 5;
             [s1, pred1] = iterated_steps_new(fmodel, cmodel, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
             s2 = iterated_steps_second_order(fmodel, cmodel, trmodel.radius, mu, x, Q, R, ind_qr, bl, bu);
             pred2 = predict_descent(fmodel, cmodel, s2, mu, []);
@@ -274,7 +292,7 @@ while ~finish
                 s = s1;
                 pred = pred1;
             end
-            if pred < 0
+            if pred <= 0
                 warning('cmg:fumou', 'check this');
             end
         end
@@ -306,7 +324,8 @@ while ~finish
         if find(~isfinite(trial_fvalues), 1)
             rho = -inf;
         else
-            ared = px - p_trial; % There are better ways
+            ared = evaluate_p_descent(trmodel.fvalues(:, trmodel.tr_center), trial_fvalues, con_lb, con_ub, mu);
+            %ared = px - p_trial; % There are better ways
             rho = ared/pred;
         end
         if rho > eta_2 || (rho > eta_1 && geometry_ok)
@@ -339,16 +358,8 @@ while ~finish
         end
     else % evaluate step
         rho = -inf;
-        if ~geometry_ok
-            [trmodel, mchange_flag] = ...
+        [trmodel, mchange_flag] = ...
                 ensure_improvement(trmodel, fphi, bl, bu, options);
-        elseif count_inf > 10
-            count_inf = 0;
-            gamma_dec = gamma_1;%max(gamma_0, gamma_1*norm(step)/trmodel.radius);
-            trmodel.radius = gamma_dec*trmodel.radius;
-        else
-            count_inf = count_inf + 1;
-        end
         if strcmp(options.basis, 'dummy')
                 mchange_flag = 4;
         end
@@ -381,6 +392,7 @@ while ~finish
     history_solution(iter).fx = trmodel.fvalues(1, trmodel.tr_center);
     history_solution(iter).q1 = q1;
     history_solution(iter).q2 = q2;
+    history_solution(iter).q3 = q3;
     history_solution(iter).ns = norm(s);
     history_solution(iter).mchange = mchange_flag;
     history_solution(iter).step_type= step_type;

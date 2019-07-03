@@ -1,8 +1,9 @@
 function [Q, R, bl_included, bu_included] = ...
-        include_bounds_gradients(Q, R, include_bl, include_bu)
+        include_bounds_gradients(Q, R, include_bl, include_bu, tol_indep)
 
-
-    tol_indep = 1e-5;
+    if nargin < 5
+        tol_indep = 1e-5;
+    end
     
     [dim, r_cols] = size(R);
 

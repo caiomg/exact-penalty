@@ -1,5 +1,5 @@
-function [measure, direction, Q, R, ind_qr] = l1_choose_search_direction(...
-    Q, R, ind_qr, multipliers, pg, mu, x, lb, ub, tol_multipliers, threshold)
+function [measure, direction, removed] = l1_choose_search_direction_new(...
+    Q, R, multipliers, pg, mu, x, lb, ub, tol_multipliers, threshold)
 
     if nargin < 10
         tol_multipliers = 0;
@@ -14,7 +14,7 @@ function [measure, direction, Q, R, ind_qr] = l1_choose_search_direction(...
     direction = [];
     Q_measure = Q;
     R_measure = R;
-    ind_qr_measure = ind_qr;
+    removed = 0;
 
     for k = 1:n_constraints
         if measure >= threshold
@@ -35,7 +35,7 @@ function [measure, direction, Q, R, ind_qr] = l1_choose_search_direction(...
             end
             pred_change = pgrad_k'*direction_k_proj;
             if pred_change < 0
-                measure_k = sqrt(-pred_change)/abs(multipliers(k));
+                measure_k = sqrt(-pred_change);%/abs(multipliers(k));
             elseif pred_change == 0
                 measure_k = 0;
             else
@@ -48,13 +48,12 @@ function [measure, direction, Q, R, ind_qr] = l1_choose_search_direction(...
                 direction = direction_k_proj;
                 Q_measure = Q_k;
                 R_measure = R_k;
-                ind_qr_measure = [1:k-1, k+1:n_constraints];
+                removed = k;
             end
         end
     end
     Q = Q_measure;
     R = R_measure;
-    ind_qr = ind_qr_measure;
 end
 
 

@@ -1,7 +1,16 @@
+if exist('terminate_cutest_problem', 'file') ~= 2
+  addpath('my_cutest_functions');
+end
+if exist('check_kkt', 'file') ~= 2
+  addpath('process');
+end
+if exist('evaluate_polynomial', 'file') ~= 2
+  addpath('tr_modeling');
+  addpath('tr_modeling/polynomials');
+end
+
 
 terminate_cutest_problem()
-clear global problem_path_cutest problem_name_cutest problem_data_cutest
-global problem_data_cutest
 
 problem_name = 'HS100';
 % problem_name = 'WOMFLET';
@@ -16,7 +25,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS103';
+problem_name = 'HS66';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -70,11 +79,16 @@ x0 = prob.x;
 % Parameters
 mu = 10;
 solution = nan;
-for m = 1:length(selected_problems)
-    if strcmp(problem_name, selected_problems(m).name)
-        mu = selected_problems(m).mu
-        solution = selected_problems(m).solution;
-        break
+if ~exist('selected_problems', 'var')
+   list_of_problems; 
+end
+if exist('selected_problems', 'var')
+    for m = 1:length(selected_problems)
+        if strcmp(problem_name, selected_problems(m).name)
+            mu = selected_problems(m).mu
+            solution = selected_problems(m).solution;
+            break
+        end
     end
 end
 
@@ -100,17 +114,17 @@ counter.reset_count();
 l1_options = struct('eta_2', 0.05, ...
                     'pivot_threshold', 0.001, ...
                     'basis', 'NOT dummy', ...
-                    'debug', true, 'inspect_iteration', 506);
+                    'debug', true, 'inspect_iteration', 36);
 %                , 'poised_radius_factor', 6)
 %                    'pivot_imp', 1.1, 'debug', false, 'inspect_iteration', 30)
 % l1_options = [];
 % l1_options.eta_2 = 0.1;
 l1_options = [];
-l1_options.eta_2 = 0.01;
-l1_options.pivot_threshold = 0.01;
+l1_options.eta_2 = 0.05;
+l1_options.pivot_threshold = 0.001;
 l1_options.basis = 'FULL';
 l1_options.debug = true;
-l1_options.inspect_iteration = 358;
+l1_options.inspect_iteration = 20;
 
 l1_options
 
@@ -122,8 +136,10 @@ len_con = length(all_con);
 
 
 % rng('shuffle')
+bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
 [x_l1, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, mu, ...
                             epsilon, delta, Lambda, bl, bu, l1_options)
+warning(bad_cond_warn)                        
 l1_count = counter.get_count()
 fx = f(x_l1)
 if isfinite(solution)

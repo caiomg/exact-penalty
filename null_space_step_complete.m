@@ -82,11 +82,13 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
                     
                     x = project_to_bounds(x0 + s, lb, ub);
                     [Q, R, bl_included, bu_included] = ...
-                        detect_and_include_active_bounds(Q, R, x, ...
-                                                         d, lb, ub, tol_con);
+                        include_bounds_gradients(Q, R, bl_active_new, bu_active_new);
+% $$$                     [Q, R, bl_included, bu_included] = ...
+% $$$                         detect_and_include_active_bounds(Q, R, x, ...
+% $$$                                                          d, lb, ub, tol_con);
 
-                    bl_active = bl_active | bl_included;
-                    bu_active = bu_active | bu_included;
+                    bl_active = bl_active | bl_active_new;
+                    bu_active = bu_active | bu_active_new;
                     break
                 else
                     % Decrease not OK, recompute direction
