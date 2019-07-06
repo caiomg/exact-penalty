@@ -154,6 +154,8 @@ rng(p_seed);
 
 [kkt_ok, lgrad] = check_kkt(f, all_con, x_l1, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
 
+[is_fop, lgrad_l1] = check_fop(f, all_con, x_l1, mu, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
+
 
 %tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
 % tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
