@@ -29,7 +29,7 @@ end
 if h_pos_def
     lambda = 0;
     dR = abs(diag(R));
-    if min(dR)/max(dR) < sqrt(eps)
+    if min(dR)/max(dR) < 10*sqrt(eps)
         lambda_l = min(dR);
     else
         lambda_l = 0;
