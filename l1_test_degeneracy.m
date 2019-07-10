@@ -1,5 +1,5 @@
 function [degenerate, d, con_confirmed, lb_confirmed, ub_confirmed] = ...
-        l1_test_degeneracy(p_grad, Q_ext, R_ext, con_eactive, lb_active, ub_active)
+        l1_test_degeneracy(p_grad, Q_ext, R_ext, con_eactive, lb_active, ub_active, mu)
 % L1_TEST_DEGENERACY - 
 %   
     tol_independence = sqrt(eps(1));
@@ -23,9 +23,10 @@ function [degenerate, d, con_confirmed, lb_confirmed, ub_confirmed] = ...
         ub(~ub_active) = ones(sum(~ub_active), 1);
         n_active_bounds = sum(lb_active | ub_active);
         n_constraints = r_cols - n_active_bounds;
-        A_con = (Q_ext*R_ext(:,1:n_constraints))';
+        A_con = mu*(Q_ext*R_ext(:,1:n_constraints))';
         
-        d = solve_linear_problem(p_grad, A_con, zeros(n_constraints, 1), [], [], lb, ub);
+         [d, lambda] = solve_linear_problem(p_grad, A_con, zeros(n_constraints, 1), [], [], lb, ub);
+         %d = linprog(p_grad, A_con, zeros(n_constraints, 1), [], [], lb, ub);
         
 %         intlinprog_problem.f = [p_grad; 0];
 %         intlinprog_problem.solver = 'intlinprog';
@@ -43,9 +44,9 @@ function [degenerate, d, con_confirmed, lb_confirmed, ub_confirmed] = ...
 %         % ub_confirmed = ub_active & lambda.upper(1:end-1) > 0;
 %         d = d(1:end-1);
         con_confirmed = con_eactive;
-        con_confirmed(con_eactive) = abs(A_con*d) > 1e-6;
-        lb_confirmed = lb_active & (d < 1e-6);
-        ub_confirmed = ub_active & (d < -1e-6);
+        con_confirmed(con_eactive) = A_con*d > -1e-8;
+        lb_confirmed = lb_active & (d < -1e-6);
+        ub_confirmed = ub_active & (d > 1e-6);
     end
         
 end

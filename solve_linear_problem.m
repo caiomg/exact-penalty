@@ -1,4 +1,4 @@
-function x = solve_linear_problem(f, Aineq, bineq, Aeq, beq, lb, ub, x0)
+function [x, lambda] = solve_linear_problem(f, Aineq, bineq, Aeq, beq, lb, ub, x0)
     
     
     dim = size(f, 1);
@@ -48,11 +48,13 @@ function x = solve_linear_problem(f, Aineq, bineq, Aeq, beq, lb, ub, x0)
     
     ipopt_options.ipopt.acceptable_iter = 100;
     ipopt_options.ipopt.tol = 1e-9;
-    ipopt_options.ipopt.compl_inf_tol = 1e-5;
+    ipopt_options.ipopt.compl_inf_tol = 1e-6;
     ipopt_options.ipopt.print_level = 0;
-    % ipopt_options.ipopt.dual_inf_tol = 0.5;
-    % ipopt_options.ipopt.constr_viol_tol = solver_constr_tol;
+    ipopt_options.ipopt.dual_inf_tol = 1e-4;
+    ipopt_options.ipopt.constr_viol_tol = 1e-11;
+    ipopt_options.ipopt.nlp_scaling_method = 'gradient-based';
 
     [x, info] = ipopt(x0, f_ipopt, ipopt_options);
+    lambda = info.lambda;
     
 end

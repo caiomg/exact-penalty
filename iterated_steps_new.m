@@ -1,5 +1,6 @@
 function [s, pred] = iterated_steps_new(fmodel, cmodel, radius, mu, ...
-                                        x0, Q, R, ind_qr, lb, ub)
+                                        x0, Q, R, ind_qr, lb, ub, ...
+                                        lb_active, ub_active)
 
 tol1 = 0.95*radius;
 tol2 = 0.5*radius;
@@ -15,7 +16,8 @@ for k = 1:dim
     pg = l1_pseudo_gradient_new(fmodel, cmodel, mu, s, ind_qr);
 
     h = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, R, ...
-                                      ind_qr, x0, -pg, radius, lb, ub, s);
+                                      ind_qr, x0, -pg, radius, lb, ...
+                                      ub, s, lb_active, ub_active, true);
     pred_h = predict_descent(fmodel, cmodel, h, mu, []);
 
     v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, radius, ...

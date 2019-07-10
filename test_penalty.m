@@ -25,7 +25,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS66';
+problem_name = 'HS101';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -124,7 +124,8 @@ l1_options.eta_2 = 0.05;
 l1_options.pivot_threshold = 0.001;
 l1_options.basis = 'FULL';
 l1_options.debug = true;
-l1_options.inspect_iteration = 20;
+l1_options.inspect_iteration = 383;
+% l1_options.crit_mu = 0.1
 
 l1_options
 
@@ -133,7 +134,6 @@ warning('off', 'cmg:badly_conditioned_system');
 p_seed = rng('default');
 % [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
 len_con = length(all_con);
-
 
 % rng('shuffle')
 bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');

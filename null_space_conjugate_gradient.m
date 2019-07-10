@@ -1,6 +1,7 @@
 function s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, ...
                                            R, ind_qr, x0, d0, radius, ...
-                                           lb, ub, s0)
+                                           lb, ub, s0, bl_active, ...
+                                           bu_active, project_initial_direction)
     % NULL_SPACE_CONJUGATE_GRADIENT - 
     %
 
@@ -8,6 +9,18 @@ function s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, ...
     if nargin < 12 || isempty(s0)
         s0 = zeros(dim, 1);
     end
+    if nargin < 13 || isempty(bl_active)
+        bl_active = false(dim, 1);
+    end
+    if nargin < 14
+        bu_active = false(dim, 1);
+    end
+    if nargin < 15
+        project_initial_direction = true;
+    end
+    [Q, R, bl_included, bu_included] = ...
+        include_bounds_gradients(Q, R, bl_active, bu_active);
+
 
     tol_d = eps(1);
     tol_h = eps(1);
@@ -15,16 +28,16 @@ function s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, ...
 
     s = s0;
     x = project_to_bounds(x0 + s, lb, ub);    
-%     [Q, R, bl_active, bu_active] = detect_and_include_active_bounds(Q, ...
-%                                                       R, x, d0, lb, ...
-%                                                       ub, tol_con);
+
     r_cols = size(R, 2);
     N = Q(:, r_cols+1:end);
-    bl_active = false(dim, 1);
-    bu_active = false(dim, 1);
     N(bl_active|bu_active, :) = zeros(sum(bl_active | bu_active), ...
                                       dim - r_cols);
-    d = N*(N'*d0);
+    if project_initial_direction
+        d = N*(N'*d0);
+    else
+        d = d0;
+    end
 
     pred_s = predict_descent(fmodel, cmodel, s, mu, []);
 
@@ -46,11 +59,19 @@ function s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, ...
         
         tmax = min(tmax_bounds, tmax_tr);
         [t, brpoints_crossed] = line_search_cg(fmodel_d, cmodel_d, mu, d, tmax);
-        pred_d = predict_descent(fmodel, cmodel, s + t*d, mu, []);
+        s_next = s + t*d;
+        bl_needing_correction =  x0 + s_next < lb;
+        s_next(bl_needing_correction) = lb(bl_needing_correction) - x0(bl_needing_correction);
+        bu_needing_correction =  x0 + s_next > ub;
+        s_next(bu_needing_correction) = ub(bu_needing_correction) - x0(bu_needing_correction);
+        pred_d = predict_descent(fmodel, cmodel, s_next, mu, []);
         if pred_d > pred_s
-            s = s + t*d;
+            s = s_next;
+            pred_s = pred_d;
         elseif tmax_bounds ~= 0
             break
+        else
+            1;
         end
         if tmax_bounds ~= 0 && (t == 0 || t == tmax_tr)
             break
@@ -59,8 +80,6 @@ function s = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, ...
             % Restart method
             bl_active_new = t_lb == t;
             bu_active_new = t_ub == t;
-            s(bl_active_new) = lb(bl_active_new) - x0(bl_active_new);
-            s(bu_active_new) = ub(bu_active_new) - x0(bu_active_new);
             
             
 %             [Q, R, bl_included, bu_included] = ...
