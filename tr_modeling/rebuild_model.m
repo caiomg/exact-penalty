@@ -9,6 +9,11 @@ function model = rebuild_model(model, options)
     pivot_threshold_rel = options.pivot_threshold;
     radius = model.radius;
     pivot_threshold = pivot_threshold_rel*min(1, radius);
+    if radius < 1
+        pivot_threshold_sufficient = pivot_threshold*2;
+    else
+        pivot_threshold_sufficient = pivot_threshold;
+    end
 
     % All points we know
     points_abs = [model.points_abs, model.cached_points];
@@ -33,6 +38,20 @@ function model = rebuild_model(model, options)
     points_shifted = points_shifted(:, pt_order);
     points_abs = points_abs(:, pt_order);
     fvalues = fvalues(:, pt_order);
+    % Remove duplicates
+    to_remove = false(p_ini, 1);
+    for n = 2:p_ini
+       if distances(n) == distances(n-1) ...
+               && norm(points_abs(:, n) - points_abs(:, n-1), inf) == 0
+           to_remove(n) = true;
+       end
+    end
+    if ~isempty(find(to_remove, 1))
+       points_shifted(:, to_remove) = [];
+       points_abs(:, to_remove) = [];
+       fvalues(:, to_remove) = [];
+       p_ini = size(points_abs, 2);
+    end
     
     % Building model
     pivot_polynomials = nfp_basis(dim); % Basis of Newton
@@ -85,20 +104,22 @@ function model = rebuild_model(model, options)
                     pt_max = n;
                 end
             end
-            if abs(max_absval) > pivot_threshold
+            if abs(max_absval) > pivot_threshold_sufficient
                 break % for(layer)
             end
         end
         if abs(max_absval) > pivot_threshold
             % Point accepted
             pt_next = last_pt_included + 1;
-            points_shifted(:, [pt_next, pt_max]) = points_shifted(:, ...
-                                                              [pt_max, pt_next]);
-            points_abs(:, [pt_next, pt_max]) = points_abs(:, [pt_max, pt_next]);
-            fvalues(:, [pt_next, pt_max]) = fvalues(:, [pt_max, ...
-                                pt_next]);
-            distances([pt_next, pt_max]) = distances([pt_max, pt_next]);
             pivot_values(pt_next) = max_absval;
+            points_shifted(:, [pt_next:end]) = ...
+                points_shifted(:, [pt_max, pt_next:pt_max-1, pt_max+1:end]);
+            points_abs(:, [pt_next:end]) = ...
+                points_abs(:, [pt_max, pt_next:pt_max-1, pt_max+1:end]);
+            fvalues(:, pt_next:end) = ...
+                fvalues(:, [pt_max, pt_next:pt_max-1, pt_max+1:end]);
+            distances(pt_next:end) = ...
+                distances([pt_max, pt_next:pt_max-1, pt_max+1:end]);
             
             % Normalize polynomial value
             pivot_polynomials(poly_i) = ...

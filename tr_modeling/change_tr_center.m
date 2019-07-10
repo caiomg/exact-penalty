@@ -6,7 +6,6 @@ function [model, exitflag] = change_tr_center(model, new_point, ...
 
     STATUS_POINT_ADDED = 1;
     STATUS_POINT_EXCHANGED = 2;
-    STATUS_MODEL_REBUILT_OLD = 3;
     STATUS_MODEL_REBUILT = 4;
 
     model_is_complete = is_complete(model);
@@ -24,18 +23,14 @@ function [model, exitflag] = change_tr_center(model, new_point, ...
         end
     end
     if model_is_complete || ~point_added
-        model_is_old = is_old(model, options);
-        if ~model_is_old
-            % Try to exchange a point of the model with this new one
-            relative_pivot_threshold = options.pivot_threshold;
-            [model, point_exchanged, pt_i] = ...
-                exchange_point(model, ...
+        % Try to exchange a point of the model with this new one
+        relative_pivot_threshold = options.pivot_threshold;
+        [model, point_exchanged, pt_i] = exchange_point(model, ...
                                                         new_point, ...
                                                         new_fvalues, ...
                                                         relative_pivot_threshold,...
                                                         false);
-        end
-        if ~model_is_old && point_exchanged
+        if point_exchanged
             % Make new point the center
             model.tr_center = pt_i;
             exitflag = STATUS_POINT_EXCHANGED;
@@ -47,11 +42,7 @@ function [model, exitflag] = change_tr_center(model, new_point, ...
             model.fvalues(:, end+1) = new_fvalues;
             model.tr_center = size(model.points_abs, 2); % Last
             model = rebuild_model(model, options);
-            if model_is_old
-                exitflag = STATUS_MODEL_REBUILT_OLD;
-            else
-                exitflag = STATUS_MODEL_REBUILT;
-            end
+            exitflag = STATUS_MODEL_REBUILT;
         end
     end
 

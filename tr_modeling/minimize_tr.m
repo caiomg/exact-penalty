@@ -1,7 +1,7 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
                                            radius, bl, bu)
 
-    matlab_solver = false;
+    solver = 'matlab';
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);
@@ -48,11 +48,12 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
 
     solver_x_tol = min(1e-8, 1e-2*min(min(bu_mod - bl_mod)));
     solver_constr_tol = min(1e-10, 1e-2*min(min(bu_mod - bl_mod)));
-    if ~matlab_solver && exist('ipopt', 'file') ~= 3
+    if (strcmp(solver, 'ipopt') && exist('ipopt', 'file') == 0) ...
+            || (strcmp(solver, 'snopt') && exist('snopt', 'file') ==0)
         % Override option
-        matlab_solver = true;
+        solver = 'matlab';
     end
-    if matlab_solver
+    if strcmp(solver, 'matlab')
         if norm(H, inf) > 10*eps(norm(g))
             fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                            'Algorithm', 'interior-point', ...
@@ -84,8 +85,9 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
             linprog_problem.solver = 'linprog';
             linprog_problem.lb = bl_mod;
             linprog_problem.ub = bu_mod;
-            linprog_problem.options.Display = 'off';
-            linprog_problem.options.Algorithm = 'dual-simplex';
+            linprog_problem.options = optimoptions('linprog', ...
+                                                   'Display', 'off', ...
+                                                   'Algorithm', 'dual-simplex');
             [x, ~, exitflag, output] = linprog(linprog_problem);
             fval = f(x);
         end
@@ -94,7 +96,7 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
         else
              warning('cmg:tr_minimization_failed', 'TR minimization failed');
         end
-    else
+    elseif strcmp(solver, 'ipopt')
         f_ipopt.objective = f;
         f_ipopt.gradient = @(x) H*x + g;
         f_ipopt.hessian = @(x, sigma, lambda) sparse(tril(H));
@@ -104,14 +106,24 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
         ipopt_options.ub = bu_mod;
         ipopt_options.ipopt.print_level = 0;
         ipopt_options.ipopt.hessian_constant = 'yes';
-        ipopt_options.ipopt.acceptable_iter = 100;
-        ipopt_options.ipopt.tol = 1e-9;
-        ipopt_options.ipopt.compl_inf_tol = 1e-5;
+        
+        if norm(H*x0 + g)*radius < 1e-8 || radius < 1e-6
+            ipopt_options.ipopt.nlp_scaling_method = 'equilibration-based';
+        else
+            ipopt_options.ipopt.nlp_scaling_method = 'gradient-based';
+        end
+        %ipopt_options.ipopt.acceptable_iter = 100;
+        %ipopt_options.ipopt.tol = 1e-9;
+        %ipopt_options.ipopt.compl_inf_tol = 1e-5;
+
         % ipopt_options.ipopt.dual_inf_tol = 0.5;
         % ipopt_options.ipopt.constr_viol_tol = solver_constr_tol;
 
         [x, info] = ipopt(x0, f_ipopt, ipopt_options);
         fval = f(x);
+        exitflag = 0;
+    elseif strcmp(solver, 'snopt')
+        [x, fval] = snopt(x0, bl_mod, bu_mod, -inf, inf, f);
         exitflag = 0;
     end
 end
