@@ -26,21 +26,6 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
         g_red = N'*pgrad;
         H_red = N'*pH*N;
 
-%          try
-%              % This should be done in the step calculation
-%              chol(H_red);
-%              status = true;
-%          catch
-%              Dv = eig(H_red);
-%              va = min(Dv);
-%              if va < -tol_l
-%                  % Will avoid calculating the step
-%                  status = false;
-%                  break
-%              else
-%                  status = true;
-%              end
-%          end
         x = project_to_bounds(x0 + s, lb, ub);
         radius_icb = radius - norm(s);
         if radius_icb < tol_con
@@ -83,9 +68,6 @@ function [s, status] = null_space_step_complete(fmodel, cmodel, mu, ...
                     x = project_to_bounds(x0 + s, lb, ub);
                     [Q, R, bl_included, bu_included] = ...
                         include_bounds_gradients(Q, R, bl_active_new, bu_active_new);
-% $$$                     [Q, R, bl_included, bu_included] = ...
-% $$$                         detect_and_include_active_bounds(Q, R, x, ...
-% $$$                                                          d, lb, ub, tol_con);
 
                     bl_active = bl_active | bl_active_new;
                     bu_active = bu_active | bu_active_new;
