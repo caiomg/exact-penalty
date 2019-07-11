@@ -186,17 +186,6 @@ while ~finish
     [q1, q2, q3, d, Q, R, ind_qr, multipliers, lb_active, ub_active] = ...
         l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
                                    bl, bu, max(Lambda, eps_c));
-%     [q1_check, q2_check, q3_check, d_check, Q_check, R_check, ind_qr_check, multipliers_check, lb_active_check, ub_active_check] = ...
-%         l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
-%                                    bl, bu, max(Lambda, eps_c));
-% 	if q1 - q1_check ~= 0 ...
-%             || q2 - q2_check ~= 0 ...
-%             || q3 - q3_check ~= 0 ...
-%             || norm(d - d_check, inf) ~= 0 ...
-%             || norm(Q - Q_check, inf) ~= 0 ...
-%             || norm(R - R_check, inf) ~= 0
-%         warning('cmg:check-difference', 'fumou');
-%     end
     if numel(ind_qr) ~= size(R, 2)
         1;
     end
@@ -412,17 +401,11 @@ while ~finish
     if trmodel.radius < tol_radius || iter > max_iter
         finish = true;
     end
-    if abs(trmodel.pivot_values(find(abs(trmodel.pivot_values) > 0, 1, 'last'))) < gamma_1*options.pivot_threshold*min(1, trmodel.radius)
-        1;
-    end
-    if pred < 0 && ~isinf(rho) || norm(s) - 1.1*history_solution(iter-1).radius > 0
-        1;
-    end
     if debug_on
         try
             check_nfp_polynomials(trmodel);
         catch this_error
-           1;%rethrow(this_error);
+           rethrow(this_error);
         end
         if iter == inspect_iteration
             warning('cmg:inspect_iteration', 'Iteration %d reached', iter);
