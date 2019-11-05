@@ -44,7 +44,7 @@ function [degenerate, d, con_confirmed, lb_confirmed, ub_confirmed] = ...
 %         % ub_confirmed = ub_active & lambda.upper(1:end-1) > 0;
 %         d = d(1:end-1);
         con_confirmed = con_eactive;
-        con_confirmed(con_eactive) = A_con*d > -1e-8;
+        con_confirmed(con_eactive) = A_con*d > 0;
         lb_confirmed = lb_active & (d < -1e-6);
         ub_confirmed = ub_active & (d > 1e-6);
     end

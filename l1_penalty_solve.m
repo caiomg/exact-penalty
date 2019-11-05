@@ -254,8 +254,12 @@ while ~finish
                                           ind_qr, x, d, trmodel.radius, ...
                                           bl, bu, zeros(dim, 1), ...
                                           lb_active, ub_active, false);
+        try
         v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, ...
                           trmodel.radius, x, bl, bu);
+        catch te
+            rethrow(te)
+        end
         s = h + v;
         pred = predict_descent(fmodel, cmodel, s, mu, []);
         if pred <= 0

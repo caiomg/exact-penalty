@@ -6,7 +6,7 @@ function print_my_table_row(results, fd)
     
     fprintf(fd, ' % 7s &', results.name);
     if log10(results.mu) - int64(log10(results.mu)) <= 100*eps
-        fprintf(fd, ' $10^{%d}$ &', log10(results.mu));
+        fprintf(fd, ' $10^{% 2d}$ &', log10(results.mu));
     else
         fprintf(fd, ' % 8d &', results.mu);
     end
