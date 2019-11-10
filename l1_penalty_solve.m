@@ -143,12 +143,9 @@ history_solution.rho = rho;
 history_solution.radius = trmodel.radius;
 history_solution.px = px;
 history_solution.fx = fx;
-history_solution.q1 = nan;
-history_solution.q2 = nan;
-history_solution.q3 = nan;
+history_solution.sigma = nan;
 history_solution.ns = 0;
 history_solution.mchange = nan;
-history_solution.step_type = nan;
 history_solution.epsilon = epsilon;
 history_solution.Lambda = Lambda;
 history_solution.pred = nan;
@@ -182,15 +179,12 @@ while ~finish
             - solucao(iter).polynomial.coefficients, inf) ~= 0
         1;
     end
+    
+    [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
+                                                      cmodel, mu, ...
+                                                      x, epsilon, bl, bu);
 
-    [q1, q2, q3, d, Q, R, ind_qr, multipliers, lb_active, ub_active] = ...
-        l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
-                                   bl, bu, max(Lambda, eps_c));
-    if numel(ind_qr) ~= size(R, 2)
-        1;
-    end
-
-    if max([q1, q2, q3]) > max(eps_c, Lambda)
+    if measure > max(eps_c, Lambda)
         tr_criticality_step_executed = false;
     else
         tr_criticality_step_executed = true;
@@ -205,21 +199,17 @@ while ~finish
                 extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
         end
 
-        [q1, q2, q3, d, Q, R, ind_qr, multipliers, lb_active, ub_active] = ...
-            l1_measure_criticality_new(fmodel, cmodel, mu, epsilon, x, ...
-                                       bl, bu, max(Lambda, eps_c));
-        while Lambda > max([q1, q2, q3]) && (q2 ~= 0 || q3 ~= 0)
+        [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
+                                                      cmodel, mu, ...
+                                                      x, epsilon, bl, bu);
+        while Lambda > measure
             Lambda = 0.5*Lambda;
         end
     end
-    
-    if numel(ind_qr) ~= size(R, 2)
-        1;
-    end
 
     % Stopping conditions
-    if q1 < tol_g && q2 == 0 && q3 == 0
-        phih = [cmodel(ind_qr).c]';
+    if measure < tol_g
+        phih = [cmodel(ind_eactive).c]';
         if norm(phih) < tol_con
             if max([cmodel.c]) > tol_con && false
                 break % Address this outside
@@ -234,93 +224,26 @@ while ~finish
 
     geometry_ok = is_lambda_poised(trmodel, options);
 
-    if q1 > Lambda && q3 == 0
-        % Regular step, away from stationary point
-        step_type = 1;
-        [s, pred] = iterated_steps_new(fmodel, cmodel, trmodel.radius, ...
-                                         mu, x, Q, R, ind_qr, bl, ...
-                                         bu, lb_active, ub_active);
-        if pred <= 0
-            warning('cmg:fumou', 'check this');
-        end
-    elseif q2 > Lambda || q3 > 0
-        % Drop step
-        if q2 > q3
-            step_type = 2;
-        else
-            step_type = 3;
-        end
-        h = null_space_conjugate_gradient(fmodel, cmodel, mu, Q, R, ...
-                                          ind_qr, x, d, trmodel.radius, ...
-                                          bl, bu, zeros(dim, 1), ...
-                                          lb_active, ub_active, false);
-        try
-        v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, ...
-                          trmodel.radius, x, bl, bu);
-        catch te
-            rethrow(te)
-        end
-        s = h + v;
-        pred = predict_descent(fmodel, cmodel, s, mu, []);
-        if pred <= 0
-            warning('cmg:fumou', 'check this');
-        end
-
-    elseif q2 == 0 % All multipliers in correct range
-        % Near stationary point
-        % Step including multipliers
-        step_type = 4;
-        if q1 > 0
-            h = null_space_step_complete(fmodel, cmodel, mu, x, ...
-                                         ind_qr, Q, R, trmodel.radius, ...
-                                         bl, bu, multipliers);
-
-            v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, ...
-                             trmodel.radius, x, bl, bu);
-            s = h + v;
-        else
-            h = zeros(dim, 1);
-            v = l1_range_step(fmodel, cmodel, Q, R, mu, h, ind_qr, ...
-                             trmodel.radius, x, bl, bu);
-            s = v;
-        end
-        pred = predict_descent(fmodel, cmodel, s, mu, []);
-        normphi = norm([cmodel(ind_qr).c], 1);
-        if pred < delta*(q1^2 + normphi)
-            Lambda = 0.5*Lambda;
-            % Regular step, away from stationary point
-            step_type = 5;
-            [s, pred] = iterated_steps_new(fmodel, cmodel, trmodel.radius, ...
-                                           mu, x, Q, R, ind_qr, bl, ...
-                                           bu, lb_active, ub_active);
-            if pred <= 0
-                warning('cmg:fumou', 'check this');
-            end
-        end
-    else
-        % This shouldn't happen
-        h = zeros(dim, 1);
-        v = zeros(dim, 1);
-        s = zeros(dim, 1);
-        pred = 0;
-        error('cmg:runtime_error', 'Low criticality. Debug this');
-    end
-    if (pred < tol_f*abs(px)*1e-6 ...
-            && norm(s) < min(tol_radius, 0.1*trmodel.radius))% ...
-         %|| (pred < tol_f*abs(px)*1e-6) % ...
-        % || (pred < tol_radius*1e-2) ...
-        evaluate_step = false;
-    else
-        evaluate_step = true;
-    end
-    if norm(s) - 1.1*trmodel.radius > 0
-%        warning('long step'); 
-    end
-    if norm(s) < 0.5*tol_radius
-%        warning('short step'); 
-    end
-    if evaluate_step
-        trial_point = project_to_bounds(x + s, bl, bu);
+    [trial_point, pred] = l1_trust_region_step(fmodel, cmodel, ...
+                                                   x, epsilon, Lambda, ...
+                                                   mu, trmodel.radius, bl, bu);
+    trial_point = project_to_bounds(trial_point, bl, bu);
+    s = trial_point - x;
+%     if (pred < tol_f*abs(px)*1e-6 ...
+%             && norm(s) < min(tol_radius, 0.1*trmodel.radius))% ...
+%          %|| (pred < tol_f*abs(px)*1e-6) % ...
+%         % || (pred < tol_radius*1e-2) ...
+%         evaluate_step = false;
+%     else
+%         evaluate_step = true;
+%     end
+%     if norm(s) - 1.1*trmodel.radius > 0
+% %        warning('long step'); 
+%     end
+%     if norm(s) < 0.5*tol_radius
+% %        warning('short step'); 
+%     end
+    if true || evaluate_step        
         [p_trial, trial_fvalues] = p(trial_point);
         if find(~isfinite(trial_fvalues), 1)
             rho = -inf;
@@ -391,12 +314,9 @@ while ~finish
     history_solution(iter).radius = trmodel.radius;
     history_solution(iter).px = px;
     history_solution(iter).fx = trmodel.fvalues(1, trmodel.tr_center);
-    history_solution(iter).q1 = q1;
-    history_solution(iter).q2 = q2;
-    history_solution(iter).q3 = q3;
+    history_solution(iter).sigma= measure;
     history_solution(iter).ns = norm(s);
     history_solution(iter).mchange = mchange_flag;
-    history_solution(iter).step_type= step_type;
     history_solution(iter).epsilon = epsilon;
     history_solution(iter).Lambda= Lambda;
     history_solution(iter).pred = pred;

@@ -34,7 +34,11 @@ function [model, succeeded, pt_i] = ...
             end
         end
     end
-    new_pivot_val = max_val;
+    if max_poly_i > 0
+        new_pivot_val = model.pivot_values(max_poly_i)*max_val;
+    else
+        new_pivot_val = 0;
+    end
     if abs(new_pivot_val) > pivot_threshold
         points_shifted(:, max_poly_i) = new_point_shifted;
         % Normalize polynomial value
