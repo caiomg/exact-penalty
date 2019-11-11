@@ -25,7 +25,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS101';
+problem_name = 'HS65';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -124,7 +124,8 @@ l1_options.eta_2 = 0.05;
 l1_options.pivot_threshold = 0.001;
 l1_options.basis = 'FULL';
 l1_options.debug = true;
-l1_options.inspect_iteration = 300;
+l1_options.inspect_iteration = 65;
+l1_options.test_new = true
 % l1_options.crit_mu = 0.1
 
 l1_options

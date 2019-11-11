@@ -1,21 +1,23 @@
 function [sigma, d, ind_eactive] = ...
-        l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
-                                                     mu, x, epsilon, lb, ub)
+        l1_criticality_measure_and_descent_direction(fmodel_x, ...
+                                                     cmodel_x, x, ...
+                                                     mu, epsilon, ...
+                                                     lb, ub, center, radius)
 % L1_CRITICALITY_MEASURE_AND_DESCENT_DIRECTION - 
 %   
 
     dim = size(x, 1);
-    ind_eactive = l1_identify_constraints(cmodel, x, lb, ub, epsilon);
+    ind_eactive = l1_identify_constraints(cmodel_x, x, lb, ub, epsilon);
 
     s0 = zeros(dim, 1);
-    pg = l1_pseudo_gradient_general(fmodel, cmodel, mu, s0, ind_eactive);
+    pg = l1_pseudo_gradient_general(fmodel_x, cmodel_x, mu, s0, ind_eactive);
     
     n_eactive = sum(ind_eactive);
     
     f = [pg;
          mu*ones(n_eactive, 1)];
     
-    G = [cmodel(ind_eactive).g];
+    G = [cmodel_x(ind_eactive).g];
     I = eye(n_eactive);
     Z = zeros(dim, n_eactive);
 
