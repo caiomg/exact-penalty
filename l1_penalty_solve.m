@@ -181,8 +181,8 @@ while ~finish
     end
     
     [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                      cmodel, mu, ...
-                                                      x, epsilon, bl, bu);
+                                                      cmodel, x, ...
+                                                      mu, epsilon, bl, bu);
 
     if measure > max(eps_c, Lambda)
         tr_criticality_step_executed = false;
@@ -200,8 +200,8 @@ while ~finish
         end
 
         [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                      cmodel, mu, ...
-                                                      x, epsilon, bl, bu);
+                                                      cmodel, x, ...
+                                                      mu, epsilon, bl, bu);
         while Lambda > measure
             Lambda = 0.5*Lambda;
         end
