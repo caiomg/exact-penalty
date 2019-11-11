@@ -6,6 +6,11 @@ function [sigma, d, ind_eactive] = ...
 % L1_CRITICALITY_MEASURE_AND_DESCENT_DIRECTION - 
 %   
 
+    if nargin < 8
+        center = x;
+        radius = inf;
+    end
+
     dim = size(x, 1);
     ind_eactive = l1_identify_constraints(cmodel_x, x, lb, ub, epsilon);
 
@@ -19,13 +24,12 @@ function [sigma, d, ind_eactive] = ...
     
     G = [cmodel_x(ind_eactive).g];
     I = eye(n_eactive);
-    Z = zeros(dim, n_eactive);
 
     Aineq = [G', -I];
     bineq = zeros(n_eactive, 1);
     
-    dlb = max(-1, lb - x);
-    dub = min(1, ub - x);
+    dlb = max(-1, max(lb - x, (center - x) - radius));
+    dub = min(1, min(ub - x, (center - x) + radius));
     ylb = zeros(n_eactive, 1);
     yub = inf(n_eactive, 1);
     

@@ -4,7 +4,7 @@ function t = infinity_tr_radius_breakpoint(d, radius, s0)
     if nargin < 3
         s0 = zeros(size(d));
     elseif ~isempty(find(s0 > radius, 1))
-        warning('cmg:out-radius', 'Initial point out of radius');
+        warning('cmg:out_radius', 'Initial point out of radius');
     end
 
     increasing_coordinates = d > 0;
