@@ -48,9 +48,9 @@ function [sigma, d, ind_eactive] = ...
     linprog_problem.ub = pub;
     [dy, sigma_neg, exitflag, output] = linprog(linprog_problem);
     if sigma_neg > 0
-        if isempty(find(Aineq*(-dy) > bineq, 1))
+        if ~isempty(dy) && (isempty(Aineq) || isempty(find(Aineq*(-dy) > bineq, 1)))
             dy = -dy;
-            sigma_neg = - sigma_neg;
+            sigma_neg = -sigma_neg;
         else
             Aineq = [Aineq;
                     f'];
@@ -64,14 +64,20 @@ function [sigma, d, ind_eactive] = ...
                                                    'Algorithm', 'dual-simplex');
             [dy, sigma_neg, exitflag, output] = linprog(linprog_problem);
             if exitflag < 0
-                warning('bla');
+                error('cmg:criticality_error', ...
+                      'Could not compute criticality measure');
             end
-            if sigma_neg > 0
-                warning('bla');
+            if sigma_neg > 0 ...
+                 && norm(max(0, Aineq*dy - bineq)) >= norm(max(0, Aineq*(-dy) - bineq))
+                dy = -dy;
+                sigma_neg = -sigma_neg;
             end
         end
     end
 
+    if isempty(dy)
+        1;
+    end
     d = dy(1:dim);
     sigma = -sigma_neg;
     
