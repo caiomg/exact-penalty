@@ -4,7 +4,9 @@ function [x, history_solution] = l1_penalty_solve(f, phi, con_lb, con_ub, initia
 %L1_PENALTY Summary of this function goes here
 %   Detailed explanation goes here
 
-defaultoptions = struct('tol_radius', 1e-6, 'tol_f', 1e-6, ...
+defaultoptions = struct('tol_radius', 1e-6, ...
+                        'tol_f', 1e-6, ...
+                        'tol_measure', 1e-5, ...
                         'tol_con', 1e-5, ...
                         'eps_c', 1e-5, ...
                         'eta_1', 0, ...
@@ -56,7 +58,13 @@ ut_option.UT = true;
 eta_1 = options.eta_1;
 eta_2 = options.eta_2;
 eps_c = options.eps_c;
+tol_measure = options.tol_measure;
+tol_con = options.tol_con;
+tol_radius = options.tol_radius;
+tol_f = options.tol_f;
 initial_radius = options.initial_radius;
+epsilon_decrease_radius_threshold = initial_radius;
+epsilon_decrease_measure_threshold = 1e3*tol_measure;
 rel_pivot_threshold = options.pivot_threshold;
 max_iter = options.max_iter;
 
@@ -111,10 +119,6 @@ linsolve_opts.UT = true;
 x0 = initial_points(:, 1);
 x = x0;
 dim = size(x, 1);
-tol_g = 1e-5;
-tol_con = options.tol_con;
-tol_radius = options.tol_radius;
-tol_f = options.tol_f;
 
 p = @(x) l1_function(f, phi, con_lb, con_ub, mu, x);
 % QR decomposition of constraints gradients matrix A
@@ -157,10 +161,6 @@ global solucao
 
 while ~finish
 
-%     if debug_on
-%         check_interpolation(trmodel);
-%     end
-
     if abs(px) > options.divergence_threshold
         break
     end
@@ -174,48 +174,47 @@ while ~finish
         cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
     end
     history_solution(iter).polynomial = trmodel.modeling_polynomials{1};
-    if iter > numel(solucao) ...
-            || norm(history_solution(iter).polynomial.coefficients ...
-            - solucao(iter).polynomial.coefficients, inf) ~= 0
-        1;
-    end
     
-    [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                      cmodel, x, ...
-                                                      mu, epsilon, bl, bu);
+    [measure, d, ind_eactive] = ...
+        l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
+                                                     x, mu, epsilon, bl, bu);
 
-    if measure > max(eps_c, Lambda)
+    if measure > eps_c;
         tr_criticality_step_executed = false;
     else
         tr_criticality_step_executed = true;
-        [trmodel, epsilon] = tr_criticality_step(trmodel, fphi, mu, ...
-                                                 epsilon, Lambda, ...
-                                                 bl, bu, con_lb, ...
-                                                 con_ub, options);
+        [trmodel, epsilon, epsilon_decrease_measure_threshold, ...
+         epsilon_decrease_radius_threshold] = tr_criticality_step(trmodel, ...
+                                                          fphi, mu, ...
+                                                          epsilon, ...
+                                                          bl, bu, ...
+                                                          con_lb, ...
+                                                          con_ub, ...
+                                                          epsilon_decrease_measure_threshold, ...
+                                                          epsilon_decrease_radius_threshold, ...
+                                                          options);
 
         if ~strcmp(options.basis, 'dummy')
+            trmodel.modeling_polynomials = compute_polynomial_models(trmodel);
             [fx, fmodel.g, fmodel.H] = get_model_matrices(trmodel, 0);
-            cmodel = ...
-                extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
+            cmodel = extract_constraints_from_tr_model(trmodel, con_lb, con_ub);
+        else
+            [fx, fmodel.g, fmodel.H] = f(x);
+            cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
         end
 
-        [measure, d, ind_eactive] = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                      cmodel, x, ...
-                                                      mu, epsilon, bl, bu);
-        while Lambda > measure
-            Lambda = 0.5*Lambda;
-        end
+        [measure, d, ind_eactive] = ...
+            l1_criticality_measure_and_descent_direction(fmodel, ...
+                                                         cmodel, x, ...
+                                                         mu, epsilon, bl, bu);
     end
 
     % Stopping conditions
-    if measure < tol_g
-        phih = [cmodel(ind_eactive).c]';
-        if norm(phih) < tol_con
+    if measure < tol_measure
+        eactive_norm_inf = norm(cmodel(ind_eactive).c, inf);
+        if eactive_norm_inf < tol_con
             if max([cmodel.c]) > tol_con && false
-                break % Address this outside
-                mu = mu*10;
-                p = @(x) l1_function(f, phi, mu, x);
-                px = trmodel.fvalues(1, 1) + mu*sum(max(0, trmodel.fvalues(2:end, 1)));
+                break % Address constraint violation outside
             else
                 break
             end
@@ -224,28 +223,21 @@ while ~finish
 
     geometry_ok = is_lambda_poised(trmodel, options);
 
-    [trial_point, pred] = l1_trust_region_step(fmodel, cmodel, ...
-                                                   x, epsilon, Lambda, ...
-                                                   mu, trmodel.radius, bl, bu);
-    trial_point = project_to_bounds(trial_point, bl, bu);
+    [point_computed, pred] = l1_trust_region_step(fmodel, cmodel, x, ...
+                                               epsilon, Lambda, mu, ...
+                                               trmodel.radius, bl, bu);
+    trial_point = project_to_bounds(point_computed, bl, bu);
+    if norm(trial_point - point_computed) > 0 
+        'Debug this';
+    end
+    if pred <= 0
+        'Debug this';
+    end
     s = trial_point - x;
-%     if (pred < tol_f*abs(px)*1e-6 ...
-%             && norm(s) < min(tol_radius, 0.1*trmodel.radius))% ...
-%          %|| (pred < tol_f*abs(px)*1e-6) % ...
-%         % || (pred < tol_radius*1e-2) ...
-%         evaluate_step = false;
-%     else
-%         evaluate_step = true;
-%     end
-%     if norm(s) - 1.1*trmodel.radius > 0
-% %        warning('long step'); 
-%     end
-%     if norm(s) < 0.5*tol_radius
-% %        warning('short step'); 
-%     end
-    if true || evaluate_step        
+    evaluate_step = true; % Another logic can be used
+    if evaluate_step
         [p_trial, trial_fvalues] = p(trial_point);
-        if find(~isfinite(trial_fvalues), 1)
+        if ~isempty(find(~isfinite(trial_fvalues), 1))
             rho = -inf;
         else
             ared = ...
@@ -254,6 +246,7 @@ while ~finish
             rho = ared/pred;
         end
         if rho > eta_2 || (rho > eta_1 && geometry_ok)
+            px = p_trial;
             x = trial_point;
             if strcmp(options.basis, 'dummy')
                 mchange_flag = 4;
@@ -264,8 +257,7 @@ while ~finish
                     change_tr_center(trmodel, trial_point, ...
                                      trial_fvalues, options);
             end
-            px = p_trial;
-        elseif rho ~= -inf
+        elseif isfinite(rho)
             if strcmp(options.basis, 'dummy')
                 mchange_flag = 4;
             else
@@ -289,14 +281,14 @@ while ~finish
                 mchange_flag = 4;
         end
     end
-    if rho <= eta_2 && (mchange_flag == 4 || tr_criticality_step_executed)
+    if rho <= eta_2
         gamma_dec = gamma_1;
         trmodel.radius = gamma_dec*trmodel.radius;
+    elseif isfinite(rho)
+        radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
+        trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
     else
-        if rho > eta_2
-            radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
-            trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
-        end
+        warning('cmg:infinite_rho', 'Invalid rho = %g', rho);
     end
     if mchange_flag == 2 && rho >= eta_2
         exchange_counts = exchange_counts + 1;
@@ -338,4 +330,3 @@ while ~finish
 end
 % In case we decided to preallocate
 history_solution = history_solution(1:iter);
-

@@ -47,6 +47,9 @@ function [sigma, d, ind_eactive] = ...
     linprog_problem.lb = plb;
     linprog_problem.ub = pub;
     [dy, sigma_neg, exitflag, output] = linprog(linprog_problem);
+    if exitflag < 0
+        'Debug this';
+    end
     if sigma_neg > 0
         if ~isempty(dy) && (isempty(Aineq) || isempty(find(Aineq*(-dy) > bineq, 1)))
             dy = -dy;

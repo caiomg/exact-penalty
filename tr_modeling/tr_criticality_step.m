@@ -1,22 +1,26 @@
-function [model, epsilon] = tr_criticality_step(model, funcs, p_mu, ...
-                                                epsilon, Lambda, bl, ...
-                                                bu, con_lb, con_ub, ...
-                                                options, one_pass)
+function [model, epsilon, epsilon_decrease_measure_threshold, ...
+          epsilon_decrease_radius_threshold] = tr_criticality_step(model, ...
+                                                      funcs, ...
+                                                      p_mu, ...
+                                                      epsilon, ...
+                                                      lb, ...
+                                                      ub, ...
+                                                      con_lb, ...
+                                                      con_ub, ...
+                                                      epsilon_decrease_measure_threshold, ...
+                                                      epsilon_decrease_radius_threshold, ...
+                                                      options)
 % CRITICALITY_STEP -- ensures model is sufficiently poised and with
 % a radius comparable to the gradient
 %
 
-if nargin < 11 || isempty(one_pass)
-    one_pass = false;
-end
-
 crit_mu = options.criticality_mu; % factor between radius and
-                             % criticality measure
+                                  % criticality measure
 omega = options.criticality_omega; % factor used to reduce radius
 beta = options.criticality_beta; % to ensure the final radius
                                  % reduction is not drastic
 tol_radius = options.tol_radius; % tolerance of TR algorithm
-tol_f = options.tol_f;
+tol_measure = options.tol_measure;
 tol_con = options.tol_con;
 factor_epsilon = 0.5;
 epsilon0 = epsilon;
@@ -29,7 +33,7 @@ if has_distant_points(model, options) || is_old(model, options)
     model_changed = true;
 end
 while ~is_lambda_poised(model, options)
-    model = ensure_improvement(model, funcs, bl, bu, options);
+    model = ensure_improvement(model, funcs, lb, ub, options);
     model_changed = true;
 end
 if model_changed
@@ -44,22 +48,20 @@ else
     cmodel = evaluate_constraints({funcs{2:end}}, x, con_lb, con_ub);
 end
 
-% [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-% [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
+[measure, ~, ind_eactive] = ...
+    l1_criticality_measure_and_descent_direction(fmodel, cmodel, x, ...
+                                                 p_mu, epsilon, lb, ub);
+eactive_norm = norm(cmodel(ind_eactive).c, 1);
 
-% [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
-%    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
-%                           bl, bu, max(Lambda, eps_c));
-measure = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                       cmodel, x, p_mu, ...
-                                                       epsilon, bl, bu);
-
-
-
+detected_convergence_of_main_algorithm = false;
 while (model.radius > crit_mu*measure)
     model.radius = omega*model.radius;
-    %epsilon = max(0.5*tol_con, factor_epsilon*epsilon);
-    epsilon = factor_epsilon*epsilon;
+
+    
+    if eactive_norm > epsilon_decrease_measure_threshold*measure ...
+            && model.radius < epsilon_decrease_radius_threshold
+        epsilon = factor_epsilon*epsilon;
+    end
     
     model_changed = false;
     if has_distant_points(model, options) || is_old(model, options)
@@ -67,7 +69,7 @@ while (model.radius > crit_mu*measure)
         model_changed = true;
     end
     while ~is_lambda_poised(model, options)
-        model = ensure_improvement(model, funcs, bl, bu, options);
+        model = ensure_improvement(model, funcs, lb, ub, options);
         model_changed = true;
     end
     if model_changed
@@ -79,47 +81,48 @@ while (model.radius > crit_mu*measure)
         cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
     end
 
-    % [ind_eactive, ~] = identify_new_constraints(cmodel, epsilon, []);
-    % [Q, R, ind_qr] = update_factorization(cmodel, [], [], ind_eactive, false);
-
-    % [q1, q2, p_grad, d_drop, Q_drop, R_drop, ind_qr_drop, multipliers] = ...
-    %    l1_measure_criticality(fmodel, cmodel, mu, Q, R, ind_qr, x, ...
-    %                           bl, bu, max(Lambda, eps_c));
-
-    measure = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                           cmodel, x, p_mu, ...
-                                                           epsilon, bl, bu);
+    [measure, ~, ind_eactive] = ...
+        l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
+                                                     x, p_mu, epsilon, lb, ub);
+    eactive_norm = norm(cmodel(ind_eactive).c, 1);
 
     
     if (model.radius < tol_radius || ...
-        (beta*measure < tol_f && model.radius < 100*tol_radius))
+        (measure < tol_measure && eactive_norm < tol_con ...
+         && model.radius < 100*tol_radius))
         % Better break.
         % Not the end of this algorithm, but satisfies stopping
         % condition for outer algorithm anyway...
-        break
-    end
-    if one_pass
-        break
-    end
-end
-
-while true
-
-    epsilon_larger = epsilon/factor_epsilon;
-    measure_larger = l1_criticality_measure_and_descent_direction(fmodel, ...
-                                                       cmodel, x, p_mu, ...
-                                                       epsilon_larger, bl, bu);
-
-    if model.radius <= crit_mu*measure_larger...
-            && epsilon/factor_epsilon <= epsilon0
-        measure = measure_larger;
-        epsilon = epsilon_larger;
-    else
+        detected_convergence_of_main_algorithm = true;
         break
     end
 end
-% The final radius is increased not to make the reduction drastic
-model.radius = min(max(model.radius, beta*norm(measure)), initial_radius);
 
+if ~detected_convergence_of_main_algorithm
+
+    % Epsilon is increased back if it does not spoil the criterion
+    % of criticality step
+    while true
+
+        epsilon_larger = epsilon/factor_epsilon;
+        measure_larger = l1_criticality_measure_and_descent_direction(fmodel, ...
+                                                          cmodel, x, p_mu, ...
+                                                          epsilon_larger, lb, ub);
+
+        if model.radius <= crit_mu*measure_larger ...
+                && epsilon/factor_epsilon <= epsilon0
+            measure = measure_larger;
+            epsilon = epsilon_larger;
+        else
+            break
+        end
+    end
+    % The final radius is increased not to make the reduction drastic
+    model.radius = min(max(model.radius, beta*norm(measure)), initial_radius);
+end
+if epsilon < epsilon0
+    epsilon_decrease_measure_threshold = 0.5*epsilon_decrease_measure_threshold;
+    epsilon_decrease_radius_threshold = 0.5*epsilon_decrease_radius_threshold;
+end
                        
 end

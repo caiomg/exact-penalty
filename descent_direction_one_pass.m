@@ -6,7 +6,7 @@ function x = descent_direction_one_pass(fmodel, cmodel, mu, x0, d, radius, lb, u
     
     tmax = min(tmax_bounds, tmax_tr);
     try
-    [t, brpoints_crossed] = line_search_cg(fmodel, cmodel, mu, d, tmax);
+        [t, brpoints_crossed] = line_search_cg(fmodel, cmodel, mu, d, tmax);
     catch this_error
         rethrow(this_error)
     end
