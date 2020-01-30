@@ -48,10 +48,10 @@ else
     cmodel = evaluate_constraints({funcs{2:end}}, x, con_lb, con_ub);
 end
 
-[measure, ~, ind_eactive] = ...
+[measure, ~, is_eactive] = ...
     l1_criticality_measure_and_descent_direction(fmodel, cmodel, x, ...
                                                  p_mu, epsilon, lb, ub);
-eactive_norm = norm(cmodel(ind_eactive).c, 1);
+eactive_norm = norm([cmodel(is_eactive).c], 1);
 
 detected_convergence_of_main_algorithm = false;
 while (model.radius > crit_mu*measure)
@@ -81,10 +81,10 @@ while (model.radius > crit_mu*measure)
         cmodel = extract_constraints_from_tr_model(model, con_lb, con_ub);
     end
 
-    [measure, ~, ind_eactive] = ...
+    [measure, ~, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
                                                      x, p_mu, epsilon, lb, ub);
-    eactive_norm = norm(cmodel(ind_eactive).c, 1);
+    eactive_norm = norm([cmodel(is_eactive).c], 1);
 
     
     if (model.radius < tol_radius || ...

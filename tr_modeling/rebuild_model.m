@@ -10,7 +10,7 @@ function model = rebuild_model(model, options)
     radius = model.radius;
     pivot_threshold = pivot_threshold_rel*min(1, radius);
     if radius < 1
-        pivot_threshold_sufficient = pivot_threshold*2;
+        pivot_threshold_sufficient = max(1e-6, pivot_threshold*2);
     else
         pivot_threshold_sufficient = pivot_threshold;
     end

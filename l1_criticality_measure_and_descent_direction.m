@@ -1,4 +1,4 @@
-function [sigma, d, ind_eactive] = ...
+function [sigma, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel_x, ...
                                                      cmodel_x, x, ...
                                                      mu, epsilon, ...
@@ -12,17 +12,17 @@ function [sigma, d, ind_eactive] = ...
     end
 
     dim = size(x, 1);
-    ind_eactive = l1_identify_constraints(cmodel_x, x, lb, ub, epsilon);
+    is_eactive = l1_identify_constraints(cmodel_x, x, lb, ub, epsilon);
 
     s0 = zeros(dim, 1);
-    pg = l1_pseudo_gradient_general(fmodel_x, cmodel_x, mu, s0, ind_eactive);
+    pg = l1_pseudo_gradient_general(fmodel_x, cmodel_x, mu, s0, is_eactive);
     
-    n_eactive = sum(ind_eactive);
+    n_eactive = sum(is_eactive);
     
     f = [pg;
          mu*ones(n_eactive, 1)];
     
-    G = [cmodel_x(ind_eactive).g];
+    G = [cmodel_x(is_eactive).g];
     I = eye(n_eactive);
 
     Aineq = [G', -I];

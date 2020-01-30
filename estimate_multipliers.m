@@ -1,22 +1,23 @@
-function multipliers = estimate_multipliers(fmodel, cmodel, x, mu, ind_eactive, lb, ub)
+function multipliers = estimate_multipliers(fmodel, cmodel, x, mu, ...
+                                            is_eactive, lb, ub)
     % ESTIMATE_MULTIPLIERS - 
     %   
 
     dim = size(x, 1);
-    if sum(ind_eactive) == 0
+    if sum(is_eactive) == 0
         multipliers = [];
     else
         s0 = zeros(dim, 1);
-        pg = l1_pseudo_gradient_general(fmodel, cmodel, mu, s0, ind_eactive);
+        pg = l1_pseudo_gradient_general(fmodel, cmodel, mu, s0, is_eactive);
 
-        A = [cmodel(ind_eactive).g];
+        A = [cmodel(is_eactive).g];
 
         %% Indirect computation
         tol_bounds = min(1e-5, 1e-3*(ub - lb));
         lb_nearly_active = x - lb < tol_bounds;
         ub_nearly_active = ub - x < tol_bounds;
 
-        n_nearly_active_nl_constraints = sum(ind_eactive);
+        n_nearly_active_nl_constraints = sum(is_eactive);
         n_nearly_active_bounds = sum(lb_nearly_active) + sum(ub_nearly_active);
 
         I = eye(dim);

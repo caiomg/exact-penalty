@@ -175,11 +175,11 @@ while ~finish
     end
     history_solution(iter).polynomial = trmodel.modeling_polynomials{1};
     
-    [measure, d, ind_eactive] = ...
+    [measure, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
                                                      x, mu, epsilon, bl, bu);
 
-    if measure > eps_c;
+    if measure > eps_c
         tr_criticality_step_executed = false;
     else
         tr_criticality_step_executed = true;
@@ -203,7 +203,7 @@ while ~finish
             cmodel = evaluate_constraints(phi, x, con_lb, con_ub);
         end
 
-        [measure, d, ind_eactive] = ...
+        [measure, d, is_eactive] = ...
             l1_criticality_measure_and_descent_direction(fmodel, ...
                                                          cmodel, x, ...
                                                          mu, epsilon, bl, bu);
@@ -211,7 +211,7 @@ while ~finish
 
     % Stopping conditions
     if measure < tol_measure
-        eactive_norm_inf = norm(cmodel(ind_eactive).c, inf);
+        eactive_norm_inf = norm([cmodel(is_eactive).c], inf);
         if eactive_norm_inf < tol_con
             if max([cmodel.c]) > tol_con && false
                 break % Address constraint violation outside
@@ -223,7 +223,7 @@ while ~finish
 
     geometry_ok = is_lambda_poised(trmodel, options);
 
-    [point_computed, pred] = l1_trust_region_step(fmodel, cmodel, x, ...
+    [point_computed, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
                                                epsilon, Lambda, mu, ...
                                                trmodel.radius, bl, bu);
     trial_point = project_to_bounds(point_computed, bl, bu);
@@ -253,9 +253,13 @@ while ~finish
                 trmodel.points_abs(:, 1) = x;
                 trmodel.tr_center = 1;
             else
+                try
                 [trmodel, mchange_flag] = ...
                     change_tr_center(trmodel, trial_point, ...
                                      trial_fvalues, options);
+                catch this_error
+                    rethrow(this_error);
+                end
             end
         elseif isfinite(rho)
             if strcmp(options.basis, 'dummy')
@@ -319,7 +323,7 @@ while ~finish
     end
     if debug_on
         try
-            check_nfp_polynomials(trmodel);
+            %check_nfp_polynomials(trmodel);
         catch this_error
            rethrow(this_error);
         end
