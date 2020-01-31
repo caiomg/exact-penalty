@@ -1,9 +1,11 @@
 function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
-                                            radius, lb, ub, d0)
+                                            radius, lb, ub)
     % NULL_SPACE_CONJUG
     %
 
     dim = size(x0, 1);
+    n_constraints = numel(cmodel);
+    max_iters = dim + n_constraints;
 
     tol_d = eps(1);
     tol_h = eps(1);
@@ -13,22 +15,17 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
     cmodel_d = cmodel;
 
     x = x0;
-    if nargin < 8
-            [~, d] = l1_criticality_measure_and_descent_direction(fmodel_d, ...
-                                                              cmodel_d, ...
-                                                              x, mu, ...
-                                                              epsilon, ...
-                                                              lb, ...
-                                                              ub, x0, radius);
-    else
-        d = d0;
-    end
+    pred = 0;
+    [~, d] = l1_criticality_measure_and_descent_direction(fmodel_d, ...
+                                                      cmodel_d, x, ...
+                                                      mu, epsilon, ...
+                                                      lb, ub);
 
     if ~isempty(find(x > ub | x < lb, 1))
         warning('cmg:out_of_bounds', 'Point already out of bounds');
     end
 
-    for iter = 1:dim
+    for iter = 1:max_iters
         
         if norm(d) < tol_d
             break
@@ -46,12 +43,20 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
     
         lower_bound_hits = t_lb == t;
         upper_bound_hits = t_ub == t;
+        x_prev = x;
+        pred_prev = pred;
         x = x + t*d;
         x(lower_bound_hits) = lb(lower_bound_hits);
         x(upper_bound_hits) = ub(upper_bound_hits);
         
         s = x - x0;
-        if ~isempty(find(abs(s) >= radius, 1))
+        pred = predict_descent(fmodel, cmodel, x - x0, mu);
+        if pred < pred_prev
+            % Rollback
+            x = x_prev;
+        end
+        % Break if step long enough
+        if radius - norm(s, inf) < 0.05*radius
             break
         end
         fmodel_d = shift_model(fmodel, s);
@@ -59,7 +64,7 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
             cmodel_d(k) = shift_model(cmodel(k), s);
         end
         try
-        [sigma, g_neg] = l1_criticality_measure_and_descent_direction(fmodel_d, ...
+        [sigma, pseudo_steepest_descent] = l1_criticality_measure_and_descent_direction(fmodel_d, ...
                                                           cmodel_d, ...
                                                           x, mu, ...
                                                           epsilon, ...
@@ -69,7 +74,7 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
         end
         
         if ~isempty(find(upper_bound_hits | lower_bound_hits, 1))
-            d = g_neg; % Restarting
+            d = pseudo_steepest_descent; % Restarting
         else
             % Compute average Hessian
             bpoint_prev = 0;
@@ -78,10 +83,10 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
                 bpoint = brpoints_crossed(k);
                 interval_length = (bpoint - bpoint_prev);
                 mid_interval = 0.5*interval_length;
-                mid_point = x + (bpoint + mid_interval)*d;
+                relative_mid_point = (x - x0) + (bpoint + mid_interval)*d;
                 
                 H = H + (interval_length/t)*l1_hessian(fmodel, cmodel, ...
-                                                       mu, mid_point);
+                                                       mu, relative_mid_point);
                 bpoint_prev = bpoint;
             end
             
@@ -90,8 +95,9 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
             if norm(dHd) < tol_h
                 break
             end
-            beta = ((g_neg'*H*d)/dHd);
-            d = g_neg + beta*d;
+            beta = -((pseudo_steepest_descent'*H*d)/dHd);
+            %beta = 0
+            d = pseudo_steepest_descent + beta*d;
             
         end
     end

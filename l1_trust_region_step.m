@@ -4,19 +4,40 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
 % L1_TRUST_REGION_STEP - 
 %   
 
+    global total_pred_h
+    global total_pred_cg
 
-
-    [sigma, d, is_eactive] = ...
+    [measure, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
                                                      x, mu, epsilon, lb, ub);
     xh = descent_direction_one_pass(fmodel, cmodel, mu, x, d, ...
                                     radius, lb, ub);
-    % x_cg = conjugate_gradient_new_measure(fmodel, cmodel, x, mu, ...
-    %                                       epsilon, radius, lb, ub, d);
+    
+    x_cg = conjugate_gradient_new_measure(fmodel, cmodel, x, mu, ...
+                                          epsilon, radius, lb, ub);
+
+    pred_h = predict_descent(fmodel, cmodel, xh - x, mu);
+    pred_cg = predict_descent(fmodel, cmodel, x_cg - x, mu);
+    
+    if pred_cg - pred_h < -eps(1)
+        error('cmg:incorrect_descent_computation', 'Wrong computation');
+    end
+    total_pred_h = total_pred_h + pred_h;
+    total_pred_cg = total_pred_cg + pred_cg;
+    
+    xused = x_cg;
+
+    s = xused - x;
+    fmodel_shifted = shift_model(fmodel, s);
+    for k = 1:length(cmodel)
+        cmodel_shifted(k) = shift_model(cmodel(k), s);
+    end
+    is_eactive_h = l1_identify_constraints(cmodel_shifted, xused, lb, ub, epsilon);
+    
     [x_trial, pred] = try_to_make_activities_exact(fmodel, cmodel, mu, ...
-                                                   is_eactive, ...
-                                                   x, xh, radius, lb, ub);
-    if sigma < Lambda
+                                                   is_eactive_h, ...
+                                                   x, xused, radius, lb, ub);
+    if measure < Lambda
         
         % Just reduce constraint values
         [x_other] = try_to_make_activities_exact(fmodel, cmodel, mu, ...

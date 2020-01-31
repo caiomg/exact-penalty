@@ -213,7 +213,7 @@ while ~finish
     if measure < tol_measure
         eactive_norm_inf = norm([cmodel(is_eactive).c], inf);
         if eactive_norm_inf < tol_con
-            if max([cmodel.c]) > tol_con && false
+            if max([cmodel.c]) > tol_con
                 break % Address constraint violation outside
             else
                 break
@@ -234,7 +234,7 @@ while ~finish
         'Debug this';
     end
     s = trial_point - x;
-    evaluate_step = true; % Another logic can be used
+    evaluate_step = pred > 0; % Another logic can be used
     if evaluate_step
         [p_trial, trial_fvalues] = p(trial_point);
         if ~isempty(find(~isfinite(trial_fvalues), 1))

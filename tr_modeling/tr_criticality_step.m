@@ -25,6 +25,8 @@ tol_con = options.tol_con;
 factor_epsilon = 0.5;
 epsilon0 = epsilon;
 
+gamma_inc = options.gamma_inc;
+
 x = model.points_abs(:, model.tr_center);
 initial_radius = model.radius;
 model_changed = false;
@@ -87,7 +89,7 @@ while (model.radius > crit_mu*measure)
     eactive_norm = norm([cmodel(is_eactive).c], 1);
 
     
-    if (model.radius < tol_radius || ...
+    if (model.radius*gamma_inc < tol_radius || ...
         (measure < tol_measure && eactive_norm < tol_con ...
          && model.radius < 100*tol_radius))
         % Better break.
