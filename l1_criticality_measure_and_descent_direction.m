@@ -1,4 +1,4 @@
-function [sigma, d, is_eactive] = ...
+function [measure, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel_x, ...
                                                      cmodel_x, x, ...
                                                      mu, epsilon, ...
@@ -6,6 +6,17 @@ function [sigma, d, is_eactive] = ...
 % L1_CRITICALITY_MEASURE_AND_DESCENT_DIRECTION - 
 %   
 
+    global as_succeeded
+    global ip_succeeded
+    global as_lower
+    global total_measure_difference
+    if isempty(as_succeeded)
+        as_succeeded = 0;
+        ip_succeeded = 0;
+        as_lower = 0;
+        total_measure_difference = 0;
+    end
+    
     if nargin < 8
         center = x;
         radius = inf;
@@ -39,52 +50,51 @@ function [sigma, d, is_eactive] = ...
            yub];
     
     linprog_problem.solver = 'linprog';
-    linprog_problem.options = optimoptions('linprog', 'Display', ...
-                                           'off', 'Algorithm', 'dual-simplex');
     linprog_problem.f = f;
     linprog_problem.Aineq = Aineq;
     linprog_problem.bineq = bineq;
     linprog_problem.lb = plb;
     linprog_problem.ub = pub;
-    [dy, sigma_neg, exitflag, output] = linprog(linprog_problem);
-    if exitflag < 0
-        'Debug this';
+
+    % Solving by active-set
+    linprog_problem.options = optimoptions('linprog', 'Display', ...
+                                           'off', 'Algorithm', 'dual-simplex');
+    [dt_as, measure_neg_as, exitflag_as, output_as] = linprog(linprog_problem);
+    
+    % Solving by interior-point
+    linprog_problem.options = optimoptions('linprog', 'Display', ...
+                                           'off', 'Algorithm', 'interior-point');
+    [dt_ip, measure_neg_ip, exitflag_ip, output_ip] = linprog(linprog_problem);
+    
+    try
+    [measure_as, d_as] = correct_measure_computation(pg, G, mu, dlb, dub, dt_as);
+    [measure_ip, d_ip] = correct_measure_computation(pg, G, mu, dlb, dub, dt_ip);
+    catch meuerro
+        rethrow(meuerro)
     end
-    if sigma_neg > 0
-        sigma_neg = 0;
+    if ~isempty(measure_as)
+        as_succeeded = as_succeeded + 1;
     end
-    if sigma_neg > 0 %OLD UNUSED CODE
-        if ~isempty(dy) && (isempty(Aineq) || isempty(find(Aineq*(-dy) > bineq, 1)))
-            dy = -dy;
-            sigma_neg = -sigma_neg;
-        else
-            Aineq = [Aineq;
-                    f'];
-            bineq = [bineq;
-                    0];
-            linprog_problem.Aineq = Aineq;
-            linprog_problem.bineq = bineq;
-            linprog_problem.options = optimoptions('linprog', ...
-                                                   'Display', 'off', ...
-                                                   'ConstraintTolerance', 1e-7, ...
-                                                   'Algorithm', 'dual-simplex');
-            [dy, sigma_neg, exitflag, output] = linprog(linprog_problem);
-            if exitflag < 0
-                error('cmg:criticality_error', ...
-                      'Could not compute criticality measure');
-            end
-            if sigma_neg > 0 ...
-                 && norm(max(0, Aineq*dy - bineq)) >= norm(max(0, Aineq*(-dy) - bineq))
-                dy = project_to_bounds(-dy, dlb, dub);
-                sigma_neg = f'*dy;
-            end
+    if ~isempty(measure_ip)
+        ip_succeeded = ip_succeeded + 1;
+    end
+    if ~isempty(measure_as) && ~isempty(measure_ip)
+        current_measure_difference = measure_as - measure_ip;
+        total_measure_difference = total_measure_difference + current_measure_difference;
+        if current_measure_difference < 0
+            as_lower = as_lower + 1;
         end
     end
-
-    if isempty(dy)
-        1;
+    if ~isempty(measure_as)
+        measure = measure_as;
+        d = d_as;
+    elseif ~isempty(measure_ip)
+        measure = measure_ip;
+        d = d_ip;
+    else
+        'Trouble here';
+        d1 = solve_linear_problem(f, Aineq, bineq, [], [], plb, pub);
+        [measure, d] = correct_measure_computation(pg, G, mu, dlb, dub, d1);
     end
-    d = dy(1:dim);
-    sigma = -sigma_neg;
-    
+
 end
