@@ -48,7 +48,7 @@ function [t, path_points] = line_search_cg(fmodel, cmodel, mu, s0, max_t)
         if g'*s0 > 0
             % Ascent
             0;
-        elseif s0'*B*s0 < 0
+        elseif (s0'*B*s0 < 0 || s0'*B*s0 == 0 && g'*s0 < 0)
             local_minima(end+1) = tu;
         else
             % Minimizing the quadratic model in direction d

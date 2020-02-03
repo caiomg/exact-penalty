@@ -4,8 +4,6 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
 % L1_TRUST_REGION_STEP - 
 %   
 
-    global total_pred_h
-    global total_pred_cg
 
     [measure, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
@@ -22,8 +20,6 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
     if pred_cg - pred_h < -eps(1)
         error('cmg:incorrect_descent_computation', 'Wrong computation');
     end
-    total_pred_h = total_pred_h + pred_h;
-    total_pred_cg = total_pred_cg + pred_cg;
     
     xused = x_cg;
 

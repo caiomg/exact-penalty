@@ -54,6 +54,7 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
         if pred < pred_prev
             % Rollback
             x = x_prev;
+            break
         end
         % Break if step long enough
         if radius - norm(s, inf) < 0.05*radius
@@ -68,7 +69,7 @@ function x = conjugate_gradient_new_measure(fmodel, cmodel, x0, mu, epsilon, ...
                                                           cmodel_d, ...
                                                           x, mu, ...
                                                           epsilon, ...
-                                                          lb, ub, x0, radius);
+                                                          lb, ub);
         catch teste
             rethrow(teste);
         end

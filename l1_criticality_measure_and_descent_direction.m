@@ -51,6 +51,9 @@ function [sigma, d, is_eactive] = ...
         'Debug this';
     end
     if sigma_neg > 0
+        sigma_neg = 0;
+    end
+    if sigma_neg > 0 %OLD UNUSED CODE
         if ~isempty(dy) && (isempty(Aineq) || isempty(find(Aineq*(-dy) > bineq, 1)))
             dy = -dy;
             sigma_neg = -sigma_neg;
@@ -72,8 +75,8 @@ function [sigma, d, is_eactive] = ...
             end
             if sigma_neg > 0 ...
                  && norm(max(0, Aineq*dy - bineq)) >= norm(max(0, Aineq*(-dy) - bineq))
-                dy = -dy;
-                sigma_neg = -sigma_neg;
+                dy = project_to_bounds(-dy, dlb, dub);
+                sigma_neg = f'*dy;
             end
         end
     end
