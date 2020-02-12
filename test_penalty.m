@@ -26,7 +26,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS102';
+problem_name = 'HS118';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
