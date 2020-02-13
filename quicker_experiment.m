@@ -51,6 +51,7 @@ solver_configuration.Lambda = Lambda;
 solver_configuration.l1_options = l1_options;
 solver_configuration.max_fcount = 10000;
 results = [];
+
 parfor k = 1:length(selected_problems)
 
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
@@ -70,7 +71,8 @@ parfor k = 1:length(selected_problems)
 end
 for k = 1:length(selected_problems)
     if all_results{k}.kkt || ...
-            (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 && -error_rel < 1e-6)
+            (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 ...
+             && -(all_results{k}.error_rel) < 1e-6)
         solved_problems(k) = true;
         good_results{end+1} = all_results{k};
         all_solved(end+1) = k;
