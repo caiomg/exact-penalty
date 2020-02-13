@@ -83,8 +83,6 @@ warning('on', 'cmg:badly_conditioned_system');
 [~, results_order] = sort(all_solved);
 good_results_ordered = {good_results{results_order}};
     filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
-    save(filename, 'all_results', 'mu', 'epsilon', ...
-         'Lambda', 'final_filenames', 'good_results', ...
-         'all_solved', 'good_results_ordered');
+    save(filename, 'all_results');
      
 print_my_table(good_results_ordered);
