@@ -26,7 +26,7 @@ problem_name = 'CB2';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
 % problem_name = 'HS101';
-problem_name = 'HS118';
+problem_name = 'HS84';
 
 [prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
 
@@ -99,16 +99,9 @@ Lambda = 0.1;
 
 
 nlcon = @(x) constraints(all_con, {}, x, 1);
-fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                               'Algorithm', 'interior-point', ...
-                               'SpecifyObjectiveGradient', false);
 nlcon_fmincon = @(x) [nlcon(x) - con_ub; con_lb - nlcon(x)];
-% global x_fmincon
-% [x_fmincon, fx_fmincon, exitflag, output, lambda_fmincon] = fmincon(f, x0,[],[],[],[], bl, bu, nlcon, fmincon_options)
-% viol_fmincon = max(0, nlcon_fmincon(x_fmincon))
-% fmincon_count = counter.get_count()
 counter.reset_count();
-% counter.set_max_count(15000);
+
 
 
 
@@ -125,7 +118,7 @@ l1_options.eta_2 = 0.05;
 l1_options.pivot_threshold = 0.001;
 l1_options.basis = 'FULL';
 l1_options.debug = true;
-l1_options.inspect_iteration = 468;
+l1_options.inspect_iteration = 21;
 l1_options.test_new = true
 % l1_options.crit_mu = 0.1
 
@@ -134,7 +127,7 @@ l1_options
 %%
 warning('off', 'cmg:badly_conditioned_system');
 p_seed = rng('default');
-% [x, hs2] = l1_penalty(f, all_con, x0, mu, epsilon, delta, Lambda)
+
 len_con = length(all_con);
 
 % rng('shuffle')
@@ -157,12 +150,6 @@ rng(p_seed);
 [kkt_ok, lgrad] = check_kkt(f, all_con, x_l1, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
 
 [is_fop, lgrad_l1] = check_fop(f, all_con, x_l1, mu, con_lb, con_ub, bl, bu, 1e-5, 5e-5)
-
-
-%tl1 = @() l1_penalty_solve(f, all_con, x0, mu, epsilon, delta, Lambda, [], [], []);
-% tmlab = @() fmincon(f, x0,[],[],[],[],[],[], nlcon, fmincon_options);
-% time_exact_penalty = timeit(tl1)
-% time_fmincon = timeit(tmlab)
 
 
 terminate_cutest_problem()

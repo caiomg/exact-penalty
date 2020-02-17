@@ -7,7 +7,6 @@ function xv = l1_feasibility_correction(cmodel, ind_eactive, tr_center, xh, radi
     
     H = A*A';
     g = A*c;
-    f = @(v) quadratic(H, g, 0, v);
     
     v_lb = max(-radius - h, lb - tr_center - h);
     v_ub = min(radius - h, ub - tr_center - h);
@@ -15,13 +14,7 @@ function xv = l1_feasibility_correction(cmodel, ind_eactive, tr_center, xh, radi
     
     v0 = 0.5*(v_lb + v_ub);
 
-    fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                                   'Algorithm', 'active-set', ...
-                                   'SpecifyObjectiveGradient', true, ...
-                                   'OptimalityTolerance', 1e-6);
-
-    [v, ~, exitflag] = fmincon(f, v0, [], [], [], [], v_lb, v_ub, ...
-                               [], fmincon_options);
+    v = solve_quadratic_problem(H, g, 0, [], [], [], [], v_lb, v_ub, v0);
     xv = xh + v;
     
 end

@@ -49,52 +49,7 @@ function [measure, d, is_eactive] = ...
     pub = [dub;
            yub];
     
-    linprog_problem.solver = 'linprog';
-    linprog_problem.f = f;
-    linprog_problem.Aineq = Aineq;
-    linprog_problem.bineq = bineq;
-    linprog_problem.lb = plb;
-    linprog_problem.ub = pub;
-
-    % Solving by active-set
-    linprog_problem.options = optimoptions('linprog', 'Display', ...
-                                           'off', 'Algorithm', 'dual-simplex');
-    [dt_as, measure_neg_as, exitflag_as, output_as] = linprog(linprog_problem);
-    
-    % Solving by interior-point
-    linprog_problem.options = optimoptions('linprog', 'Display', ...
-                                           'off', 'Algorithm', 'interior-point');
-    [dt_ip, measure_neg_ip, exitflag_ip, output_ip] = linprog(linprog_problem);
-    
-    try
-    [measure_as, d_as] = correct_measure_computation(pg, G, mu, dlb, dub, dt_as);
-    [measure_ip, d_ip] = correct_measure_computation(pg, G, mu, dlb, dub, dt_ip);
-    catch meuerro
-        rethrow(meuerro)
-    end
-    if ~isempty(measure_as)
-        as_succeeded = as_succeeded + 1;
-    end
-    if ~isempty(measure_ip)
-        ip_succeeded = ip_succeeded + 1;
-    end
-    if ~isempty(measure_as) && ~isempty(measure_ip)
-        current_measure_difference = measure_as - measure_ip;
-        total_measure_difference = total_measure_difference + current_measure_difference;
-        if current_measure_difference < 0
-            as_lower = as_lower + 1;
-        end
-    end
-    if ~isempty(measure_as)
-        measure = measure_as;
-        d = d_as;
-    elseif ~isempty(measure_ip)
-        measure = measure_ip;
-        d = d_ip;
-    else
-        'Trouble here';
         d1 = solve_linear_problem(f, Aineq, bineq, [], [], plb, pub);
         [measure, d] = correct_measure_computation(pg, G, mu, dlb, dub, d1);
-    end
 
 end

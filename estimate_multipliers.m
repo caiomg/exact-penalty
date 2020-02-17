@@ -27,19 +27,13 @@ function multipliers = estimate_multipliers(fmodel, cmodel, x, mu, ...
 
         H = A_ext'*A_ext;
         g = A_ext'*pg;
-        f = @(lambda) quadratic(H, g, 0, lambda);
 
         l_lb = [-inf(n_nearly_active_nl_constraints, 1);
                 zeros(n_nearly_active_bounds, 1)];
         lambda0 = zeros(size(l_lb));
 
-        fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
-                                       'Algorithm', 'active-set', ...
-                                       'SpecifyObjectiveGradient', true, ...
-                                       'OptimalityTolerance', 1e-6);
+        lambda = solve_quadratic_problem(H, g, 0, [], [], [], [], l_lb, [], lambda0);
 
-        [lambda, ~, exitflag] = fmincon(f, lambda0, [], [], [], [], l_lb, ...
-                                        [], [], fmincon_options);
         multipliers = lambda(1:n_nearly_active_nl_constraints);
         % I should take note of which constraints these are
 
