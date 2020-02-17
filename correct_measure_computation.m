@@ -17,7 +17,7 @@ function [measure, d, theta] = correct_measure_computation(pg, G, mu, lb, ub, dt
         
         d = project_to_bounds(d_ot, lb, ub);
         if n_aconstraints > 0
-            theta = G'*d;
+            theta = max(0, G'*d);
         else
             theta = 0;
         end
