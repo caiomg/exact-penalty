@@ -56,5 +56,8 @@ function [x, lambda] = solve_linear_problem(f, Aineq, bineq, Aeq, beq, lb, ub, x
 
     [x, info] = ipopt(x0, f_ipopt, ipopt_options);
     lambda = info.lambda;
+    if info.status <= -10
+        'Debug';
+    end
     
 end

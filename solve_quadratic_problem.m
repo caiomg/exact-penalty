@@ -62,5 +62,8 @@ function [x, lambda] = solve_quadratic_problem(H, g, c, Aineq, bineq, Aeq, beq, 
     [x, info] = ipopt(x0, f_ipopt, ipopt_options);
     %fval = f_ipopt.objective(x);
     %exitflag = info.status;
+    if info.status <= -10
+        'Debug';
+    end
 
 end
