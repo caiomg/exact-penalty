@@ -25,9 +25,7 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
 
     s = xused - x;
     fmodel_shifted = shift_model(fmodel, s);
-    for k = 1:length(cmodel)
-        cmodel_shifted(k) = shift_model(cmodel(k), s);
-    end
+    cmodel_shifted = shift_list_of_models(cmodel, s);
     is_eactive_h = l1_identify_constraints(cmodel_shifted, xused, lb, ub, epsilon);
     
     [x_trial, pred] = try_to_make_activities_exact(fmodel, cmodel, mu, ...
@@ -41,9 +39,7 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
                                                  radius, lb, ub, false);
         s = x_other - x;
         fmodel_shifted = shift_model(fmodel, s);
-        for k = 1:length(cmodel)
-            cmodel_shifted(k) = shift_model(cmodel(k), s);
-        end
+        cmodel_shifted = shift_list_of_models(cmodel, s);
         
         % I should re-identify constraints
         multipliers = estimate_multipliers(fmodel_shifted, cmodel_shifted, ...
