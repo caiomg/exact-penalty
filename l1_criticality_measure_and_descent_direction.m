@@ -6,17 +6,6 @@ function [measure, d, is_eactive] = ...
 % L1_CRITICALITY_MEASURE_AND_DESCENT_DIRECTION - 
 %   
 
-    global as_succeeded
-    global ip_succeeded
-    global as_lower
-    global total_measure_difference
-    if isempty(as_succeeded)
-        as_succeeded = 0;
-        ip_succeeded = 0;
-        as_lower = 0;
-        total_measure_difference = 0;
-    end
-    
     if nargin < 8
         center = x;
         radius = inf;
@@ -49,7 +38,8 @@ function [measure, d, is_eactive] = ...
     pub = [dub;
            yub];
     
-        d1 = solve_linear_problem(f, Aineq, bineq, [], [], plb, pub);
-        [measure, d] = correct_measure_computation(pg, G, mu, dlb, dub, d1);
-
+    dt = solve_linear_problem(f, Aineq, bineq, [], [], plb, pub);
+    [measure, d, theta] = correct_measure_computation(pg, G, mu, dlb, dub, dt);
+    dt = solve_linear_problem(f, Aineq, bineq, [], [], plb, pub, [d;theta]);
+    [measure, d, theta] = correct_measure_computation(pg, G, mu, dlb, dub, dt);
 end
