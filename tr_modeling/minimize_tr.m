@@ -1,7 +1,7 @@
 function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
                                            radius, bl, bu)
 
-    solver = 'matlab';
+    solver = 'ipopt';
     dim = size(x_tr_center, 1);
     if isempty(bl)
         bl = -inf(dim, 1);
@@ -15,8 +15,8 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
     bl_tr = x_tr_center - radius;
     bu_tr = x_tr_center + radius;
     % Joining TR bounds and decision variable bounds
-    bl_mod = max(bl, bl_tr) + tol_tr;
-    bu_mod = min(bu, bu_tr) - tol_tr;
+    bl_mod = max(bl, bl_tr); % + tol_tr;
+    bu_mod = min(bu, bu_tr); % - tol_tr;
 
     % Restoring feasibility at TR center
     bl_active = x_tr_center <= bl;
@@ -64,6 +64,7 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
             [x, fval, exitflag] = fmincon(f, x0, [], [], [], [], ...
                                           bl_mod, bu_mod, [], ...
                                           fmincon_options);
+            x = project_to_bounds(x, bl, bu);
             if exitflag < 0 || norm(x) < 0.001*radius
                 fmincon_options = optimoptions(@fmincon, 'Display', 'off', ...
                                                'Algorithm', 'active-set', ...
@@ -74,6 +75,7 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
                 [x2, fval2, exitflag2] = fmincon(f, x0, [], [], [], [], ...
                                               bl_mod, bu_mod, [], ...
                                               fmincon_options);
+                x2 = project_to_bounds(x2, bl, bu);
                  if (fval2 < fval && exitflag2 >= 0) || exitflag < 0
                      x = x2;
                      fval = fval2;
@@ -89,6 +91,7 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
                                                    'Display', 'off', ...
                                                    'Algorithm', 'dual-simplex');
             [x, ~, exitflag, output] = linprog(linprog_problem);
+            x = project_to_bounds(x, bl, bu);
             fval = f(x);
         end
         if exitflag >= 0
@@ -120,12 +123,12 @@ function [x, fval, exitflag] = minimize_tr(polynomial, x_tr_center, ...
         % ipopt_options.ipopt.constr_viol_tol = solver_constr_tol;
 
         [x, info] = ipopt(x0, f_ipopt, ipopt_options);
+        x = project_to_bounds(x, bl, bu);
         fval = f(x);
         exitflag = 0;
     elseif strcmp(solver, 'snopt')
         [x, fval] = snopt(x0, bl_mod, bu_mod, -inf, inf, f);
+        x = project_to_bounds(x, bl, bu);
         exitflag = 0;
     end
 end
-
-    
