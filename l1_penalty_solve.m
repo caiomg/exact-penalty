@@ -121,9 +121,7 @@ x = x0;
 dim = size(x, 1);
 
 p = @(x) l1_function(f, phi, con_lb, con_ub, mu, x);
-% QR decomposition of constraints gradients matrix A
-Q = zeros(dim, 0);
-R = zeros(0, 0);
+
 
 
 radius_max = options.radius_max;
