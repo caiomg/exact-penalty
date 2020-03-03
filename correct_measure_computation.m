@@ -19,7 +19,7 @@ function [measure, d, theta] = correct_measure_computation(pg, G, mu, lb, ub, dt
         if n_aconstraints > 0
             theta = max(0, G'*d);
         else
-            theta = 0;
+            theta = [];
         end
         
         measure = -(pg'*d + mu*norm(theta, 1));
