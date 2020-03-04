@@ -72,7 +72,8 @@ end
 for k = 1:length(selected_problems)
     if all_results{k}.kkt || ...
             (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 ...
-             && -(all_results{k}.error_rel) < 1e-6)
+             && (-(all_results{k}.error_rel) < 1e-6 ...
+                 ||-(all_results{k}.error_obj) < 1e-7)
         solved_problems(k) = true;
         good_results{end+1} = all_results{k};
         all_solved(end+1) = k;
@@ -86,3 +87,7 @@ good_results_ordered = {good_results{results_order}};
     save(filename, 'all_results');
      
 print_my_table(good_results_ordered);
+problems_not_solved = {selected_problems(~solved_problems)};
+fprintf(1, 'Not solved:\n');
+fprintf(1, '\t%s\t', problems_not_solved.name);
+fprintf(1, '\n');
