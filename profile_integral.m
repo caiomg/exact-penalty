@@ -1,7 +1,7 @@
 function S = profile_integral(times, indices, tmax)
 
     other_times = get_other_times(indices);
-    computing_time = [other_times];
+    computing_time = [times, other_times];
     [rho, tau] = dm_performance_profile(computing_time);
     [rho, tau] = adjust_performance_profile_scale(rho, tau, tmax);
     n_steps = size(rho, 1);

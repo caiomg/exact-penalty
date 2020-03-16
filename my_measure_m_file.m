@@ -4,8 +4,8 @@ function measure = my_measure_m_file(params)
 
     p_indices = (16:27)';
     tmax = 1e4;
-    measure = profile_integral(harder_problems(params, p_indices), ...
-                               p_indices, tmax)/tmax;
+    computing_time = harder_problems(params, p_indices);
+    measure = profile_integral(computing_time, p_indices, tmax)/tmax;
 
 end
 
