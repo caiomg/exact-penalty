@@ -25,7 +25,7 @@ function computing_times = harder_problems(params, indices)
     results = [];
     selected_problems = selected_problems(indices);
     n_problems = length(selected_problems);
-    parfor k = 1:n_problems
+    for k = 1:n_problems
 
         bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
         neg_mult_warn = warning('off', 'cmg:multipliers_negative');

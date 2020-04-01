@@ -33,7 +33,9 @@ function multipliers = estimate_multipliers(fmodel, cmodel, x, mu, ...
         lambda0 = zeros(size(l_lb));
 
         lambda = solve_quadratic_problem(H, g, 0, [], [], [], [], l_lb, [], lambda0);
-
+        if isempty(lambda)
+            lambda = -(A_ext\pg);
+        end
         multipliers = lambda(1:n_nearly_active_nl_constraints);
         % I should take note of which constraints these are
 

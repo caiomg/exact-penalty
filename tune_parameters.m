@@ -1,7 +1,7 @@
-params_initial = [1;
+params_initial = [2;
                   0.8;
-                  0.01;
-                  0.005];
+                  0.03;
+                  0.003];
 
 tuned_parameters = bfo('my_measure_m_file', params_initial, ...
                        'xlower', [0.01; 0.001; 0.01; 0.001], ...

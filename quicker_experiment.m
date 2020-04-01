@@ -24,14 +24,14 @@ log_filename = fullfile(logdir, sprintf('%s_p1_db.log', datestr(now, 30)));
 log_fd = fopen(log_filename, 'w');
 
 l1_options = [];
-l1_options.eta_2 = 0.05;
-l1_options.pivot_threshold = 0.001;
+l1_options.eta_2 = 0.01;
+l1_options.pivot_threshold = 0.005;
 l1_options.basis = 'FULL'
 l1_options.crit_mu = 0.1 % testing !!!!!
 
 % Parameters
 epsilon = 1;
-Lambda = 0.1;
+Lambda = 1e-3;
 
 list_of_problems
 
