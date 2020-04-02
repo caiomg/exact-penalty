@@ -29,7 +29,7 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
     if ~isempty(ub)
         model.ub = ub;
     end
-%     model.start = x0;
+    model.start = x0;
     
     params.OutputFlag = 0;
     params.NonConvex = 2;
@@ -39,14 +39,16 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
     if isfield(result, 'x')
         x = result.x;
         fval = result.objval;
+        if strcmp(result.status, 'OPTIMAL')
+            status = 0;
+        else
+            status = -1;
+        end
     else
-        x = [];
-        fval = [];
-    end
-    if strcmp(result.status, 'OPTIMAL')
-        status = 0;
-    else
-        status = -1;
+        [x, fval, status] = solve_quadratic_problem_matlab(H, g, ...
+                                                      c, Aineq, ...
+                                                      bineq, Aeq, ...
+                                                      beq, lb, ub, x0);
     end
 
 end

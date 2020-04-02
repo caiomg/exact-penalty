@@ -28,10 +28,8 @@ function [x, fval, status] = solve_linear_problem_gurobi(g, c, Aineq, ...
     if ~isempty(ub)
         model.ub = ub;
     end
-%     model.start = x0;
     
     params.OutputFlag = 0;
-    params.NonConvex = 2;
 
     try
         result = gurobi(model, params);
