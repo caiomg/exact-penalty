@@ -57,27 +57,18 @@ results = [];
 all_mu = 10.^(-1:6);
 n_mu =  numel(all_mu);
 solved_index = false(length(selected_problems), numel(all_mu));
+%n_problems = 7;
+selected_problems = selected_problems(1:n_problems);
 parfor k = 1:n_problems
 
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
     neg_mult_warn = warning('off', 'cmg:multipliers_negative');
     high_mult_warn = warning('off', 'cmg:multipliers_high');
 
-    for mu_ind = 1:n_mu
-        problem_result = sequentially_solve_problem(selected_problems(k), ...
-                                                     solver_configuration, all_mu(mu_ind));
-        print_result(problem_result);
-        all_results{k, mu_ind} = problem_result;
-        if problem_result.kkt ...
-                || (~isempty(problem_result.nphi) && (problem_result.nphi < 1e-6) ...
-                    && (-problem_result.error_obj <  1e-6 ...
-                        || -problem_result.error_rel < 1e-6))
-            solved_index(k, mu_ind) = true;
-            break
-        else
-            solved_index(k, mu_ind) = false;
-        end
-    end
+    problem_result = sequentially_solve_problem(selected_problems(k), ...
+                                                solver_configuration, all_mu);
+    print_result(problem_result{1, end});
+    all_results{k} = problem_result;
     
     warning(bad_cond_warn);
     warning(neg_mult_warn);
@@ -95,14 +86,23 @@ end
 % $$$ end
 
 warning('on', 'cmg:badly_conditioned_system');
-good_results_ordered = [all_results{solved_index}];
+good_results_ordered = {};
+not_solved = [];
+for  k = 1:n_problems
+    problem_results =  all_results{k};
+    if problem_results{end}.good
+        good_results_ordered{end+1} = problem_results{end};
+    else
+        not_solved(end+1) = k;
+    end
+end
+
 %[~, results_order] = sort(all_solved);
 %good_results_ordered = {good_results{results_order}};
     filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
     save(filename, 'all_results');
      
 print_my_table(good_results_ordered);
-not_solved = find(sum(solved_index, 2) == 0);
 problems_not_solved = selected_problems(not_solved);
 fprintf(1, 'Not solved:\n');
 fprintf(1, '  %s ', problems_not_solved.name);

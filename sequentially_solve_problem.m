@@ -1,5 +1,6 @@
-function problem_result = sequentially_solve_problem(problem_data, ...
-                                                     solver_configuration, mu)
+function these_results = sequentially_solve_problem(problem_data, ...
+                                                     solver_configuration, ...
+                                                     all_mu)
 % HANDLE_PROBLEM - 
 %   
 
@@ -57,64 +58,79 @@ function problem_result = sequentially_solve_problem(problem_data, ...
 
     f = @(x) counter.evaluate(x);
     x0 = prob_iface.x0;
+    these_results = {};
+    for mu = all_mu
+        counter.reset_count();
+        counter.set_max_count(max_fcount);
+
+        try
+            p_seed = rng('default');
+
+            [x, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, ...
+                                        mu, epsilon, [], Lambda, bl, ...
+                                        bu, l1_options);
+            solved = true;
+        catch thiserror
+            the_error = thiserror;
+            solved = false;
+        end
+        rng(p_seed);
+        if solved
+            fcount = counter.get_count();
+            fx = f(x);
+            nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)));
+            error_obj = problem_data.solution - fx;
+            error_rel = error_obj/abs(problem_data.solution);
+            [kkt, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5);
+            the_error = [];
+        else
+            x = [];
+            hs2 = [];
+            fx = [];
+            nphi = [];
+            error_obj = [];
+            error_x = [];
+            fcount = nan;
+            kkt = false;
+            error_rel = inf;
+            lgrad = nan;
+        end
+
+        problem_result = struct('name', problem_name, ...
+                                'x', x, ...
+                                'fx', fx, ...
+                                'history', [], ...
+                                'fcount', fcount, ...
+                                'error_obj', error_obj, ...
+                                'nphi', nphi, ...
+                                'mu', mu, ...
+                                'epsilon', epsilon, ...
+                                'Lambda', Lambda, ...
+                                'kkt', kkt, ...
+                                'error_rel', error_rel, ...
+                                'lgrad', lgrad, ...
+                                'l1_options', l1_options, ...
+                                'the_error', the_error);
+        if problem_result.kkt ...
+                || (~isempty(problem_result.nphi) && (problem_result.nphi < 1e-6) ...
+                    && (-problem_result.error_obj <  1e-6 ...
+                        || -problem_result.error_rel < 1e-6))
+            problem_result.good =  true;
+        else
+            problem_result.good = false;
+        end
+
+        filename = fullfile(log_dir, [problem_name, '.result']);
+        fid = fopen(filename, 'a');
+        fprintf(fid, '\nmu:%d     kkt: %d', mu, kkt); 
+        fprintf(fid, '\n%s\n', jsonencode(problem_result));
+        fclose(fid);
+        these_results{1,end+1} = problem_result;
+        if problem_result.good
+            break
+        end
+
+    end
+        terminate_cutest_problem();
     
-
-    counter.reset_count();
-    counter.set_max_count(max_fcount);
-
-    try
-        p_seed = rng('default');
-
-        [x, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, ...
-                                     mu, epsilon, [], Lambda, bl, ...
-                                     bu, l1_options);
-        solved = true;
-    catch thiserror
-        the_error = thiserror;
-        solved = false;
-    end
-    rng(p_seed);
-    if solved
-        fcount = counter.get_count();
-        fx = f(x);
-        nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)));
-        error_obj = problem_data.solution - fx;
-        error_rel = error_obj/abs(problem_data.solution);
-        [kkt, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5);
-        the_error = [];
-    else
-        x = [];
-        hs2 = [];
-        fx = [];
-        nphi = [];
-        error_obj = [];
-        error_x = [];
-        fcount = nan;
-        kkt = false;
-        error_rel = inf;
-        lgrad = nan;
-    end
-
-    problem_result = struct('name', problem_name, ...
-                            'x', x, ...
-                            'fx', fx, ...
-                            'history', [], ...
-                            'fcount', fcount, ...
-                            'error_obj', error_obj, ...
-                            'nphi', nphi, ...
-                            'mu', mu, ...
-                            'epsilon', epsilon, ...
-                            'Lambda', Lambda, ...
-                            'kkt', kkt, ...
-                            'error_rel', error_rel, ...
-                            'lgrad', lgrad, ...
-                            'l1_options', l1_options, ...
-                            'the_error', the_error);
-
-    terminate_cutest_problem();
-    filename = fullfile(log_dir, [problem_name, '.result']);
-    fid = fopen(filename, 'a');
-    fprintf(fid, '\nmu:%d     kkt: %d', mu, kkt); 
-    fprintf(fid, '\n%s\n', jsonencode(problem_result));
-    fclose(fid);
 end
