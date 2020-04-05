@@ -33,7 +33,7 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
     
     params.OutputFlag = 0;
     params.NonConvex = 2;
-    params.TimeLimit = 2*dim;
+    params.TimeLimit = 1*dim;
     
     result = gurobi(model, params);
     if isfield(result, 'x')
@@ -45,10 +45,30 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
             status = -1;
         end
     else
-        [x, fval, status] = solve_quadratic_problem_matlab(H, g, ...
+        try
+            params.NonConvex = 1;
+            params.TimeLimit = inf;
+            result = gurobi(model, params);
+        catch this_error
+            if strcmp(this_error.identifier, 'gurobi:Error')
+                'PASS';
+            else
+                rethrow(this_error);
+            end
+        end
+        if isfield(result, 'x')
+            x = result.x;
+            fval = result.objval;
+            if strcmp(result.status, 'OPTIMAL')
+                status = 0;
+            else
+                status = -1;
+            end
+        else
+            [x, fval, status] = solve_quadratic_problem_matlab(H, g, ...
                                                       c, Aineq, ...
                                                       bineq, Aeq, ...
                                                       beq, lb, ub, x0);
+        end
     end
-
 end
