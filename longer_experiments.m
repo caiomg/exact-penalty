@@ -57,7 +57,7 @@ results = [];
 all_mu = 10.^(-1:6);
 n_mu =  numel(all_mu);
 solved_index = false(length(selected_problems), numel(all_mu));
-parfor k = 1:length(selected_problems)
+parfor k = 1:n_problems
 
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
     neg_mult_warn = warning('off', 'cmg:multipliers_negative');
