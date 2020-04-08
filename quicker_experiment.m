@@ -51,7 +51,7 @@ solver_configuration.epsilon = epsilon;
 solver_configuration.Lambda = Lambda;
 solver_configuration.l1_options = l1_options;
 solver_configuration.max_fcount = 25000;
-solver_configuration.log_dir = log_dir;
+solver_configuration.log_dir = logdir;
 results = [];
 
 all_mu = 10.^(-1:6);
@@ -62,12 +62,12 @@ parfor k = 1:length(selected_problems)
     neg_mult_warn = warning('off', 'cmg:multipliers_negative');
     high_mult_warn = warning('off', 'cmg:multipliers_high');
 
-    for mu_ind = 1:7
-        problem_result = sequenntially_solve_problem(selected_problems(k), ...
-                                                     solver_configuration, all_mu(mu_ind));
-        print_result(problem_result);
-        all_results{k, mu_ind} = problem_result;
-    end
+    problem_result = handle_problem(selected_problems(k), solver_configuration);
+
+    %     print_result(problem_result, log_fd);
+   print_result(problem_result);
+
+   all_results{k} = problem_result;
     
     warning(bad_cond_warn);
     warning(neg_mult_warn);
