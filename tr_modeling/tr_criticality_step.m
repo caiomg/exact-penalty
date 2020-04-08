@@ -24,6 +24,7 @@ tol_measure = options.tol_measure;
 tol_con = options.tol_con;
 factor_epsilon = 0.5;
 epsilon0 = epsilon;
+beta_3 = 1;
 
 gamma_inc = options.gamma_inc;
 
@@ -53,16 +54,17 @@ end
 [measure, ~, is_eactive] = ...
     l1_criticality_measure_and_descent_direction(fmodel, cmodel, x, ...
                                                  p_mu, epsilon, lb, ub);
-eactive_norm = norm([cmodel(is_eactive).c], 1);
+eactive_norm = norm([cmodel(is_eactive).c], inf);
 
 detected_convergence_of_main_algorithm = false;
 while (model.radius > crit_mu*measure)
-    model.radius = omega*model.radius;
 
-    
-    if eactive_norm > epsilon_decrease_measure_threshold*measure ...
-            && model.radius < epsilon_decrease_radius_threshold
+    if measure < epsilon_decrease_measure_threshold ...
+            && model.radius < epsilon_decrease_radius_threshold ...
+            && eactive_norm > beta_3*measure
         epsilon = factor_epsilon*epsilon;
+    else
+        model.radius = omega*model.radius;
     end
     
     model_changed = false;
@@ -86,7 +88,7 @@ while (model.radius > crit_mu*measure)
     [measure, ~, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
                                                      x, p_mu, epsilon, lb, ub);
-    eactive_norm = norm([cmodel(is_eactive).c], 1);
+    eactive_norm = norm([cmodel(is_eactive).c], inf);
 
     
     if (model.radius*gamma_inc < tol_radius || ...
