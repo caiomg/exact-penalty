@@ -1,6 +1,27 @@
-function selected_problems = hs_cheti_problems()
+function selected_problems = hs_cheti_sampaio()
 
 selected_problems = [];
+selected_problems(end+1).name = 'HS10'; 
+selected_problems(end).solution = -1.0;
+
+selected_problems(end+1).name = 'HS11';
+selected_problems(end).solution = -8.498464223;
+
+selected_problems(end+1).name = 'HS12';
+selected_problems(end).solution = -30.0;
+
+selected_problems(end+1).name = 'HS13';
+selected_problems(end).solution = 1;
+
+selected_problems(end+1).name = 'HS15';
+selected_problems(end).solution = 306.5;
+
+selected_problems(end+1).name = 'HS16';
+selected_problems(end).solution = 0.25;
+
+selected_problems(end+1).name = 'HS17';
+selected_problems(end).solution = 1.0;
+
 selected_problems(end+1).name = 'HS18'; 
 selected_problems(end).solution = 5.0;
 selected_problems(end).mu = 1;
@@ -9,13 +30,25 @@ selected_problems(end+1).name = 'HS19';
 selected_problems(end).solution = -6961.81381;
 selected_problems(end).mu = 10000;
 
+selected_problems(end+1).name = 'HS20';
+selected_problems(end).solution = 81.5 - 25*sqrt(3);
+
 selected_problems(end+1).name = 'HS21'; 
 selected_problems(end).solution = -99.96;
 selected_problems(end).mu = 1e-1;
 
+selected_problems(end+1).name = 'HS22';
+selected_problems(end).solution = 1;
+
 selected_problems(end+1).name = 'HS23'; 
 selected_problems(end).solution = 2.0;
 selected_problems(end).mu = 10;
+
+selected_problems(end+1).name = 'HS24'; 
+selected_problems(end).solution = -1.0;
+
+selected_problems(end+1).name = 'HS29'; 
+selected_problems(end).solution = -16*sqrt(2);
 
 selected_problems(end+1).name = 'HS30'; 
 selected_problems(end).solution = 1.0;
@@ -25,9 +58,15 @@ selected_problems(end+1).name = 'HS31';
 selected_problems(end).solution = 6.0;
 selected_problems(end).mu = 10;
 
+selected_problems(end+1).name = 'HS33'; 
+selected_problems(end).solution = sqrt(2) - 6;
+
 selected_problems(end+1).name = 'HS34'; 
-selected_problems(end).solution = -0.83403245;
+selected_problems(end).solution = -log(log(10));
 selected_problems(end).mu = 1;
+
+selected_problems(end+1).name = 'HS35'; 
+selected_problems(end).solution = 1/9;
 
 selected_problems(end+1).name = 'HS36'; 
 selected_problems(end).solution = -3300.0;
@@ -37,9 +76,15 @@ selected_problems(end+1).name = 'HS37';
 selected_problems(end).solution = -3456.0;
 selected_problems(end).mu = 1000;
 
+selected_problems(end+1).name = 'HS43'; 
+selected_problems(end).solution = -44;
+
 selected_problems(end+1).name = 'HS59'; 
 selected_problems(end).solution = -7.8027894;
 selected_problems(end).mu = 1e-1;
+
+selected_problems(end+1).name = 'HS64'; 
+selected_problems(end).solution = 6299.842428;
 
 selected_problems(end+1).name = 'HS65'; 
 selected_problems(end).solution = 0.9535288567;
@@ -61,6 +106,9 @@ selected_problems(end+1).name = 'HS72';
 selected_problems(end).solution = 727.5888453;
 selected_problems(end).mu = 100000;
 
+selected_problems(end+1).name = 'HS76';
+selected_problems(end).solution = -4.681818181;
+
 selected_problems(end+1).name = 'HS83'; 
 selected_problems(end).solution = -30665.53867;
 selected_problems(end).mu = 1000;
@@ -72,6 +120,9 @@ selected_problems(end).mu = 100;
 selected_problems(end+1).name = 'HS85'; 
 selected_problems(end).solution = -1.90513375;
 selected_problems(end).mu = 1e-1;
+
+selected_problems(end+1).name = 'HS93'; 
+selected_problems(end).solution = 135.075961;
 
 selected_problems(end+1).name = 'HS95'; 
 selected_problems(end).solution = 0.015619514;
@@ -112,6 +163,12 @@ selected_problems(end).mu = 1e-1;
 selected_problems(end+1).name = 'HS106';
 selected_problems(end).solution = 7049.330923;
 selected_problems(end).mu = 100000;
+
+selected_problems(end+1).name = 'HS108';
+selected_problems(end).solution = -0.8660254038;
+
+selected_problems(end+1).name = 'HS113';
+selected_problems(end).solution = 24.3062091;
 
 selected_problems(end+1).name = 'HS116';
 selected_problems(end).solution = 97.588409;

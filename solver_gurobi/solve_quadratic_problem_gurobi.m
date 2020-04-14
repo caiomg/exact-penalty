@@ -34,8 +34,20 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
     params.OutputFlag = 0;
     params.NonConvex = 2;
     params.TimeLimit = 1*dim;
-    
-    result = gurobi(model, params);
+    try
+        result = gurobi(model, params);
+    catch my_error
+        if strfind(my_error.message, ...
+                'Gurobi error 10020: Q matrix is not positive semi-definite (PSD)')
+            % Address Gurobi bug
+            if norm(H) < 1e-5*norm(g)
+                model.Q = 0*model.Q;
+                result = gurobi(model, params);
+            else
+                rethrow(my_error);
+            end
+        end
+    end
     if isfield(result, 'x')
         x = result.x;
         fval = result.objval;

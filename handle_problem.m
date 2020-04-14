@@ -4,7 +4,11 @@ function problem_result = handle_problem(problem_data, solver_configuration)
 
 
     problem_name = problem_data.name;
-    mu = problem_data.mu;
+    if isfield(problem_data, 'mu') && ~isempty(problem_data.mu)
+        mu = problem_data.mu;
+    else
+        mu = 10;
+    end
     epsilon = solver_configuration.epsilon;
     Lambda = solver_configuration.Lambda;
     l1_options = solver_configuration.l1_options;

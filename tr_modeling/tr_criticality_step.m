@@ -63,6 +63,8 @@ while (model.radius > crit_mu*measure)
             && model.radius < epsilon_decrease_radius_threshold ...
             && eactive_norm > beta_3*measure
         epsilon = factor_epsilon*epsilon;
+        epsilon_decrease_measure_threshold = 0.5*epsilon_decrease_measure_threshold;
+        epsilon_decrease_radius_threshold = omega*epsilon_decrease_radius_threshold;
     else
         model.radius = omega*model.radius;
     end
@@ -109,24 +111,25 @@ if ~detected_convergence_of_main_algorithm
     while true
 
         epsilon_larger = epsilon/factor_epsilon;
-        measure_larger = l1_criticality_measure_and_descent_direction(fmodel, ...
+        if epsilon_larger <= epsilon0
+            
+            measure_larger = l1_criticality_measure_and_descent_direction(fmodel, ...
                                                           cmodel, x, p_mu, ...
                                                           epsilon_larger, lb, ub);
-
-        if model.radius <= crit_mu*measure_larger ...
-                && epsilon/factor_epsilon <= epsilon0
-            measure = measure_larger;
-            epsilon = epsilon_larger;
+            if model.radius <= crit_mu*measure_larger
+                measure = measure_larger;
+                epsilon = epsilon_larger;
+                epsilon_decrease_measure_threshold = 2*epsilon_decrease_measure_threshold;
+                epsilon_decrease_radius_threshold = epsilon_decrease_radius_threshold/omega;
+            else
+                break
+            end
         else
             break
         end
     end
     % The final radius is increased not to make the reduction drastic
     model.radius = min(max(model.radius, beta*norm(measure)), initial_radius);
-end
-if epsilon < epsilon0
-    epsilon_decrease_measure_threshold = 0.5*epsilon_decrease_measure_threshold;
-    epsilon_decrease_radius_threshold = 0.5*epsilon_decrease_radius_threshold;
 end
                        
 end

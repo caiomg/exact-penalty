@@ -34,7 +34,7 @@ l1_options.max_iter = 15000;
 epsilon = 1;
 Lambda = 1e-3;
 
-list_of_problems
+selected_problems = hs_cheti_sampaio();
 
 all_epsilon = [1]
 all_lambda = [0.1]
@@ -61,6 +61,7 @@ parfor k = 1:length(selected_problems)
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
     neg_mult_warn = warning('off', 'cmg:multipliers_negative');
     high_mult_warn = warning('off', 'cmg:multipliers_high');
+    different_objective_warn = warning('off', 'cmg:different_objective');
 
     problem_result = handle_problem(selected_problems(k), solver_configuration);
 
@@ -72,6 +73,7 @@ parfor k = 1:length(selected_problems)
     warning(bad_cond_warn);
     warning(neg_mult_warn);
     warning(high_mult_warn);
+    warning(different_objective_warn);
 end
 for k = 1:length(selected_problems)
     if all_results{k}.kkt || ...

@@ -36,6 +36,13 @@ function [model, succeeded, pt_i] = ...
     end
     if max_poly_i > 0
         new_pivot_val = model.pivot_values(max_poly_i)*max_val;
+        if ~isfinite(new_pivot_val) ...
+           && isfinite(max_val) && isfinite(model.pivot_values(max_poly_i))
+             % adjustment
+             new_pivot_val = sign(new_pivot_val)*realmax;
+             warning('cmg:geometry_degenerating', ...
+                     'Bad geometry of interpolation set for machine precision');
+        end
     else
         new_pivot_val = 0;
     end
