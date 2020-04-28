@@ -241,7 +241,7 @@ while ~finish
                                  trial_fvalues, con_lb, con_ub, mu);
             rho = ared/pred;
         end
-        if rho > eta_2 || (rho > eta_1 && geometry_ok)
+        if rho >= eta_2 || (rho > eta_1 && geometry_ok)
             px = p_trial;
             x = trial_point;
             if strcmp(options.basis, 'dummy')
@@ -281,11 +281,13 @@ while ~finish
                 mchange_flag = 4;
         end
     end
-    if rho <= eta_2
+    if rho < eta_2
         gamma_dec = gamma_1;
         trmodel.radius = gamma_dec*trmodel.radius;
     elseif isfinite(rho)
-        radius_inc = max(1, gamma_2*(norm(s)/trmodel.radius));
+        s_norm = norm(s, inf);
+        s_norm = min(trmodel.radius, s_norm); %small correction
+        radius_inc = max(1, gamma_2*(s_norm/trmodel.radius));
         trmodel.radius = min(radius_inc*trmodel.radius, radius_max);
     else
         warning('cmg:infinite_rho', 'Invalid rho = %g', rho);

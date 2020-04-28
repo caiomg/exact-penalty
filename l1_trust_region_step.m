@@ -47,27 +47,27 @@ function [x_trial, pred, Lambda] = l1_trust_region_step(fmodel, cmodel, x, ...
         
         % Test some conditions for other descent directions
         tol_multipliers = 10*eps(mu);
-        if ~isempty(find(multipliers < 0 - tol_multipliers, 1))
+        negative_multiplier = ~isempty(find(multipliers < 0 - tol_multipliers, 1));
+        high_multiplier = ~isempty(find(multipliers > mu + tol_multipliers, 1));
+        if negative_multiplier
             warning('cmg:multipliers_negative', ...
                     'Negative Lagrange multiplier');
         end
-        if ~isempty(find(multipliers > mu + tol_multipliers, 1))
+        if high_multiplier
             warning('cmg:multipliers_high', ...
                     'Overly high Lagrange multiplier');
         end
-        try
-        xm = l1_step_with_multipliers(fmodel_shifted, cmodel_shifted, ...
-                                      x_other, multipliers, is_eactive, ...
-                                      mu, x, radius, lb, ub);
-        catch aqui
-            rethrow(aqui);
-        end
-        pred_xm = predict_descent(fmodel, cmodel, xm - x, mu);
-        if pred_xm > pred
-            pred = pred_xm;
-            x_trial = xm;
-        else
-            Lambda = 0.5*Lambda;
+        if ~negative_multiplier && ~high_multiplier
+            xm = l1_step_with_multipliers(fmodel_shifted, cmodel_shifted, ...
+                                          x_other, multipliers, is_eactive, ...
+                                          mu, x, radius, lb, ub);
+            pred_xm = predict_descent(fmodel, cmodel, xm - x, mu);
+            if pred_xm >= pred
+                pred = pred_xm;
+                x_trial = xm;
+            else
+                Lambda = 0.5*Lambda;
+            end
         end
     end
     

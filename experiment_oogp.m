@@ -56,29 +56,37 @@ ec = evaluation_counter(@(y) santos_gas_network(y.*fixed_scale + O));
 cache = simple_cache(@(x) ec.evaluate(x), 3);
 %
 
-l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
+old_l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
                        'eps_c', 1e-5, 'eta_1', 0, 'eta_2', 0.05, ...
                        'gamma_inc', 2, 'gamma_dec', 0.5, ...
                         'initial_radius', 0.1, 'radius_max', 2, ...
                         'criticality_mu', 50, 'criticality_beta', 10, ...
                         'criticality_omega', 0.5, 'basis', 'diagonal hessian', ...
                         'pivot_threshold', 0.001, 'poised_radius_factor', 6, ...
-                        'pivot_imp', 1.1, 'debug', false, 'inspect_iteration', 569, 'max_iter', 600)
+                        'pivot_imp', 1.1, 'debug', false, 'inspect_iteration', 569, 'max_iter', 600);
+%My new values
+l1_options = [];
+l1_options.eta_2 = 0.01;
+l1_options.pivot_threshold = 0.05;
+l1_options.initial_radius = 0.1;
+l1_options.radius_max = 1;
+l1_options.basis = 'FULL';
+l1_options.max_iter = 300;
+l1_options.tol_radius = 1e-6;
 
 % Objective: minimizing negative of oil production
-f = @(x) -cache.getvalue(x, 1);
+f_scale = 1e3;
+f = @(x) -cache.getvalue(x, 1)/f_scale;
 
 
 all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
           @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
-%mu = 1e6;
-mu = 10^muexp;
-epsilon = 0.1/n_scale;
-delta = 1e-6/n_scale;
-Lambda = 0.1/n_scale;
+epsilon = 1e-1;
+delta = [];
+Lambda = 1e-3;
 
-dbstop if warning 'cmg:inspect_iteration'
+%dbstop if warning 'cmg:inspect_iteration'
 len_con = length(all_con);
 con_lb = -inf(len_con, 1);
 con_ub = zeros(len_con, 1);
@@ -88,6 +96,6 @@ con_ub = zeros(len_con, 1);
 evaluations = ec.get_count()
 x_full_space = x.*fixed_scale + O
 [qo, qg, zco2] = santos_gas_network(x_full_space);
-rel_name = sprintf('%s_%s_%d', initial_condition, scenario, muexp);
+rel_name = sprintf('%s_%s_%04d', initial_condition, scenario, mu);
 filename =  fullfile(log_dir, rel_name);
 save(filename);

@@ -1,5 +1,6 @@
-list_of_problems
-directory = '~/docd/exchange/my_problems/';
+
+
+directory = '~/code/my_problems/';
 
 
 cobyla_results = {};
