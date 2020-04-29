@@ -277,6 +277,7 @@ while ~finish
         end
     else % evaluate step
         rho = -inf;
+        ared = 0;
         [trmodel, mchange_flag] = ...
                 ensure_improvement(trmodel, fphi, bl, bu, options);
         if strcmp(options.basis, 'dummy')
