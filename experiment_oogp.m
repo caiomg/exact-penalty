@@ -72,7 +72,7 @@ l1_options.initial_radius = 0.1;
 l1_options.radius_max = 1;
 l1_options.basis = 'FULL';
 l1_options.max_iter = 300;
-l1_options.tol_radius = 1e-5;
+l1_options.tol_radius = 5e-4;
 l1_options.verbose = true;
 
 % Objective: minimizing negative of oil production
