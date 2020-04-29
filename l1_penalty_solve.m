@@ -151,6 +151,7 @@ history_solution.mchange = nan;
 history_solution.epsilon = epsilon;
 history_solution.Lambda = Lambda;
 history_solution.pred = nan;
+history_solution.ared = nan;
 history_solution.polynomial = trmodel.modeling_polynomials{1};
 count_inf = 0;
 evaluate_step = true;
@@ -235,6 +236,7 @@ while ~finish
         [p_trial, trial_fvalues] = p(trial_point);
         if ~isempty(find(~isfinite(trial_fvalues), 1))
             rho = -inf;
+            ared = nan;
         else
             ared = ...
               evaluate_p_descent(trmodel.fvalues(:, trmodel.tr_center), ...
@@ -314,6 +316,7 @@ while ~finish
     history_solution(iter).epsilon = epsilon;
     history_solution(iter).Lambda= Lambda;
     history_solution(iter).pred = pred;
+    history_solution(iter).ared = ared;
     history_solution(iter).criticality_step = tr_criticality_step_executed;
 
     offending_pivot = find(isinf(trmodel.pivot_values), 1);
