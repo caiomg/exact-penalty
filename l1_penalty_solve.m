@@ -27,7 +27,8 @@ defaultoptions = struct('tol_radius', 1e-6, ...
                         'divergence_threshold', 1e10, ...
                         'basis', 'unused option', ...
                         'debug', false, ...
-                        'inspect_iteration', 10);
+                        'inspect_iteration', 10, ...
+                        'verbose', false);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -67,6 +68,7 @@ epsilon_decrease_radius_threshold = initial_radius;
 epsilon_decrease_measure_threshold = 1e3*tol_measure;
 rel_pivot_threshold = options.pivot_threshold;
 max_iter = options.max_iter;
+verbose = options.verbose;
 
 fphi = {f, phi{:}}';
 
@@ -152,6 +154,7 @@ history_solution.epsilon = epsilon;
 history_solution.Lambda = Lambda;
 history_solution.pred = nan;
 history_solution.ared = nan;
+history_solution.constraints = [cmodel.c];
 history_solution.polynomial = trmodel.modeling_polynomials{1};
 count_inf = 0;
 evaluate_step = true;
@@ -284,10 +287,12 @@ while ~finish
                 mchange_flag = 4;
         end
     end
-    if rho < eta_2
+    if rho < eta_2 && geometry_ok
         gamma_dec = gamma_1;
         trmodel.radius = gamma_dec*trmodel.radius;
-    elseif isfinite(rho)
+    elseif rho < eta_2
+        'pass';
+    elseif rho >= eta_2 && isfinite(rho)
         s_norm = norm(s, inf);
         s_norm = min(trmodel.radius, s_norm); %small correction
         radius_inc = max(1, gamma_2*(s_norm/trmodel.radius));
@@ -318,7 +323,13 @@ while ~finish
     history_solution(iter).Lambda= Lambda;
     history_solution(iter).pred = pred;
     history_solution(iter).ared = ared;
+    history_solution(iter).constraints = [cmodel.c];
     history_solution(iter).criticality_step = tr_criticality_step_executed;
+
+    if verbose
+        fprintf(1, 'fx: % +10g,  rho: % +10g, radius: % 6g\n', ...
+            history_solution(iter).fx, history_solution(iter).rho, history_solution(iter).radius);
+    end
 
     offending_pivot = find(isinf(trmodel.pivot_values), 1);
     if ~isempty(offending_pivot)
