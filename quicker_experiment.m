@@ -26,6 +26,7 @@ log_fd = fopen(log_filename, 'w');
 l1_options = [];
 l1_options.eta_2 = 0.01;
 l1_options.pivot_threshold = 0.01;
+l1_options.pivot_threshold = 0.03
 % l1_options.basis = 'FULL'
 % l1_options.criticality_mu = 0.1 % testing !!!!!
 % l1_options.criticality_beta = 0.02 % testing

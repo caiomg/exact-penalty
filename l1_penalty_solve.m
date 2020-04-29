@@ -327,8 +327,8 @@ while ~finish
     history_solution(iter).criticality_step = tr_criticality_step_executed;
 
     if verbose
-        fprintf(1, 'fx: % +10g,  rho: % +10g, radius: % 6g\n', ...
-            history_solution(iter).fx, history_solution(iter).rho, history_solution(iter).radius);
+        fprintf(1, 'fx: % +10g,  px: % +10g, rho: % +10g, radius: % 5g\n', ...
+            history_solution(iter).fx, px, history_solution(iter).rho, history_solution(iter).radius);
     end
 
     offending_pivot = find(isinf(trmodel.pivot_values), 1);
