@@ -27,7 +27,7 @@ else
     log_dir = '.';
 end
 
-all_mu = [1024, 1000, 512, 2000];
+all_mu = [1000, 2000, 5000];
 all_scenarios = {'C3', 'C2', 'C1'};
 all_ic = {'base', 'pre_gas', 'pos_gas', 'more_co2', 'less_co2'};
 for mu = all_mu

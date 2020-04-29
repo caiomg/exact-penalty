@@ -67,9 +67,9 @@ old_l1_options = struct('tol_radius', 1e-4, 'tol_f', 1e-6, ...
 %My new values
 l1_options = [];
 l1_options.eta_2 = 0.01;
-l1_options.pivot_threshold = 0.05;
+l1_options.pivot_threshold = 0.001;
 l1_options.initial_radius = 0.1;
-l1_options.radius_max = 0.2;
+l1_options.radius_max = 1;
 l1_options.basis = 'FULL';
 l1_options.max_iter = 300;
 l1_options.tol_radius = 1e-6;
