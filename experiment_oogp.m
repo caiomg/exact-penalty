@@ -82,7 +82,7 @@ f = @(x) -cache.getvalue(x, 1)/f_scale;
 all_con = {@(x) (cache.getvalue(x, 2) - gas_lim)/gas_lim;
           @(x) (cache.getvalue(x, 3) - co2_lim)/co2_lim};
 
-epsilon = 1e-1;
+epsilon = 1e-3;
 delta = [];
 Lambda = 1e-3;
 
