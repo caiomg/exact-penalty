@@ -1,8 +1,6 @@
 function these_results = sequentially_solve_problem(problem_data, ...
                                                      solver_configuration, ...
                                                      all_mu)
-% HANDLE_PROBLEM - 
-%   
 
 
     problem_name = problem_data.name;
@@ -80,7 +78,7 @@ function these_results = sequentially_solve_problem(problem_data, ...
             fx = f(x);
             nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)));
             error_obj = problem_data.solution - fx;
-            error_rel = -error_obj/(hs2(1).fx - problem_data.solution);
+            error_rel = -error_obj/(hs2(1).px - problem_data.solution);
             [kkt, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5);
             the_error = [];
         else

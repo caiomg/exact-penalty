@@ -287,7 +287,7 @@ while ~finish
                 mchange_flag = 4;
         end
     end
-    if rho < eta_2 && geometry_ok
+    if rho < eta_2 && (geometry_ok || mchange_flag == 4)
         gamma_dec = gamma_1;
         trmodel.radius = gamma_dec*trmodel.radius;
     elseif rho < eta_2

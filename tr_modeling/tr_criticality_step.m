@@ -30,13 +30,25 @@ gamma_inc = options.gamma_inc;
 
 x = model.points_abs(:, model.tr_center);
 initial_radius = model.radius;
+dim = size(x, 1);
 model_changed = false;
 if has_distant_points(model, options) || is_old(model, options)
     model = rebuild_model(model, options);
     model_changed = true;
 end
+change_count = 0;
 while ~is_lambda_poised(model, options)
-    model = ensure_improvement(model, funcs, lb, ub, options);
+    [model, mchange_flag] = ensure_improvement(model, funcs, lb, ub, options);
+    if mchange_flag == 4
+        change_count = change_count + 1;
+        if change_count > dim
+            model.radius = omega*model.radius;
+            change_count = 0;
+            if has_distant_points(model, options) || is_old(model, options)
+                model = rebuild_model(model, options);
+            end
+        end
+    end
     model_changed = true;
 end
 if model_changed
