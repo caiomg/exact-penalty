@@ -160,6 +160,7 @@ history_solution.polynomial = trmodel.modeling_polynomials{1};
 count_inf = 0;
 evaluate_step = true;
 
+first_feasible = [];
 while ~finish
 
 

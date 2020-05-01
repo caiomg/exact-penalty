@@ -57,7 +57,7 @@ solver_configuration.log_dir = logdir;
 results = [];
 
 all_mu = 10.^(-1:6);
-
+selected_problems = selected_problems([1:48, 50])
 parfor k = 1:length(selected_problems)
 
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
@@ -67,6 +67,7 @@ parfor k = 1:length(selected_problems)
 
     feasibility_info = handle_problem_first_feasible(selected_problems(k), solver_configuration);
 
+    fprintf(1, '%s\n', jsonencode(feasibility_info))
     %     print_result(problem_result, log_fd);
 
    all_feasibility_info{k} = feasibility_info;
