@@ -1,4 +1,4 @@
-function [x, history_solution] = l1_penalty_solve(f, phi, con_lb, con_ub, initial_points, ...
+function [x, history_solution, first_feasible] = l1_penalty_solve(f, phi, con_lb, con_ub, initial_points, ...
                                                   mu, epsilon, delta, ...
                                                   Lambda, bl, bu, options)
 %L1_PENALTY Summary of this function goes here
@@ -28,7 +28,8 @@ defaultoptions = struct('tol_radius', 1e-6, ...
                         'basis', 'unused option', ...
                         'debug', false, ...
                         'inspect_iteration', 10, ...
-                        'verbose', false);
+                        'verbose', false,...
+                        'first_feasible_only', false);
 
 option_names = fieldnames(defaultoptions);
 for k = 1:length(option_names)
@@ -161,6 +162,8 @@ evaluate_step = true;
 
 while ~finish
 
+
+    
     if abs(px) > options.divergence_threshold
         break
     end
@@ -178,6 +181,16 @@ while ~finish
     [measure, d, is_eactive] = ...
         l1_criticality_measure_and_descent_direction(fmodel, cmodel, ...
                                                      x, mu, epsilon, bl, bu);
+    viol = norm([cmodel(is_eactive).c], inf);
+    if viol <= options.tol_con
+        first_feasible.x = x;
+        first_feasible.fx = fx;
+        first_feasible.viol = viol;
+        first_feasible.iter = iter;
+        if options.first_feasible_only
+            break;
+        end
+    end
 
     if measure > eps_c
         tr_criticality_step_executed = false;
@@ -327,8 +340,8 @@ while ~finish
     history_solution(iter).criticality_step = tr_criticality_step_executed;
 
     if verbose
-        fprintf(1, 'fx: % +10g,  px: % +10g, rho: % +10g, radius: % 5g\n', ...
-            history_solution(iter).fx, px, history_solution(iter).rho, history_solution(iter).radius);
+        fprintf(1, 'fx: % +10g,  viol: % +10g, rho: % +10g, radius: % 5g\n', ...
+            history_solution(iter).fx, norm([cmodel(is_eactive).c], inf), history_solution(iter).rho, history_solution(iter).radius);
     end
 
     offending_pivot = find(isinf(trmodel.pivot_values), 1);

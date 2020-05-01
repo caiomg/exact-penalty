@@ -42,7 +42,7 @@ all_epsilon = [1]
 all_lambda = [0.1]
 
 final_filenames = {};
-all_results = {};
+all_feasibility_info = {};
 good_results = {};
 all_solved = [];
 n_problems = length(selected_problems);
@@ -65,37 +65,15 @@ parfor k = 1:length(selected_problems)
     high_mult_warn = warning('off', 'cmg:multipliers_high');
     different_objective_warn = warning('off', 'cmg:different_objective');
 
-    problem_result = handle_problem(selected_problems(k), solver_configuration);
+    feasibility_info = handle_problem_first_feasible(selected_problems(k), solver_configuration);
 
     %     print_result(problem_result, log_fd);
-   print_result(problem_result);
 
-   all_results{k} = problem_result;
+   all_feasibility_info{k} = feasibility_info;
     
     warning(bad_cond_warn);
     warning(neg_mult_warn);
     warning(high_mult_warn);
     warning(different_objective_warn);
 end
-for k = 1:length(selected_problems)
-    if all_results{k}.kkt || ...
-            (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 ...
-             && (-(all_results{k}.error_rel) < 1e-6 ...
-                 ||-(all_results{k}.error_obj) < 1e-7))
-        solved_problems(k) = true;
-        good_results{end+1} = all_results{k};
-        all_solved(end+1) = k;
-    end
-end
 
-warning('on', 'cmg:badly_conditioned_system');
-[~, results_order] = sort(all_solved);
-good_results_ordered = {good_results{results_order}};
-    filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
-    save(filename, 'all_results');
-     
-print_my_table(good_results_ordered);
-problems_not_solved = selected_problems(~solved_problems);
-fprintf(1, 'Not solved:\n');
-fprintf(1, '  %s ', problems_not_solved.name);
-fprintf(1, '\n');
