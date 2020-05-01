@@ -27,7 +27,7 @@ selected_problems(end).mu = 0.1;
 
 selected_problems(end+1).name = 'HS17';
 selected_problems(end).solution = 1.0;
-selected_problems(end).mu = 100;
+selected_problems(end).mu = 10;
 
 selected_problems(end+1).name = 'HS18'; 
 selected_problems(end).solution = 5.0;
@@ -119,7 +119,7 @@ selected_problems(end).mu = 1;
 
 selected_problems(end+1).name = 'HS70'; 
 selected_problems(end).solution = 0.007498464;
-selected_problems(end).mu = 1;
+selected_problems(end).mu = 0.1;
 
 selected_problems(end+1).name = 'HS72'; 
 selected_problems(end).solution = 727.5888453;
@@ -163,7 +163,7 @@ selected_problems(end).mu = 1;
 
 selected_problems(end+1).name = 'HS101';
 selected_problems(end).solution = 1809.76476;
-selected_problems(end).mu = 10000;
+selected_problems(end).mu = 100000;
 
 selected_problems(end+1).name = 'HS102';
 selected_problems(end).solution = 911.880571;%1809.76476;
@@ -175,15 +175,15 @@ selected_problems(end).mu = 10000;
 
 selected_problems(end+1).name = 'HS104';
 selected_problems(end).solution = 3.9511634396;
-selected_problems(end).mu = 10;
+selected_problems(end).mu = 1000;
 
 selected_problems(end+1).name = 'HS105';
 selected_problems(end).solution = 1138.416240;
-selected_problems(end).mu = 1e-1;
+selected_problems(end).mu = 1;
 
 selected_problems(end+1).name = 'HS106';
 selected_problems(end).solution = 7049.330923;
-selected_problems(end).mu = 100000;
+selected_problems(end).mu = 1e4;
 
 selected_problems(end+1).name = 'HS108';
 selected_problems(end).solution = -0.8660254038;
