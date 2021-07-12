@@ -35,16 +35,16 @@ function [new_points, new_pivot_values, new_points_abs] = ...
         else
             new_points = new_point_min;
             new_pivot_values = pivot_min;
-            point_found = true;
+            new_points_abs = new_point_min_abs;
         end
     elseif exitflag_max >= 0
         new_points = new_point_max;
         new_pivot_values = pivot_max;
         new_points_abs = new_point_max_abs;
     else
-        point_found = false;
         new_points = [];
         new_pivot_values = 0;
+        new_points_abs = [];
     end
         
 end

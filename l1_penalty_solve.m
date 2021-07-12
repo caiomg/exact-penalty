@@ -1,4 +1,4 @@
-function [x, history_solution, first_feasible] = l1_penalty_solve(f, phi, con_lb, con_ub, initial_points, ...
+function [x, history_solution, first_feasible] = l1_penalty_solve(objective, phi, con_lb, con_ub, initial_points, ...
                                                   mu, epsilon, delta, ...
                                                   Lambda, bl, bu, options)
 %L1_PENALTY Summary of this function goes here
@@ -71,6 +71,8 @@ rel_pivot_threshold = options.pivot_threshold;
 max_iter = options.max_iter;
 verbose = options.verbose;
 
+counter = evaluation_counter(objective);
+f = @(x) counter.evaluate(x);
 fphi = {f, phi{:}}';
 
 [dim, n_initial_points] = size(initial_points);
@@ -156,7 +158,10 @@ history_solution.Lambda = Lambda;
 history_solution.pred = nan;
 history_solution.ared = nan;
 history_solution.constraints = [cmodel.c];
+history_solution.l2_violation = norm(max(0, [cmodel.c]));
+history_solution.l1_violation = norm(max(0, [cmodel.c]), 1);
 history_solution.polynomial = trmodel.modeling_polynomials{1};
+history_solution.evaluations = counter.get_count();
 count_inf = 0;
 evaluate_step = true;
 
@@ -227,6 +232,25 @@ while ~finish
     if measure < tol_measure
         eactive_norm_inf = norm([cmodel(is_eactive).c], inf);
         if eactive_norm_inf < tol_con
+            iter = iter + 1;
+            history_solution(iter).x = x;
+            history_solution(iter).rho = nan;
+            history_solution(iter).radius = trmodel.radius;
+            history_solution(iter).px = px;
+            history_solution(iter).fx = trmodel.fvalues(1, trmodel.tr_center);
+            history_solution(iter).sigma= measure;
+            history_solution(iter).ns = 0;
+            history_solution(iter).mchange = nan;
+            history_solution(iter).epsilon = epsilon;
+            history_solution(iter).Lambda= Lambda;
+            history_solution(iter).pred = 0;
+            history_solution(iter).ared = 0;
+            history_solution(iter).constraints = [cmodel.c];
+            history_solution(iter).l2_violation = norm(max(0, [cmodel.c]));
+            history_solution(iter).l1_violation = norm(max(0, [cmodel.c]), 1);
+            history_solution(iter).criticality_step = tr_criticality_step_executed;
+            history_solution(iter).evaluations = counter.get_count();
+
             if max([cmodel.c]) > tol_con
                 break % Address constraint violation outside
             else
@@ -338,11 +362,14 @@ while ~finish
     history_solution(iter).pred = pred;
     history_solution(iter).ared = ared;
     history_solution(iter).constraints = [cmodel.c];
+    history_solution(iter).l2_violation = norm(max(0, [cmodel.c]));
+    history_solution(iter).l1_violation = norm(max(0, [cmodel.c]), 1);
     history_solution(iter).criticality_step = tr_criticality_step_executed;
+    history_solution(iter).evaluations = counter.get_count();
 
     if verbose
         fprintf(1, 'fx: % +10g,  viol: % +10g, rho: % +10g, radius: % 5g\n', ...
-            history_solution(iter).fx, norm([cmodel(is_eactive).c], inf), history_solution(iter).rho, history_solution(iter).radius);
+            history_solution(iter).fx, norm(max(0, [cmodel.c]), inf), history_solution(iter).rho, history_solution(iter).radius);
     end
 
     offending_pivot = find(isinf(trmodel.pivot_values), 1);

@@ -20,15 +20,15 @@ problem_name = 'HS100';
 % problem_name = 'POLAK3'; % Second derivative of cons. too much important
 % % problem_name = 'QC';
 problem_name = 'CB2';
-% problem_name = 'LOOTSMA';
+problem_name = 'AVGASB';
 % % problem_name = 'HS88';
 % problem_name = 'HS18';
 % problem_name = 'HS19';
 % problem_name = 'HS21';
-% problem_name = 'HS101';
-problem_name = 'HS84';
+problem_name = 'HS35MOD';
 
-[prob, prob_iface] = setup_cutest_problem(problem_name, '../my_problems/');
+
+[prob, prob_iface] = setup_cutest_problem(problem_name, '..');
 
 % Objective
 %f_obj = @(x) get_cutest_objective(x);
@@ -114,12 +114,13 @@ l1_options = struct('eta_2', 0.05, ...
 % l1_options = [];
 % l1_options.eta_2 = 0.1;
 l1_options = [];
-l1_options.eta_2 = 0.05;
-l1_options.pivot_threshold = 0.001;
+l1_options.eta_2 = 0.01;
+l1_options.pivot_threshold = 0.04;
 l1_options.basis = 'FULL';
-l1_options.debug = true;
+l1_options.debug = false;
 l1_options.inspect_iteration = 21;
 l1_options.test_new = true
+l1_options.verbose = true
 % l1_options.crit_mu = 0.1
 
 l1_options
@@ -132,7 +133,7 @@ len_con = length(all_con);
 
 % rng('shuffle')
 bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
-[x_l1, hs2] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, mu, ...
+[x_l1, hs2, ff] = l1_penalty_solve(f, all_con, con_lb, con_ub, x0, mu, ...
                             epsilon, delta, Lambda, bl, bu, l1_options)
 warning(bad_cond_warn)                        
 l1_count = counter.get_count()

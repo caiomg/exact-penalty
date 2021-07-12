@@ -48,10 +48,10 @@ function [x, fval, status] = solve_quadratic_problem_gurobi(H, g, c, Aineq, bine
             end
         end
     end
-    if isfield(result, 'x')
+    if exist('result', 'var') == 1 && isfield(result, 'x')
         x = result.x;
         fval = result.objval;
-        if strcmp(result.status, 'OPTIMAL')
+    if strcmp(result.status, 'OPTIMAL')
             status = 0;
         else
             status = -1;

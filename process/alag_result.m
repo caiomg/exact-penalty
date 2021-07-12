@@ -31,40 +31,11 @@ al_evals = [805, 288, 302; % HS18
             220633, 3633, 186851 %HS118
             ]
         
-        
-my_evals_cheti = [summary(ind_cheti).fcount]';
-my_evals_sampaio = [summary(ind_sampaio).fcount]';
 
-my_evals_sampaio_penalty_known = [...
-        30
-        49
-        22
-        21
-        16
-        55
-        34
-        44
-        12
-        11
-        35
-        17
-        19
-        15
-        39
-        41
-        47
-        31
-        36
-        47
-        31
-        63
-        98
-        41
-       169
-        38
-        42
-        50
-       283
-         2
-       219
-       316];
+ind_cheti = indices_of_problems(summary, cheti_names);
+my_evals_cheti = [summary_corrected(ind_cheti).fcount]';
+ind_sampaio = indices_of_problems(summary, sampaio_names);
+
+my_evals_sampaio = [summary_corrected(ind_sampaio).fcount]';
+
+my_evals_sampaio_penalty_known = [summary_corrected(ind_sampaio).best_fcount]';

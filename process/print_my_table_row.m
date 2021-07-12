@@ -11,8 +11,10 @@ function print_my_table_row(results, fd)
         fprintf(fd, ' % 8d &', results.mu);
     end
     fprintf(fd, ' % 6d &', results.fcount);
+    if isfield(results, 'best_fcount')
+        fprintf(fd, ' % 6d &', results.best_fcount);
+    end
     fprintf(fd, ' % +9.3g &', results.fx);
-    fprintf(fd, ' % +9.3g &', results.error_obj);
     fprintf(fd, ' % 9.3g &', norm(results.lgrad));
     fprintf(fd, ' % 9.3g \\\\\n', results.nphi);
     

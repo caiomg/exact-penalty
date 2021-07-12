@@ -26,6 +26,7 @@ log_fd = fopen(log_filename, 'w');
 l1_options = [];
 l1_options.eta_2 = 0.01;
 l1_options.pivot_threshold = 0.01;
+l1_options.pivot_threshold = 0.04
 % l1_options.basis = 'FULL'
 % l1_options.criticality_mu = 0.1 % testing !!!!!
 % l1_options.criticality_beta = 0.02 % testing
@@ -56,57 +57,45 @@ solver_configuration.log_dir = logdir;
 results = [];
 
 all_mu = 10.^(-1:6);
-n_mu =  numel(all_mu);
-solved_index = false(length(selected_problems), numel(all_mu));
-%n_problems = 7;
-selected_problems = selected_problems(1:n_problems);
-parfor k = 1:n_problems
+
+parfor k = 1:length(selected_problems)
 
     bad_cond_warn = warning('off', 'cmg:ill_conditioned_system');
     neg_mult_warn = warning('off', 'cmg:multipliers_negative');
     high_mult_warn = warning('off', 'cmg:multipliers_high');
     different_objective_warn = warning('off', 'cmg:different_objective');
 
-    problem_result = sequentially_solve_problem(selected_problems(k), ...
-                                                solver_configuration, all_mu);
-    print_result(problem_result{1, end});
-    all_results{k} = problem_result;
+    problem_result = handle_problem(selected_problems(k), solver_configuration);
+
+    %     print_result(problem_result, log_fd);
+   print_result(problem_result);
+
+   all_results{k} = problem_result;
     
     warning(bad_cond_warn);
     warning(neg_mult_warn);
     warning(high_mult_warn);
     warning(different_objective_warn);
 end
-% $$$ for k = 1:length(selected_problems)
-% $$$     if all_results{k}.kkt || ...
-% $$$             (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 ...
-% $$$              && (-(all_results{k}.error_rel) < 1e-6 ...
-% $$$                  ||-(all_results{k}.error_obj) < 1e-7))
-% $$$         solved_problems(k) = true;
-% $$$         good_results{end+1} = all_results{k};
-% $$$         all_solved(end+1) = k;
-% $$$     end
-% $$$ end
-
-warning('on', 'cmg:badly_conditioned_system');
-good_results_ordered = {};
-not_solved = [];
-for  k = 1:n_problems
-    problem_results =  all_results{k};
-    if problem_results{end}.good
-        good_results_ordered{end+1} = problem_results{end};
-    else
-        not_solved(end+1) = k;
+for k = 1:length(selected_problems)
+    if all_results{k}.kkt || ...
+            (~isempty(all_results{k}.nphi) && all_results{k}.nphi < 1e-6 ...
+             && (-(all_results{k}.error_rel) < 1e-6 ...
+                 ||-(all_results{k}.error_obj) < 1e-7))
+        solved_problems(k) = true;
+        good_results{end+1} = all_results{k};
+        all_solved(end+1) = k;
     end
 end
 
-%[~, results_order] = sort(all_solved);
-%good_results_ordered = {good_results{results_order}};
+warning('on', 'cmg:badly_conditioned_system');
+[~, results_order] = sort(all_solved);
+good_results_ordered = {good_results{results_order}};
     filename = fullfile(logdir, sprintf('%s_p1_db', datestr(now, 30)));
     save(filename, 'all_results');
      
 print_my_table(good_results_ordered);
-problems_not_solved = selected_problems(not_solved);
+problems_not_solved = selected_problems(~solved_problems);
 fprintf(1, 'Not solved:\n');
 fprintf(1, '  %s ', problems_not_solved.name);
 fprintf(1, '\n');

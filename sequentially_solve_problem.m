@@ -1,16 +1,16 @@
-function these_results = sequentially_solve_problem(problem_data, ...
+function [these_results, iterations] = sequentially_solve_problem(problem_name, ...
                                                      solver_configuration, ...
                                                      all_mu)
 
 
-    problem_name = problem_data.name;
     epsilon = solver_configuration.epsilon;
     Lambda = solver_configuration.Lambda;
     l1_options = solver_configuration.l1_options;
     max_fcount = solver_configuration.max_fcount;
     log_dir = solver_configuration.log_dir;
+    feasibility_tol = solver_configuration.feasibility_tol;
     
-    [old_iface, prob_iface] = setup_cutest_problem(problem_name, '../my_problems');
+    [old_iface, prob_iface] = setup_cutest_problem(problem_name, '~/code/problems/');
     dim = prob_iface.dim;
     n_constraints = sum(prob_iface.con_lb > -1e19) + sum(prob_iface.con_ub < 1e19);
     cutest_lower_bounds = prob_iface.lb > -1e19;
@@ -19,33 +19,40 @@ function these_results = sequentially_solve_problem(problem_data, ...
 
     bl = prob_iface.lb;
     bu = prob_iface.ub;
-%%
-    lower_bounds = bl > -1e19;
-    upper_bounds = bu < 1e19;
-    old_constraints_approach = false;
-    if old_constraints_approach
-        % Objective
-        f_obj = @(x) get_cutest_objective(x);
-        % 'Nonlinear' constraints
-        all_con = cell(n_constraints, 1);
-        for q = 1:n_constraints
-            gk = @(x) evaluate_my_cutest_constraint(x, q, 1);
-            all_con{q} = gk;
-        end
-        len_con = length(all_con);
-        con_lb = -inf(len_con, 1);
-        con_ub = zeros(len_con, 1);
-    else
-        f_obj = @(x) prob_iface.evaluate_objective(x);
-        con_lb = prob_iface.con_lb;
-        con_ub = prob_iface.con_ub;
-        con_lb(con_lb < -1e19) = -inf(size(con_lb(con_lb < -1e19)));
-        con_ub(con_ub > 1e19) = inf(size(con_ub(con_ub > 1e19)));
-        all_con = cell(prob_iface.n_constraints, 1);
-        for q = 1:prob_iface.n_constraints
-            all_con{q} = @(x) prob_iface.evaluate_constraint(x, q);
-        end 
-    end
+
+    fixed_variables = (bl == bu);
+    if sum(fixed_variables) == 0
+      x0 = prob_iface.x0;
+      %%
+      lower_bounds = bl > -1e19;
+      upper_bounds = bu < 1e19;
+      old_constraints_approach = false;
+      f_obj = @(x) prob_iface.evaluate_objective(x);
+      con_lb = prob_iface.con_lb;
+      con_ub = prob_iface.con_ub;
+      all_con = cell(prob_iface.n_constraints, 1);
+      for q = 1:prob_iface.n_constraints
+        all_con{q} = @(x) prob_iface.evaluate_constraint(x, q);
+      end 
+      else
+      lower_bounds = bl > -1e19;
+      upper_bounds = bu < 1e19;
+      old_constraints_approach = false;
+      f_obj = @(x) function_fix_fixed(@(y) prob_iface.evaluate_objective(y), x, bl, bu);
+      con_lb = prob_iface.con_lb;
+      con_ub = prob_iface.con_ub;
+      all_con = cell(prob_iface.n_constraints, 1);
+      for q = 1:prob_iface.n_constraints
+        all_con{q} = @(x) function_fix_fixed(@(y) prob_iface.evaluate_constraint(y, q), x, bl, bu);
+      end 
+      bl = bl(~fixed_variables);
+      bu = bu(~fixed_variables);
+      x0 = prob_iface.x0(~fixed_variables);
+    end      
+    
+
+
+
     counter = evaluation_counter(f_obj);
 
     nlcon = @(x) constraints(all_con, {}, x, 1);
@@ -55,8 +62,14 @@ function these_results = sequentially_solve_problem(problem_data, ...
 
 
     f = @(x) counter.evaluate(x);
-    x0 = prob_iface.x0;
     these_results = {};
+    iterations.name = problem_name;
+    iterations.fx = [];
+    iterations.violation = [];
+    iterations.evaluations = [];
+    iterations.radius = [];
+    iterations.last_run = 0;
+    total_evaluations = 0;
     for mu = all_mu
         counter.reset_count();
         counter.set_max_count(max_fcount);
@@ -76,21 +89,23 @@ function these_results = sequentially_solve_problem(problem_data, ...
         if solved
             fcount = counter.get_count();
             fx = f(x);
-            nphi = norm(max(0,max(con_lb - nlcon(x), nlcon(x) - con_ub)));
-            error_obj = problem_data.solution - fx;
-            error_rel = -error_obj/(hs2(1).px - problem_data.solution);
+            nphi = norm(max(0, max(con_lb - nlcon(x), nlcon(x) - con_ub)));
             [kkt, lgrad] = check_kkt(f, all_con, x, con_lb, con_ub, bl, bu, 1e-5, 5e-5);
             the_error = [];
+            iterations.fx = [iterations.fx, hs2.fx];
+            iterations.violation = [iterations.violation, hs2.l2_violation];
+            iterations.evaluations = [iterations.evaluations, total_evaluations + [hs2.evaluations]];
+            iterations.radius = [iterations.radius, hs2.radius];
+            iterations.last_run = numel(hs2);
+            total_evaluations = iterations.evaluations(end);
         else
             x = [];
             hs2 = [];
             fx = [];
             nphi = [];
-            error_obj = [];
             error_x = [];
             fcount = nan;
             kkt = false;
-            error_rel = inf;
             lgrad = nan;
         end
 
@@ -99,20 +114,15 @@ function these_results = sequentially_solve_problem(problem_data, ...
                                 'fx', fx, ...
                                 'history', [], ...
                                 'fcount', fcount, ...
-                                'error_obj', error_obj, ...
                                 'nphi', nphi, ...
                                 'mu', mu, ...
                                 'epsilon', epsilon, ...
                                 'Lambda', Lambda, ...
                                 'kkt', kkt, ...
-                                'error_rel', error_rel, ...
                                 'lgrad', lgrad, ...
                                 'l1_options', l1_options, ...
                                 'the_error', the_error);
-        if problem_result.kkt ...
-                || (~isempty(problem_result.nphi) && (problem_result.nphi < 1e-5) ...
-                    && (-problem_result.error_obj <  1e-6 ...
-                        || problem_result.error_rel < 1e-4))
+        if solved && nphi <= feasibility_tol
             problem_result.good =  true;
         else
             problem_result.good = false;
@@ -132,3 +142,18 @@ function these_results = sequentially_solve_problem(problem_data, ...
         terminate_cutest_problem();
     
 end
+
+function [f, grad] = function_fix_fixed(fun, x, lb, ub)
+  fixed_variables = (lb == ub);
+  x_full = zeros(size(lb));
+  x_full(fixed_variables) = lb(fixed_variables);
+  x_full(~fixed_variables) = x;
+  if nargout < 2
+      f = fun(x_full);
+  else
+    [f, grad] = fun(x_full);
+    grad = grad(~fixed_variables);
+  end
+end
+
+  
